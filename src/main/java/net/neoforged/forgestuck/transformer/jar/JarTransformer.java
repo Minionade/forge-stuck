@@ -42,8 +42,11 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "3";
+    public static final String TRANSFORMER_VERSION = "4";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
+    /** Targeted Thermal 1.20.1 -> NeoForge 1.21.1 compatibility shim: Thermal modules depend on id "thermal". */
+    public static final String THERMAL_SOURCE_ID = "thermal_foundation";
+    public static final String THERMAL_TARGET_ID = "thermal";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 
     private static final Logger LOGGER = LoggerFactory.getLogger("forgestuck");
@@ -257,9 +260,23 @@ public class JarTransformer {
         List<Config> mods = new ArrayList<>();
         Config deps = Config.inMemory();
         List<UnmodifiableConfig> sourceMods = source.getOrElse("mods", List.<UnmodifiableConfig>of());
+        boolean hasThermalTarget = false;
         for (UnmodifiableConfig sm : sourceMods) {
-            String modId = sm.get("modId");
-            if (modId == null) continue;
+            if (THERMAL_TARGET_ID.equals(sm.get("modId"))) hasThermalTarget = true;
+        }
+        for (UnmodifiableConfig sm : sourceMods) {
+            String sourceId = sm.get("modId");
+            if (sourceId == null) continue;
+            String modId = sourceId;
+            if (THERMAL_SOURCE_ID.equals(sourceId)) {
+                if (hasThermalTarget) {
+                    LOGGER.warn("{} {} declares both '{}' and '{}'; keeping '{}' and dropping '{}'", TAG, jarName,
+                            THERMAL_TARGET_ID, THERMAL_SOURCE_ID, THERMAL_TARGET_ID, THERMAL_SOURCE_ID);
+                    continue;
+                }
+                modId = THERMAL_TARGET_ID;
+                LOGGER.info("{} remapped mod id {} -> {} in {}", TAG, THERMAL_SOURCE_ID, THERMAL_TARGET_ID, jarName);
+            }
             Config mod = Config.inMemory();
             mod.set("modId", modId);
             String version = sm.getOrElse("version", jarVersion);
@@ -271,11 +288,24 @@ public class JarTransformer {
             if (authors != null) mod.set("authors", authors);
             mods.add(mod);
 
-            List<UnmodifiableConfig> sourceDeps = dependenciesOf(source, modId);
+            List<UnmodifiableConfig> sourceDeps = dependenciesOf(source, sourceId);
             List<Config> converted = new ArrayList<>();
+            TreeSet<String> seenDeps = new TreeSet<>();
             for (UnmodifiableConfig dep : sourceDeps) {
                 Config c = convertDependency(dep);
-                if (c != null) converted.add(c);
+                if (c == null) continue;
+                String depId = c.get("modId");
+                if (THERMAL_SOURCE_ID.equals(depId)) {
+                    c.set("modId", THERMAL_TARGET_ID);
+                    depId = THERMAL_TARGET_ID;
+                    LOGGER.info("{} remapped dependency {} -> {} for mod {} in {}", TAG, THERMAL_SOURCE_ID,
+                            THERMAL_TARGET_ID, modId, jarName);
+                }
+                if (depId.equals(modId) || !seenDeps.add(depId)) {
+                    LOGGER.warn("{} dropped self/duplicate dependency {} for mod {} in {}", TAG, depId, modId, jarName);
+                    continue;
+                }
+                converted.add(c);
             }
             if (!converted.isEmpty()) deps.set(List.of(modId), converted);
         }

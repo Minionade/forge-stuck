@@ -249,4 +249,79 @@ class JarTransformerTest {
         String toml = new String(read(out, "META-INF/neoforge.mods.toml"), StandardCharsets.UTF_8);
         assertEquals("javafml", new TomlParser().parse(toml).get("modLoader"));
     }
+
+    @Test
+    void thermalFoundationIdIsRemappedToThermal() {
+        String toml = """
+                modLoader = "javafml"
+                [[mods]]
+                modId = "thermal_foundation"
+                version = "1.0"
+                [[dependencies.thermal_foundation]]
+                modId = "cofh_core"
+                mandatory = true
+                versionRange = "[1,)"
+                """;
+        Config out = new TomlParser().parse(new JarTransformer(List.of()).convertModsToml(toml, "1.0", "tf.jar"));
+        List<UnmodifiableConfig> mods = out.get("mods");
+        assertEquals(1, mods.size());
+        assertEquals("thermal", mods.get(0).get("modId"));
+        List<UnmodifiableConfig> deps = out.get(List.of("dependencies", "thermal"));
+        assertEquals("cofh_core", deps.get(0).get("modId"));
+    }
+
+    @Test
+    void thermalDependencyTargetsAreNormalized() {
+        String toml = """
+                modLoader = "javafml"
+                [[mods]]
+                modId = "thermal_expansion"
+                version = "1.0"
+                [[dependencies.thermal_expansion]]
+                modId = "thermal_foundation"
+                mandatory = true
+                versionRange = "[11.0.3,11.1.0)"
+                """;
+        Config out = new TomlParser().parse(new JarTransformer(List.of()).convertModsToml(toml, "1.0", "te.jar"));
+        List<UnmodifiableConfig> deps = out.get(List.of("dependencies", "thermal_expansion"));
+        assertEquals(1, deps.size());
+        assertEquals("thermal", deps.get(0).get("modId"));
+        assertEquals("[11.0.3,11.1.0)", deps.get(0).get("versionRange"));
+    }
+
+    @Test
+    void thermalCoexistenceKeepsSingleThermal() {
+        String toml = """
+                modLoader = "javafml"
+                [[mods]]
+                modId = "thermal"
+                version = "1.0"
+                [[mods]]
+                modId = "thermal_foundation"
+                version = "1.0"
+                """;
+        Config out = new TomlParser().parse(new JarTransformer(List.of()).convertModsToml(toml, "1.0", "t.jar"));
+        List<UnmodifiableConfig> mods = out.get("mods");
+        assertEquals(1, mods.size());
+        assertEquals("thermal", mods.get(0).get("modId"));
+    }
+
+    @Test
+    void nonThermalModsAreUnchanged() {
+        String toml = """
+                modLoader = "javafml"
+                [[mods]]
+                modId = "cofh_core"
+                version = "1.0"
+                [[dependencies.cofh_core]]
+                modId = "bdlib"
+                mandatory = true
+                versionRange = "[2,)"
+                """;
+        Config out = new TomlParser().parse(new JarTransformer(List.of()).convertModsToml(toml, "1.0", "c.jar"));
+        List<UnmodifiableConfig> mods = out.get("mods");
+        assertEquals("cofh_core", mods.get(0).get("modId"));
+        List<UnmodifiableConfig> deps = out.get(List.of("dependencies", "cofh_core"));
+        assertEquals("bdlib", deps.get(0).get("modId"));
+    }
 }
