@@ -61,48 +61,60 @@ neoForge {
 
 // Prevent split-package conflicts during dev runs because build/classes and a copied forgestuck jar can both
 // be discovered in the same module layer; temporarily move the built jar out of run/mods while runClient runs,
-// then restore it afterward.
-tasks.named('runClient') {
-    doFirst {
-        def modsDir = file('run/mods')
-        if (!modsDir.exists()) {
-            modsDir.mkdirs()
-        }
-        def backupDir = file("${buildDir}/tmp/forgestuck-backup")
-        backupDir.mkdirs()
+// then restore it afterward. Use Action instances (not Groovy closures) so the configuration cache is preserved.
+import org.gradle.api.Action
+import org.gradle.api.Task
 
-        modsDir.listFiles()?.findAll { file ->
-            file.name.toLowerCase(Locale.ROOT).startsWith('forgestuck')
-        }?.each { file ->
-            def target = new File(backupDir, file.name)
-            if (target.exists()) {
-                target.delete()
-            }
-            println "[Forge Stuck!!] Temporarily moving ${file.name} out of run/mods for dev-launch compatibility"
-            file.renameTo(target)
-        }
-    }
-
-    doLast {
-        def modsDir = file('run/mods')
-        def backupDir = file("${buildDir}/tmp/forgestuck-backup")
-        if (!modsDir.exists()) {
-            modsDir.mkdirs()
-        }
-
-        if (backupDir.exists()) {
-            backupDir.listFiles()?.each { file ->
-                def target = new File(modsDir, file.name)
-                if (target.exists()) {
-                    target.delete()
+tasks.named('runClient').configure(new Action<Task>() {
+    @Override
+    void execute(Task t) {
+        t.doFirst(new Action<Task>() {
+            @Override
+            void execute(Task ignored) {
+                def modsDir = file('run/mods')
+                if (!modsDir.exists()) {
+                    modsDir.mkdirs()
                 }
-                println "[Forge Stuck!!] Restoring ${file.name} to run/mods after dev launch"
-                file.renameTo(target)
+                def backupDir = file("${buildDir}/tmp/forgestuck-backup")
+                backupDir.mkdirs()
+
+                modsDir.listFiles()?.findAll { file ->
+                    file.name.toLowerCase(java.util.Locale.ROOT).startsWith('forgestuck')
+                }?.each { file ->
+                    def target = new File(backupDir, file.name)
+                    if (target.exists()) {
+                        target.delete()
+                    }
+                    println "[Forge Stuck!!] Temporarily moving ${file.name} out of run/mods for dev-launch compatibility"
+                    file.renameTo(target)
+                }
             }
-            backupDir.deleteDir()
-        }
+        })
+
+        t.doLast(new Action<Task>() {
+            @Override
+            void execute(Task ignored) {
+                def modsDir = file('run/mods')
+                def backupDir = file("${buildDir}/tmp/forgestuck-backup")
+                if (!modsDir.exists()) {
+                    modsDir.mkdirs()
+                }
+
+                if (backupDir.exists()) {
+                    backupDir.listFiles()?.each { file ->
+                        def target = new File(modsDir, file.name)
+                        if (target.exists()) {
+                            target.delete()
+                        }
+                        println "[Forge Stuck!!] Restoring ${file.name} to run/mods after dev launch"
+                        file.renameTo(target)
+                    }
+                    backupDir.deleteDir()
+                }
+            }
+        })
     }
-}
+})
 
 // Standard publishing and IDEA settings
 publishing {
