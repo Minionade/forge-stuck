@@ -1,0 +1,26 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="LGPL-3.0"
+
+[[mods]]
+modId="forgestuck"
+version="${file.jarVersion}"
+displayName="Forge Stuck!!"
+authors="Forge Stuck!! Team"
+description='''
+Runtime compatibility layer that adapts legacy Forge 1.20.1 mod jars found in the mods folder.
+'''
+
+[[dependencies.forgestuck]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1.0,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.forgestuck]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1,1.22)"
+    ordering="NONE"
+    side="BOTH"
