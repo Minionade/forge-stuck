@@ -8,3 +8,6 @@ coverage/
 !.env.example
 /.idea
 *.lock
+/.gradle
+*.bin
+*.gz
