@@ -1,0 +1,39 @@
+plugins {
+  id 'java'
+}
+
+group = 'net.neoforged'
+version = '1.21.1-1.1.0'
+
+defaultTasks 'clean', 'build'
+
+java {
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(21)
+  }
+  withSourcesJar()
+}
+
+tasks.withType(JavaCompile) {
+  options.encoding = 'UTF-8'
+}
+
+jar {
+  manifest {
+    attributes(
+      'Manifest-Version': '1.0',
+      'Specification-Title': 'forgestuck',
+      'Specification-Vendor': 'Forge Stuck!! Team',
+      'Implementation-Title': 'Forge Stuck!!',
+      'Implementation-Version': project.version,
+      'FMLModType': 'MOD',
+      'TweakClass': 'net.neoforged.forgestuck.transformer.ForgeClassTransformer',
+      'Automatic-Module-Name': 'net.neoforged.forgestuck',
+      'Created-By': "Forge Stuck!! Engine ${project.version}"
+    )
+  }
+  from {
+    // include compiled classes and resources
+    (compileJava.destinationDirectory)
+  }
+}
