@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Gradle: runClient" type="GradleRunConfiguration" factoryName="Gradle">
+    <option name="externalProjectPath" value="$PROJECT_DIR$" />
+    <list name="taskNames">
+      <option value="runClient" />
+    </list>
+    <option name="vmOptions" value="-Xmx4G -Duser.language=en" />
+    <option name="scriptParameters" value="" />
+    <option name="useGradleAwareMake" value="true" />
+    <method v="2" />
+  </configuration>
+</component>
