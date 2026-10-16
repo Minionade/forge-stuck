@@ -1,0 +1,11 @@
+modLoader="javafml"
+loaderVersion="[2,)"
+license="LGPL-3.0"
+
+[[mods]]
+modId="forgestuck"
+version="1.21.1-1.1.0"
+displayName="Forge Stuck!!"
+description='''
+Placeholder mod artifact for packaging. Replace with real NeoForge implementation and sources.
+'''
