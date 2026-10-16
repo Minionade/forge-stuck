@@ -6,8 +6,10 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.stream.Stream;
 import net.neoforged.forgestuck.transformer.jar.JarTransformer;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforgespi.ILaunchContext;
 import net.neoforged.neoforgespi.locating.IDiscoveryPipeline;
 import net.neoforged.neoforgespi.locating.IModFile;
@@ -17,16 +19,22 @@ import net.neoforged.neoforgespi.locating.ModFileDiscoveryAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * Finds legacy Forge 1.20.1 jars in the mods folder, rewrites them into cached NeoForge-loadable jars under
- * {@code <gameDir>/.forgestuck/cache} and registers those with the loader through its own pipeline.
- *
- * The original jar is marked as located via {@link ILaunchContext#addLocated(Path)} so the regular mods folder
- * locator (which runs later because of our higher priority) skips it and does not log "Skipping jar".
- */
 public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
     private static final Logger LOGGER = LoggerFactory.getLogger("forgestuck");
     private static final String TAG = "[Forge Stuck!!]";
+
+    // Never transform language/runtime provider jars or known platform helpers.
+    private static final Set<String> TRANSFORM_EXCLUDE_SUBSTRINGS = Set.of(
+            "scalablecatsforce",
+            "scalablecat",
+            "kotori",
+            "language",
+            "scala",
+            "kotlinforforge",
+            "forgifiedfabricapi",
+            "connector",
+            "sinytra"
+    );
 
     @Override
     public int getPriority() {
@@ -35,12 +43,10 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
 
     @Override
     public void findCandidates(ILaunchContext context, IDiscoveryPipeline pipeline) {
-        Path gameDir = context.gameDirectory();
+        Path gameDir = FMLPaths.GAMEDIR.get();
         Path modsDir = gameDir.resolve("mods");
         Path cacheDir = gameDir.resolve(".forgestuck").resolve("cache");
-        if (!Files.isDirectory(modsDir)) {
-            return;
-        }
+        if (!Files.isDirectory(modsDir)) return;
 
         List<Path> jars;
         try (Stream<Path> files = Files.list(modsDir)) {
@@ -55,15 +61,39 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
         JarTransformer transformer = JarTransformer.withDefaultSteps();
         for (Path jar : jars) {
             String name = jar.getFileName().toString();
+            String lower = name.toLowerCase(Locale.ROOT);
+
+            if (shouldSkipTransformation(lower)) {
+                LOGGER.info("{} bypass transform (provider/platform jar): {}", TAG, name);
+
+                // Mark as located so default mods-folder locator won't duplicate it.
+                context.addLocated(jar);
+
+                ModFileDiscoveryAttributes attributes = ModFileDiscoveryAttributes.DEFAULT.withLocator(this);
+                var modFile = pipeline.addPath(jar, attributes, IncompatibleFileReporting.ERROR);
+
+                if (modFile.isPresent()) {
+                    IModFile file = modFile.get();
+                    LOGGER.info("{} registered UNTRANSFORMED mod id(s) {} from {}", TAG,
+                            file.getModInfos().stream().map(i -> i.getModId()).toList(), name);
+                } else {
+                    LOGGER.warn("{} could not register untransformed provider/platform jar {}", TAG, name);
+                }
+                continue;
+            }
+
             try {
                 if (!LegacyJarDetector.isLegacyCandidate(jar)) {
                     continue;
                 }
+
                 LOGGER.info("{} candidate found: {}", TAG, name);
                 context.addLocated(jar);
+
                 JarTransformer.Result result = transformer.transformCached(jar, cacheDir);
                 ModFileDiscoveryAttributes attributes = ModFileDiscoveryAttributes.DEFAULT.withLocator(this);
                 var modFile = pipeline.addPath(result.output(), attributes, IncompatibleFileReporting.ERROR);
+
                 if (modFile.isPresent()) {
                     IModFile file = modFile.get();
                     LOGGER.info("{} registered mod id(s) {} from {}", TAG,
@@ -75,6 +105,10 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
                 LOGGER.error("{} skipped {}: {}", TAG, name, t.toString(), t);
             }
         }
+    }
+
+    private static boolean shouldSkipTransformation(String lowerJarName) {
+        return TRANSFORM_EXCLUDE_SUBSTRINGS.stream().anyMatch(lowerJarName::contains);
     }
 
     private static boolean isScannable(Path p) {
