@@ -31,6 +31,7 @@ public class MixinResourceRewriter {
 
     private final LegacyNameMappings mappings;
     private final String jarName;
+    private final ForgeOwnerMappings owners;
     /** dotted mixin class name -> reason it was dropped */
     private final Map<String, String> dropped = new LinkedHashMap<>();
     private final TreeSet<String> rewrittenConfigs = new TreeSet<>();
@@ -38,8 +39,13 @@ public class MixinResourceRewriter {
     private int refmapEntriesDropped;
 
     public MixinResourceRewriter(LegacyNameMappings mappings, String jarName) {
+        this(mappings, jarName, ForgeOwnerMappings.defaults());
+    }
+
+    public MixinResourceRewriter(LegacyNameMappings mappings, String jarName, ForgeOwnerMappings owners) {
         this.mappings = mappings;
         this.jarName = jarName;
+        this.owners = owners;
     }
 
     /** Inspects an already transformed class; records it as unusable when its mixin cannot be applied. */
@@ -58,6 +64,12 @@ public class MixinResourceRewriter {
                     drop(className, "target class " + target + " does not exist on this Minecraft version");
                     return;
                 }
+            }
+            Set<String> legacyOwners = owners.remainingOwners(bytes);
+            if (!legacyOwners.isEmpty()) {
+                drop(className, "unresolved owner " + legacyOwners
+                        + " (no safe NeoForge equivalent for the members used / incompatible descriptor)");
+                return;
             }
             TreeSet<String> unresolved = new TreeSet<>();
             for (MethodNode m : node.methods) {
@@ -199,10 +211,10 @@ public class MixinResourceRewriter {
             boolean classChanged = false;
             for (Map.Entry<String, JsonElement> m : in.entrySet()) {
                 Set<String> remapped = new TreeSet<>();
-                String key = mappings.remapTokens(m.getKey(), remapped);
+                String key = remapOwners(mappings.remapTokens(m.getKey(), remapped), remapped);
                 JsonElement value = m.getValue();
                 if (value.isJsonPrimitive() && value.getAsJsonPrimitive().isString()) {
-                    String v = mappings.remapTokens(value.getAsString(), remapped);
+                    String v = remapOwners(mappings.remapTokens(value.getAsString(), remapped), remapped);
                     if (!v.equals(value.getAsString())) value = new com.google.gson.JsonPrimitive(v);
                 }
                 if (!remapped.isEmpty()) {
@@ -218,6 +230,13 @@ public class MixinResourceRewriter {
             }
         }
         return changed;
+    }
+
+    private String remapOwners(String s, Set<String> remapped) {
+        java.util.Map<String, Integer> counts = new java.util.TreeMap<>();
+        String r = owners.remapDescriptorTokens(s, Set.of(), counts);
+        remapped.addAll(counts.keySet());
+        return r;
     }
 
     /** Logs the per-jar summary. */
