@@ -55,6 +55,9 @@ export function generateClassBytes(
     ifaceIndices.push(addClass(ifaceUtf8));
   }
 
+  // Ensure 'Code' utf8 exists in constant pool before we write it out
+  const codeAttrUtf8 = addUtf8('Code');
+
   // Prepare method entries collection (we'll always add <init>, optionally more)
   type MethodEntry = { nameIdx: number; descIdx: number; codeBytes: number[]; maxStack: number; maxLocals: number };
   const methods: MethodEntry[] = [];
@@ -142,29 +145,8 @@ export function generateClassBytes(
     // attributes_count = 1 (Code)
     buffer.push(0x00, 0x01);
 
-    // attribute_name_index -> code attribute name must be in cp; find or add
-    // We added 'Code' earlier for init, but not guaranteed here. Ensure it exists.
-    let codeAttrIndex = -1;
-    // find existing utf8 'Code'
-    for (let i = 0; i < cpEntries.length; i++) {
-      const e = cpEntries[i];
-      if (e.tag === 1) {
-        // bytes start with length two bytes then utf8 bytes
-        const len = (e.bytes[0] << 8) | e.bytes[1];
-        const strBytes = e.bytes.slice(2);
-        const s = new TextDecoder().decode(new Uint8Array(strBytes));
-        if (s === 'Code') {
-          codeAttrIndex = i + 1; // constant pool index
-          break;
-        }
-      }
-    }
-    if (codeAttrIndex === -1) {
-      // add utf8 'Code'
-      codeAttrIndex = addUtf8('Code');
-    }
-
-    // attribute_name_index
+    // attribute_name_index -> use codeAttrUtf8 which was added before
+    const codeAttrIndex = codeAttrUtf8;
     buffer.push((codeAttrIndex >> 8) & 0xff, codeAttrIndex & 0xff);
     // attribute_length (u4)
     buffer.push((attributeLength >> 24) & 0xff, (attributeLength >> 16) & 0xff, (attributeLength >> 8) & 0xff, attributeLength & 0xff);
