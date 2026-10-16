@@ -10,17 +10,8 @@ group = mod_group_id
 
 repositories {
     mavenLocal()
-    exclusiveContent {
-        forRepository {
-            maven {
-                name = 'CurseMaven'
-                url = 'https://cursemaven.com'
-            }
-        }
-        filter {
-            includeGroup 'curse.maven'
-        }
-    }
+    maven { url = uri('https://maven.neoforged.net/releases') }
+    mavenCentral()
 }
 
 base {
@@ -29,22 +20,10 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
-// Every mod we build against comes from CurseMaven (ids in gradle.properties). Create and Sable ship libraries
-// jar-in-jar (Create: Flywheel, Ponder, Registrate; Sable: sable-companion, Veil, Rapier). FML loads those from
-// the outer jar at runtime, but javac needs them unpacked, so they are extracted here for the compile classpath only.
-def curse = { String slug, String project, String file -> "curse.maven:${slug}-${project}:${file}" }
-
-configurations {
-    jarInJarSource { transitive = false }
-}
-
-var extractJarInJar = tasks.register('extractJarInJar', Copy) {
-    from({ configurations.jarInJarSource.collect { zipTree(it) } }) {
-        include 'META-INF/jarjar/*.jar'
-        eachFile { it.path = it.name }
-    }
-    includeEmptyDirs = false
-    into layout.buildDirectory.dir('jarjar')
+// Minimal dependencies for the compatibility bridge project
+dependencies {
+    implementation 'org.ow2.asm:asm:9.7'
+    implementation 'org.ow2.asm:asm-commons:9.7'
 }
 
 neoForge {
@@ -67,16 +46,6 @@ neoForge {
             systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
         }
 
-        gameTestServer {
-            type = "gameTestServer"
-            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
-        }
-
-        data {
-            data()
-            programArguments.addAll '--mod', project.mod_id, '--all', '--output', file('src/generated/resources/').getAbsolutePath(), '--existing', file('src/main/resources/').getAbsolutePath()
-        }
-
         configureEach {
             systemProperty 'forge.logging.markers', 'REGISTRIES'
             logLevel = org.slf4j.event.Level.DEBUG
@@ -90,63 +59,7 @@ neoForge {
     }
 }
 
-sourceSets.main.resources { srcDir 'src/generated/resources' }
-
-dependencies {
-    // Required: the mod we are patching, and everything it builds on.
-    implementation curse('dynamic-tree-physics', dtp_curse_project, dtp_curse_file)
-    implementation curse('dynamic-trees', dynamictrees_curse_project, dynamictrees_curse_file)
-    implementation curse('tree-physics', treephysics_curse_project, treephysics_curse_file)
-    implementation curse('sable', sable_curse_project, sable_curse_file)
-
-    // Optional integrations: Create's saw, and Dynamic Trees Plus' cacti and mushrooms.
-    implementation curse('create', create_curse_project, create_curse_file)
-    implementation curse('dynamic-trees-plus', dynamictreesplus_curse_project, dynamictreesplus_curse_file)
-
-    // A third-party Dynamic Trees addon (pale oak, creaking hearts, cactus flowers), used to check that the
-    // patches hold for any addon built on Dynamic Trees' standard classes. Needs Vanilla Backport and Platform.
-    implementation curse('dt-vanilla-backport', dtvanillabackport_curse_project, dtvanillabackport_curse_file)
-    runtimeOnly curse('vanilla-backport', vanilla_backport_curse_project, vanilla_backport_curse_file)
-    runtimeOnly curse('platform', platform_curse_project, platform_curse_file)
-
-    jarInJarSource curse('sable', sable_curse_project, sable_curse_file)
-    jarInJarSource curse('create', create_curse_project, create_curse_file)
-
-    // Libraries the jars above carry jar-in-jar; compile only, FML loads them from the outer jars.
-    compileOnly fileTree(layout.buildDirectory.dir('jarjar')) {
-        include '*.jar'
-        builtBy extractJarInJar
-    }
-}
-
-var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
-    var replaceProperties = [minecraft_version      : minecraft_version,
-                             minecraft_version_range: minecraft_version_range,
-                             neo_version            : neo_version,
-                             neo_version_range      : neo_version_range,
-                             loader_version_range   : loader_version_range,
-                             mod_id                 : mod_id,
-                             mod_name               : mod_name,
-                             mod_license            : mod_license,
-                             mod_version            : mod_version,
-                             mod_authors            : mod_authors,
-                             mod_description        : mod_description,
-                             dtp_version_range      : dtp_version_range,
-                             dynamictrees_version_range     : dynamictrees_version_range,
-                             dynamictreesplus_version_range : dynamictreesplus_version_range,
-                             treephysics_version_range      : treephysics_version_range,
-                             sable_version_range    : sable_version_range,
-                             create_version_range   : create_version_range]
-    inputs.properties replaceProperties
-    expand replaceProperties
-    from "src/main/templates"
-    into "build/generated/sources/modMetadata"
-}
-
-sourceSets.main.resources.srcDir generateModMetadata
-neoForge.ideSyncTask generateModMetadata
-neoForge.ideSyncTask extractJarInJar
-
+// Standard publishing and IDEA settings
 publishing {
     publications {
         register('mavenJava', MavenPublication) {
