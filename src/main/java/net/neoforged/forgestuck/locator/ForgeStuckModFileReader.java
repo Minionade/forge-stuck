@@ -34,6 +34,24 @@ public class ForgeStuckModFileReader implements IModFileReader {
     public IModFile read(JarContents contents, ModFileDiscoveryAttributes attrs) {
         try {
             String legacyToml = readJarText(contents, "META-INF/mods.toml");
+
+            // If JarContents-based approach failed, try falling back to attrs -> on-disk JarFile
+            if ((legacyToml == null || legacyToml.isBlank()) && attrs != null) {
+                Path p = discoverPathFromAttributes(attrs);
+                if (p != null) {
+                    try (JarFile jar = new JarFile(p.toFile())) {
+                        JarEntry forgeToml = jar.getJarEntry("META-INF/mods.toml");
+                        JarEntry neoToml = jar.getJarEntry("META-INF/neoforge.mods.toml");
+                        if (forgeToml != null && neoToml == null) {
+                            try (InputStream is = jar.getInputStream(forgeToml)) {
+                                legacyToml = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                            }
+                        }
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
+
             if (legacyToml == null || legacyToml.isBlank()) {
                 LOGGER.debug("[Forge Stuck!!] JarContents-based reader: no META-INF/mods.toml found");
                 return null;
@@ -66,25 +84,25 @@ public class ForgeStuckModFileReader implements IModFileReader {
         try {
             Object result = invokeJarMethod(jarContents, "getInputStream", entryName);
             if (result == null) {
-                return null;
-            }
-
-            if (result instanceof Optional<?> optional) {
+                // continue to try getEntry-based approach
+            } else if (result instanceof Optional<?> optional) {
                 if (optional.isEmpty()) {
-                    return null;
+                    // no stream for string-based lookup
+                } else {
+                    Object streamObj = optional.get();
+                    if (streamObj instanceof InputStream stream) {
+                        try (InputStream s = stream) {
+                            return new String(s.readAllBytes(), StandardCharsets.UTF_8);
+                        }
+                    }
                 }
-                Object streamObj = optional.get();
-                if (streamObj instanceof InputStream stream) {
-                    return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            } else if (result instanceof InputStream stream) {
+                try (InputStream s = stream) {
+                    return new String(s.readAllBytes(), StandardCharsets.UTF_8);
                 }
-                return null;
-            }
-
-            if (result instanceof InputStream stream) {
-                return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
             }
         } catch (Throwable ignored) {
-            // fall through to the legacy path below
+            // fall through to entry-based attempt
         }
 
         try {
@@ -95,7 +113,13 @@ public class ForgeStuckModFileReader implements IModFileReader {
                 if (streamResult instanceof Optional<?> streamOptional && streamOptional.isPresent()) {
                     Object streamObj = streamOptional.get();
                     if (streamObj instanceof InputStream stream) {
-                        return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                        try (InputStream s = stream) {
+                            return new String(s.readAllBytes(), StandardCharsets.UTF_8);
+                        }
+                    }
+                } else if (streamResult instanceof InputStream stream) {
+                    try (InputStream s = stream) {
+                        return new String(s.readAllBytes(), StandardCharsets.UTF_8);
                     }
                 }
             }
@@ -103,14 +127,6 @@ public class ForgeStuckModFileReader implements IModFileReader {
             // ignore and return null below
         }
 
-        // Final fallback: use the ModFileDiscoveryAttributes path if available
-        try {
-            if (jarContents instanceof JarContents) {
-                return null;
-            }
-        } catch (Throwable ignored) {
-            // ignore
-        }
         return null;
     }
 
@@ -150,6 +166,27 @@ public class ForgeStuckModFileReader implements IModFileReader {
                     // continue checking other overloads
                 }
             }
+        }
+        return null;
+    }
+
+    private Path discoverPathFromAttributes(ModFileDiscoveryAttributes attrs) {
+        try {
+            for (Method m : attrs.getClass().getMethods()) {
+                String n = m.getName().toLowerCase(Locale.ROOT);
+                if (n.contains("path") || n.contains("file") || n.contains("location") || n.contains("source")) {
+                    Class<?> ret = m.getReturnType();
+                    try {
+                        Object o = m.invoke(attrs);
+                        if (o == null) continue;
+                        if (o instanceof Path) return (Path) o;
+                        if (o instanceof java.io.File) return ((java.io.File) o).toPath();
+                        if (o instanceof String) return Path.of((String) o);
+                    } catch (Throwable ignored) {
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
         }
         return null;
     }
