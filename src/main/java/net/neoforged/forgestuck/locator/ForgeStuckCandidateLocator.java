@@ -23,13 +23,10 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
     private static final Logger LOGGER = LoggerFactory.getLogger("forgestuck");
     private static final String TAG = "[Forge Stuck!!]";
 
-    // Never transform language/runtime provider jars or known platform helpers.
+    // Provider/platform jars that should never be transformed by ForgeStuck.
+    // Keep this list narrow and explicit.
     private static final Set<String> TRANSFORM_EXCLUDE_SUBSTRINGS = Set.of(
             "scalablecatsforce",
-            "scalablecat",
-            "kotori",
-            "language",
-            "scala",
             "kotlinforforge",
             "forgifiedfabricapi",
             "connector",
@@ -50,7 +47,8 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
 
         List<Path> jars;
         try (Stream<Path> files = Files.list(modsDir)) {
-            jars = files.filter(ForgeStuckCandidateLocator::isScannable)
+            jars = files
+                    .filter(ForgeStuckCandidateLocator::isScannable)
                     .sorted(Comparator.comparing(p -> p.getFileName().toString().toLowerCase(Locale.ROOT)))
                     .toList();
         } catch (IOException e) {
@@ -59,42 +57,42 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
         }
 
         JarTransformer transformer = JarTransformer.withDefaultSteps();
+
         for (Path jar : jars) {
             String name = jar.getFileName().toString();
             String lower = name.toLowerCase(Locale.ROOT);
 
-            if (shouldSkipTransformation(lower)) {
-                LOGGER.info("{} bypass transform (provider/platform jar): {}", TAG, name);
-
-                // Mark as located so default mods-folder locator won't duplicate it.
-                context.addLocated(jar);
-
-                ModFileDiscoveryAttributes attributes = ModFileDiscoveryAttributes.DEFAULT.withLocator(this);
-                var modFile = pipeline.addPath(jar, attributes, IncompatibleFileReporting.ERROR);
-
-                if (modFile.isPresent()) {
-                    IModFile file = modFile.get();
-                    LOGGER.info("{} registered UNTRANSFORMED mod id(s) {} from {}", TAG,
-                            file.getModInfos().stream().map(i -> i.getModId()).toList(), name);
-                } else {
-                    LOGGER.warn("{} could not register untransformed provider/platform jar {}", TAG, name);
-                }
-                continue;
-            }
-
             try {
+                // For provider/platform jars: register the ORIGINAL jar, untransformed.
+                if (shouldSkipTransformation(lower)) {
+                    LOGGER.info("{} bypass transform (provider/platform jar): {}", TAG, name);
+
+                    ModFileDiscoveryAttributes attributes = ModFileDiscoveryAttributes.DEFAULT.withLocator(this);
+                    var modFile = pipeline.addPath(jar, attributes, IncompatibleFileReporting.ERROR);
+
+                    if (modFile.isPresent()) {
+                        context.addLocated(jar);
+                        IModFile file = modFile.get();
+                        LOGGER.info("{} registered UNTRANSFORMED mod id(s) {} from {}", TAG,
+                                file.getModInfos().stream().map(i -> i.getModId()).toList(), name);
+                    } else {
+                        LOGGER.warn("{} could not register untransformed provider/platform jar {} (leaving for other locators)", TAG, name);
+                    }
+                    continue;
+                }
+
                 if (!LegacyJarDetector.isLegacyCandidate(jar)) {
                     continue;
                 }
 
                 LOGGER.info("{} candidate found: {}", TAG, name);
-                context.addLocated(jar);
 
                 JarTransformer.Result result = transformer.transformCached(jar, cacheDir);
                 ModFileDiscoveryAttributes attributes = ModFileDiscoveryAttributes.DEFAULT.withLocator(this);
                 var modFile = pipeline.addPath(result.output(), attributes, IncompatibleFileReporting.ERROR);
 
                 if (modFile.isPresent()) {
+                    context.addLocated(jar);
                     IModFile file = modFile.get();
                     LOGGER.info("{} registered mod id(s) {} from {}", TAG,
                             file.getModInfos().stream().map(i -> i.getModId()).toList(), name);
