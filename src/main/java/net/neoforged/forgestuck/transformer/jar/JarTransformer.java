@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "5";
+    public static final String TRANSFORMER_VERSION = "6";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     /** Targeted Thermal 1.20.1 -> NeoForge 1.21.1 compatibility shim: Thermal modules depend on id "thermal". */
     public static final String THERMAL_SOURCE_ID = "thermal_foundation";
@@ -93,8 +93,8 @@ public class JarTransformer {
 
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
-        return new JarTransformer(List.of(new ForgeClassTransformStep(), new ResourceLocationClassTransformStep(),
-                new SrgMemberRemapStep()));
+        return new JarTransformer(List.of(new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
+                new ResourceLocationClassTransformStep(), new SrgMemberRemapStep()));
     }
 
     /** Returns the cached output for this source jar, creating it when missing. */
@@ -134,6 +134,7 @@ public class JarTransformer {
             Map<String, String> rewritten = new LinkedHashMap<>();
             TreeSet<String> removed = new TreeSet<>();
             MixinResourceRewriter mixins = new MixinResourceRewriter(mappings, jarName);
+            OwnerRemapReport ownerReport = new OwnerRemapReport();
             Map<String, JarEntry> pendingMixinEntries = new LinkedHashMap<>();
             Map<String, byte[]> pendingMixinData = new LinkedHashMap<>();
             Enumeration<JarEntry> entries = in.entries();
@@ -161,7 +162,7 @@ public class JarTransformer {
                 if (name.equals(JarFile.MANIFEST_NAME)) {
                     data = stripManifestDigests(data);
                 } else if (name.endsWith(".class")) {
-                    data = applySteps(name, data);
+                    data = applySteps(name, data, ownerReport);
                     mixins.inspectClass(name.substring(0, name.length() - ".class".length()).replace('/', '.'), data);
                 } else if (MixinResourceRewriter.isCandidate(name)) {
                     pendingMixinEntries.put(name, entry);
@@ -179,7 +180,10 @@ public class JarTransformer {
                 String name = pending.getKey();
                 putEntry(out, pending.getValue(), name, mixins.rewrite(name, pendingMixinData.get(name)));
             }
+            ownerReport.log(LOGGER, TAG, jarName);
             mixins.logSummary();
+            LOGGER.info("{} {} summary: {} owner reference(s) remapped in {} class(es), {} mixin class(es) dropped",
+                    TAG, jarName, ownerReport.total(), ownerReport.classesRewritten(), mixins.droppedMixins().size());
             rewritten.forEach((from, to) -> LOGGER.info("{} {} model loader {} -> {}", TAG, jarName, from, to));
             for (String id : removed) {
                 LOGGER.warn("{} {} removed unknown model loader '{}' from model JSON(s); models may render or "
@@ -194,12 +198,12 @@ public class JarTransformer {
         }
     }
 
-    private byte[] applySteps(String entryName, byte[] data) {
+    private byte[] applySteps(String entryName, byte[] data, OwnerRemapReport report) {
         String className = entryName.substring(0, entryName.length() - ".class".length()).replace('/', '.');
         byte[] current = data;
         for (ClassTransformStep step : steps) {
             try {
-                byte[] result = step.apply(className, current);
+                byte[] result = step.apply(className, current, report);
                 if (result != null) current = result;
             } catch (Exception | LinkageError e) {
                 LOGGER.warn("{} class step {} failed on {}, leaving it unchanged: {}", TAG,

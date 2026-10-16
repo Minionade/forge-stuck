@@ -11,4 +11,9 @@ public interface ClassTransformStep {
      * @return the rewritten bytes, or the very same array instance when nothing changed
      */
     byte[] apply(String className, byte[] bytes);
+
+    /** Variant that also records per-jar statistics; steps without statistics just delegate. */
+    default byte[] apply(String className, byte[] bytes, OwnerRemapReport report) {
+        return apply(className, bytes);
+    }
 }
