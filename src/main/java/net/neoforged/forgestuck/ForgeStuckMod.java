@@ -15,7 +15,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import org.slf4j.Logger;
 
 /**
- * Forge Stuck!!: NeoForge 1.21.1 runtime compatibility bridge for older Forge mod patterns.
+ * Forge Stuck!!: NeoForge 1.21.1 compatibility bridge for legacy Forge mod patterns.
  */
 @Mod(ForgeStuckMod.MODID)
 public class ForgeStuckMod {
