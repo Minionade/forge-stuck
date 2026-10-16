@@ -15,10 +15,7 @@ export const JAVA_PROJECT_FILES: JavaSourceFile[] = [
     code: `package net.neoforged.forgestuck;
 
 import com.mojang.logging.LogUtils;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
@@ -35,11 +32,18 @@ import org.slf4j.Logger;
 
 /**
  * Forge Stuck!!: NeoForge 1.21.1 Runtime Compatibility Bridge for Forge 1.20.1 mods.
- * 
+ *
  * For when your favorite mods are stubbornly stuck in 1.20.1!
- * Intercepts legacy Forge mod classloading, routes ItemStack NBT calls to
- * DataComponents.CUSTOM_DATA, connects ForgeCapabilities to NeoForge BlockCapabilities,
- * and handles targeted mod adapters for Thermal Series, Gendustry CE, and Advanced Generators.
+ *
+ * Works just like Sinytra Connector / RetroMod: drop forgestuck.jar into your /mods/
+ * folder alongside your existing 1.20.1 Forge mod JARs — no subfolders, no setup steps,
+ * no moving files. ForgeStuckModFileReader intercepts skipped 1.20.1 mods BEFORE
+ * NeoForge's default reader can reject them.
+ *
+ * - Intercepts legacy Forge mod classloading via IModFileReader ServiceLoader.
+ * - Routes ItemStack NBT calls to DataComponents.CUSTOM_DATA.
+ * - Connects ForgeCapabilities to NeoForge BlockCapabilities.
+ * - Targeted adapters for Thermal Series, Gendustry CE, and Advanced Generators.
  */
 @Mod(ForgeStuckMod.MODID)
 public class ForgeStuckMod {
@@ -50,25 +54,20 @@ public class ForgeStuckMod {
     public ForgeStuckMod(IEventBus modEventBus) {
         LOGGER.info("[Forge Stuck!!] Unsticking 1.20.1 mods for NeoForge 1.21.1 v{}", VERSION);
 
-        // Register mod lifecycle listeners
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::registerCapabilities);
         modEventBus.addListener(this::registerPayloads);
         modEventBus.addListener(this::onLoadComplete);
 
-        // Register runtime game event listeners
         NeoForge.EVENT_BUS.register(this);
         NeoForge.EVENT_BUS.register(LegacyItemStackShim.class);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         LOGGER.info("[Forge Stuck!!] Bootstrapping Legacy Forge API Shim Layer...");
-        
-        // Initialize dynamic adapters for targeted mods
         ThermalSeriesAdapter.init();
         ForestryGeneticsAdapter.init();
         AdvancedGeneratorsMultiblockAdapter.init();
-        
         LOGGER.info("[Forge Stuck!!] Adapters unstuck: Thermal Series, Gendustry CE, Advanced Generators");
     }
 
@@ -85,44 +84,6 @@ public class ForgeStuckMod {
     private void onLoadComplete(FMLLoadCompleteEvent event) {
         LOGGER.info("[Forge Stuck!!] Successfully un-stuck Forge 1.20.1 mods! All shims active.");
     }
-
-    /**
-     * Standalone CLI runner: Can also be executed directly via 'java -jar forgestuck-1.21.1-1.1.0.jar'
-     * or as a Prism Launcher pre-launch command to organize /mods/.forgestuck/ ahead of time!
-     */
-    public static void main(String[] args) {
-        System.out.println("=================================================");
-        System.out.println("Forge Stuck!! v" + VERSION + " - Setup & Organizer");
-        System.out.println("=================================================");
-        try {
-            java.nio.file.Path currentDir = java.nio.file.Paths.get(".").toAbsolutePath().normalize();
-            java.nio.file.Path modsDir = Files.exists(currentDir.resolve("mods")) ? currentDir.resolve("mods") : currentDir;
-            java.nio.file.Path forgestuckDir = modsDir.resolve(".forgestuck");
-            java.nio.file.Path manifestsDir = forgestuckDir.resolve("manifests");
-
-            Files.createDirectories(manifestsDir);
-            System.out.println("[Forge Stuck!!] Ensured target directory exists: " + forgestuckDir);
-
-            // Move any 1.20.1 Forge JARs from mods/ to mods/.forgestuck/ so NeoForge doesn't reject them
-            if (Files.isDirectory(modsDir)) {
-                try (var stream = Files.list(modsDir)) {
-                    stream.filter(p -> p.toString().toLowerCase().endsWith(".jar") && !p.getFileName().toString().startsWith("forgestuck"))
-                          .forEach(p -> {
-                              try (java.util.jar.JarFile jf = new java.util.jar.JarFile(p.toFile())) {
-                                  if (jf.getJarEntry("META-INF/neoforge.mods.toml") == null && jf.getJarEntry("META-INF/mods.toml") != null) {
-                                      java.nio.file.Path target = forgestuckDir.resolve(p.getFileName());
-                                      Files.move(p, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                                      System.out.println("[Forge Stuck!!] Moved legacy JAR to /mods/.forgestuck/: " + p.getFileName());
-                                  }
-                              } catch (Exception ignored) {}
-                          });
-                }
-            }
-            System.out.println("[Forge Stuck!!] Setup complete! Original JARs remain untouched.");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 }
 `,
   },
@@ -130,7 +91,7 @@ public class ForgeStuckMod {
     path: 'src/main/java/net/neoforged/forgestuck/locator/ForgeStuckModLocator.java',
     filename: 'ForgeStuckModLocator.java',
     category: 'locator',
-    description: 'Custom IModLocator that intercepts skipped 1.20.1 mods and generates synthetic neoforge.mods.toml manifests in-memory',
+    description: 'IModLocator that scans /mods/ directly for 1.20.1 Forge JARs and presents them to NeoForge without any subfolders',
     code: `package net.neoforged.forgestuck.locator;
 
 import com.mojang.logging.LogUtils;
@@ -140,7 +101,6 @@ import net.neoforged.fml.loading.moddiscovery.ModFile;
 import net.neoforged.fml.loading.moddiscovery.ModFileFactory;
 import org.slf4j.Logger;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -152,14 +112,19 @@ import java.util.stream.Stream;
 
 /**
  * Custom Mod Locator for Forge Stuck!!
- * 
- * In NeoForge 1.21.1, the default ModDiscoverer encounters 1.20.1 JARs with only
- * META-INF/mods.toml and logs:
- *   "Skipping jar. File mods/... is for Minecraft Forge or an older version of NeoForge, and cannot be loaded"
- * 
- * ForgeStuckModLocator runs during FML discovery, catches these skipped 1.20.1 JARs,
- * reads their legacy mods.toml, wraps them with a synthesized neoforge.mods.toml in memory,
- * and passes them to NeoForge as valid candidate mods!
+ *
+ * Scans the standard /mods/ directory directly for 1.20.1 Forge JARs — exactly
+ * like Sinytra Connector and RetroMod. No subfolders. No moving files. Just drop
+ * your old Forge mods alongside forgestuck.jar and launch.
+ *
+ * How it works:
+ *  1. ForgeStuckModFileReader (IModFileReader, registered via ServiceLoader) runs FIRST
+ *     and intercepts any JAR that has META-INF/mods.toml but NOT META-INF/neoforge.mods.toml.
+ *  2. This locator serves as a secondary safety net, scanning /mods/ for any 1.20.1 JARs
+ *     that the reader didn't catch and registering them the same way.
+ *
+ * The 1.20.1 JAR files remain exactly where the user put them — on disk, in /mods/.
+ * No copies, no moves, no reorganization needed.
  */
 public class ForgeStuckModLocator extends AbstractJarFileModLocator {
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -172,115 +137,73 @@ public class ForgeStuckModLocator extends AbstractJarFileModLocator {
             return Collections.emptyList();
         }
 
-        Path forgestuckDir = modsDir.resolve(".forgestuck");
-        Path manifestsBaseDir = forgestuckDir.resolve("manifests");
-        try {
-            Files.createDirectories(manifestsBaseDir);
-            LOGGER.info("[Forge Stuck!!] Target directory verified at: {}", forgestuckDir);
-        } catch (IOException e) {
-            LOGGER.error("[Forge Stuck!!] Failed to create /mods/.forgestuck/ folder: {}", e.getMessage());
-        }
+        List<ModFile> discovered = new ArrayList<>();
 
-        List<ModFile> discovered1201Mods = new ArrayList<>();
-
-        // 1. Move any 1.20.1 Forge mods placed directly in mods/ into mods/.forgestuck/
-        // This is crucial because NeoForge's ModsFolderLocator will abort launch if old Forge mods sit directly in mods/
+        // Scan /mods/ directly — just like Sinytra Connector's EmbeddedDependencyLocator
         try (Stream<Path> files = Files.list(modsDir)) {
-            files.filter(p -> p.toString().toLowerCase().endsWith(".jar") && !p.getFileName().toString().startsWith("forgestuck")).forEach(jarPath -> {
-                try (JarFile jar = new JarFile(jarPath.toFile())) {
-                    JarEntry neoToml = jar.getJarEntry("META-INF/neoforge.mods.toml");
-                    JarEntry forgeToml = jar.getJarEntry("META-INF/mods.toml");
-
-                    if (neoToml == null && forgeToml != null) {
-                        Path destination = forgestuckDir.resolve(jarPath.getFileName());
-                        Files.move(jarPath, destination, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                        LOGGER.info("[Forge Stuck!!] Moved 1.20.1 JAR to /mods/.forgestuck/ to prevent NeoForge rejection: {}", jarPath.getFileName());
-                    }
-                } catch (Exception ignored) {}
-            });
-        } catch (Exception ignored) {}
-
-        // 2. Discover and register all 1.20.1 mods safely residing in mods/.forgestuck/
-        if (Files.isDirectory(forgestuckDir)) {
-            try (Stream<Path> forgestuckFiles = Files.list(forgestuckDir)) {
-                forgestuckFiles.filter(p -> p.toString().toLowerCase().endsWith(".jar")).forEach(jarPath -> {
+            files.filter(p -> p.toString().toLowerCase().endsWith(".jar")
+                           && !p.getFileName().toString().startsWith("forgestuck"))
+                .forEach(jarPath -> {
                     try (JarFile jar = new JarFile(jarPath.toFile())) {
+                        JarEntry neoToml = jar.getJarEntry("META-INF/neoforge.mods.toml");
                         JarEntry forgeToml = jar.getJarEntry("META-INF/mods.toml");
-                        if (forgeToml != null) {
-                            String jarFileName = jarPath.getFileName().toString();
-                            
-                            // Read legacy mods.toml directly from stream (original JAR remains 100% untouched)
+
+                        // Only handle 1.20.1 Forge mods (has mods.toml but NOT neoforge.mods.toml)
+                        if (neoToml == null && forgeToml != null) {
                             String legacyTomlContent;
                             try (InputStream is = jar.getInputStream(forgeToml)) {
                                 legacyTomlContent = new String(is.readAllBytes());
                             }
 
-                            String modId = extractModId(legacyTomlContent, jarFileName);
+                            String modId = extractModId(legacyTomlContent, jarPath.getFileName().toString());
+                            String synthesizedToml = convertForgeTomlToNeoForge(legacyTomlContent, modId);
 
-                            // Dedicated manifest path inside /mods/.forgestuck/manifests/<modId>/META-INF/neoforge.mods.toml
-                            Path dedicatedManifestDir = manifestsBaseDir.resolve(modId).resolve("META-INF");
-                            Files.createDirectories(dedicatedManifestDir);
-                            Path dedicatedTomlPath = dedicatedManifestDir.resolve("neoforge.mods.toml");
-
-                            String synthesizedToml = convertForgeTomlToNeoForge(legacyTomlContent, jarFileName, modId);
-                            Files.writeString(dedicatedTomlPath, synthesizedToml);
-
-                            LOGGER.info("[Forge Stuck!!] Generated manifest in /mods/.forgestuck/manifests/{}/META-INF/neoforge.mods.toml", modId);
-
-                            // Register ModFile with NeoForge
                             ModFile modFile = ModFileFactory.FACTORY.build(jarPath, this, synthesizedToml);
-                            discovered1201Mods.add(modFile);
-                            LOGGER.info("[Forge Stuck!!] Successfully registered {} for NeoForge 1.21.1 loading", jarFileName);
+                            discovered.add(modFile);
+                            LOGGER.info("[Forge Stuck!!] Located and registered 1.20.1 mod directly from /mods/: {}", jarPath.getFileName());
                         }
                     } catch (Exception e) {
-                        LOGGER.error("[Forge Stuck!!] Error processing {}: {}", jarPath, e.getMessage());
+                        LOGGER.error("[Forge Stuck!!] Error processing {}: {}", jarPath.getFileName(), e.getMessage());
                     }
                 });
-            } catch (IOException e) {
-                LOGGER.error("[Forge Stuck!!] Failed scanning /mods/.forgestuck/: {}", e.getMessage());
-            }
+        } catch (IOException e) {
+            LOGGER.error("[Forge Stuck!!] Failed scanning /mods/: {}", e.getMessage());
         }
 
-        return discovered1201Mods;
+        return discovered;
     }
 
-    private static String extractModId(String toml, String filename) {
+    static String extractModId(String toml, String filename) {
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("modId\\\\s*=\\\\s*[\"']([^\"']+)[\"']").matcher(toml);
-        if (m.find()) {
-            return m.group(1);
-        }
+        if (m.find()) return m.group(1);
         return filename.replaceAll("\\\\.jar$", "").replaceAll("[^a-zA-Z0-9_]", "_").toLowerCase();
     }
 
-    private static String convertForgeTomlToNeoForge(String forgeToml, String filename, String modId) {
-        // Upgrade modLoader version and strip Forge-specific rigid constraints
+    static String convertForgeTomlToNeoForge(String forgeToml, String modId) {
+        // Upgrade loader version range from Forge (47+) to NeoForge (2+)
         String neoToml = forgeToml
             .replaceAll("loaderVersion=\"\\[47,\\)\"", "loaderVersion=\"[2,)\"")
-            .replaceAll("modLoader=\"javafml\"", "modLoader=\"javafml\"\\nloaderVersion=\"[2,)\"");
+            .replaceAll("modLoader=\"javafml\"", "modLoader=\"javafml\"\nloaderVersion=\"[2,)\"");
 
-        // If no dependencies section exists for neoforge, supply default
+        // Inject NeoForge dependency if not present
         if (!neoToml.contains("modId=\"neoforge\"")) {
-            neoToml += "\\n\\n# Automatically injected by Forge Stuck!! into dedicated path\\n" +
-                       "[[dependencies." + modId + "]]\\n" +
-                       "    modId=\\"neoforge\\"\\n" +
-                       "    type=\\"required\\"\\n" +
-                       "    versionRange=\\"[21.1.0,)\\"\\n" +
-                       "    ordering=\\"NONE\\"\\n" +
-                       "    side=\\"BOTH\\"\\n";
+            neoToml += "\n\n# Automatically injected by Forge Stuck!!\n" +
+                       "[[dependencies." + modId + "]]\n" +
+                       "    modId=\"neoforge\"\n" +
+                       "    type=\"required\"\n" +
+                       "    versionRange=\"[21.1.0,)\"\n" +
+                       "    ordering=\"NONE\"\n" +
+                       "    side=\"BOTH\"\n";
         }
 
         return neoToml;
     }
 
     @Override
-    public String name() {
-        return NAME;
-    }
+    public String name() { return NAME; }
 
     @Override
-    public String toString() {
-        return "ForgeStuck 1.20.1 Compatibility Locator";
-    }
+    public String toString() { return "ForgeStuck 1.20.1 Compatibility Locator (flat /mods/ scanner)"; }
 }
 `,
   },
@@ -288,11 +211,10 @@ public class ForgeStuckModLocator extends AbstractJarFileModLocator {
     path: 'src/main/java/net/neoforged/forgestuck/locator/ForgeStuckModFileReader.java',
     filename: 'ForgeStuckModFileReader.java',
     category: 'locator',
-    description: 'IModFileReader that claims 1.20.1 Forge mods directly in /mods/ before JarModsDotTomlModFileReader can reject them',
+    description: 'Primary IModFileReader — intercepts 1.20.1 Forge JARs sitting directly in /mods/ BEFORE NeoForge can reject them. No subfolders required.',
     code: `package net.neoforged.forgestuck.locator;
 
 import com.mojang.logging.LogUtils;
-import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.fml.loading.moddiscovery.ModFile;
 import net.neoforged.fml.loading.moddiscovery.ModFileFactory;
 import net.neoforged.neoforgespi.locating.IModFile;
@@ -300,27 +222,38 @@ import net.neoforged.neoforgespi.locating.IModFileReader;
 import org.slf4j.Logger;
 
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Custom IModFileReader registered via ServiceLoader.
- * 
- * Intercepts 1.20.1 Forge mods sitting directly in /mods/ BEFORE
- * NeoForge's default JarModsDotTomlModFileReader can reject them.
- * 
- * Reads the legacy META-INF/mods.toml from the stream (leaving the original JAR on disk 100% untouched),
- * writes the synthesized neoforge.mods.toml to /mods/.forgestuck/manifests/<modid>/META-INF/neoforge.mods.toml,
- * and builds a valid IModFile so NeoForge loads it directly from /mods/ without errors or subfolders!
+ * PRIMARY interception mechanism for Forge Stuck!!
+ *
+ * Registered via ServiceLoader (META-INF/services/net.neoforged.neoforgespi.locating.IModFileReader).
+ * NeoForge calls every registered IModFileReader in order before its built-in
+ * JarModsDotTomlModFileReader. By returning a non-null IModFile here, we claim the JAR
+ * and prevent NeoForge from ever seeing "Skipping jar... is for Minecraft Forge or an
+ * older version of NeoForge" — exactly how Sinytra Connector works.
+ *
+ * The 1.20.1 JAR is read in-memory only. The file on disk is NEVER moved, copied,
+ * or modified. Users just drop their old mods alongside forgestuck.jar and launch.
+ *
+ * Flow:
+ *  read(path) called for every JAR in /mods/
+ *   └─ Has META-INF/mods.toml but NOT META-INF/neoforge.mods.toml?
+ *       ├─ YES: synthesize neoforge.mods.toml in-memory → return valid IModFile → NeoForge loads it ✓
+ *       └─ NO: return null → NeoForge uses its own reader as usual ✓
  */
 public class ForgeStuckModFileReader implements IModFileReader {
     private static final Logger LOGGER = LogUtils.getLogger();
 
+    @Override
     public IModFile read(Path path, Object locator) {
         try {
-            if (!path.toString().toLowerCase().endsWith(".jar") || path.getFileName().toString().startsWith("forgestuck")) {
+            String filename = path.getFileName().toString();
+
+            // Skip non-JAR files and our own JAR
+            if (!filename.toLowerCase().endsWith(".jar") || filename.startsWith("forgestuck")) {
                 return null;
             }
 
@@ -328,65 +261,32 @@ public class ForgeStuckModFileReader implements IModFileReader {
                 JarEntry neoToml = jar.getJarEntry("META-INF/neoforge.mods.toml");
                 JarEntry forgeToml = jar.getJarEntry("META-INF/mods.toml");
 
-                // If it is a 1.20.1 Forge mod, intercept it before NeoForge rejects it!
+                // This is a 1.20.1 Forge mod: intercept it before NeoForge rejects it!
                 if (neoToml == null && forgeToml != null) {
-                    String filename = path.getFileName().toString();
-                    LOGGER.info("[Forge Stuck!!] Intercepting 1.20.1 Forge mod in /mods/: {}", filename);
+                    LOGGER.info("[Forge Stuck!!] Intercepting 1.20.1 Forge mod: {}", filename);
 
-                    // 1. Read legacy mods.toml directly from stream (Zero edits to original JAR on disk)
+                    // Read the legacy mods.toml completely in-memory (zero disk writes)
                     String legacyToml;
                     try (InputStream is = jar.getInputStream(forgeToml)) {
                         legacyToml = new String(is.readAllBytes());
                     }
 
-                    // 2. Extract modId
-                    String modId = extractModId(legacyToml, filename);
+                    String modId = ForgeStuckModLocator.extractModId(legacyToml, filename);
+                    String synthesizedToml = ForgeStuckModLocator.convertForgeTomlToNeoForge(legacyToml, modId);
 
-                    // 3. Create dedicated path in /mods/.forgestuck/manifests/<modId>/META-INF/neoforge.mods.toml
-                    Path modsDir = FMLPaths.MODSDIR.get();
-                    Path dedicatedManifestDir = modsDir.resolve(".forgestuck")
-                        .resolve("manifests")
-                        .resolve(modId)
-                        .resolve("META-INF");
-                    Files.createDirectories(dedicatedManifestDir);
-
-                    Path dedicatedToml = dedicatedManifestDir.resolve("neoforge.mods.toml");
-                    String synthesized = convertForgeTomlToNeoForge(legacyToml, filename, modId);
-                    Files.writeString(dedicatedToml, synthesized);
-
-                    LOGGER.info("[Forge Stuck!!] Generated manifest at: {}", dedicatedToml);
-
-                    // 4. Return valid IModFile so NeoForge loads it directly and skips JarModsDotTomlModFileReader!
-                    return ModFileFactory.FACTORY.build(path, (net.neoforged.fml.loading.moddiscovery.AbstractJarFileModLocator) locator, synthesized);
+                    // Return a valid IModFile built directly from the original path.
+                    // NeoForge will load the mod from /mods/<file>.jar without any subfolder.
+                    return ModFileFactory.FACTORY.build(
+                        path,
+                        (net.neoforged.fml.loading.moddiscovery.AbstractJarFileModLocator) locator,
+                        synthesizedToml
+                    );
                 }
             }
         } catch (Exception e) {
-            LOGGER.debug("[Forge Stuck!! Reader] {}", e.getMessage());
+            LOGGER.debug("[Forge Stuck!! Reader] Skipping {}: {}", path.getFileName(), e.getMessage());
         }
         return null;
-    }
-
-    private static String extractModId(String toml, String filename) {
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("modId\\\\s*=\\\\s*[\"']([^\"']+)[\"']").matcher(toml);
-        if (m.find()) return m.group(1);
-        return filename.replaceAll("\\\\.jar$", "").replaceAll("[^a-zA-Z0-9_]", "_").toLowerCase();
-    }
-
-    private static String convertForgeTomlToNeoForge(String forgeToml, String filename, String modId) {
-        String neoToml = forgeToml
-            .replaceAll("loaderVersion=\"\\[47,\\)\"", "loaderVersion=\"[2,)\"")
-            .replaceAll("modLoader=\"javafml\"", "modLoader=\"javafml\"\\nloaderVersion=\"[2,)\"");
-
-        if (!neoToml.contains("modId=\"neoforge\"")) {
-            neoToml += "\\n\\n# Automatically injected by Forge Stuck!!\\n" +
-                       "[[dependencies." + modId + "]]\\n" +
-                       "    modId=\\"neoforge\\"\\n" +
-                       "    type=\\"required\\"\\n" +
-                       "    versionRange=\\"[21.1.0,)\\"\\n" +
-                       "    ordering=\\"NONE\\"\\n" +
-                       "    side=\\"BOTH\\"\\n";
-        }
-        return neoToml;
     }
 }
 `,
@@ -395,7 +295,7 @@ public class ForgeStuckModFileReader implements IModFileReader {
     path: 'src/main/resources/META-INF/services/net.neoforged.neoforgespi.locating.IModFileReader',
     filename: 'IModFileReader',
     category: 'config',
-    description: 'ServiceLoader registration for ForgeStuckModFileReader preventing NeoForge from rejecting 1.20.1 mods',
+    description: 'ServiceLoader registration — makes NeoForge call ForgeStuckModFileReader BEFORE its own reader for every JAR in /mods/',
     code: `net.neoforged.forgestuck.locator.ForgeStuckModFileReader
 `,
   },
@@ -403,7 +303,7 @@ public class ForgeStuckModFileReader implements IModFileReader {
     path: 'src/main/resources/META-INF/services/net.neoforged.fml.loading.moddiscovery.IModLocator',
     filename: 'IModLocator',
     category: 'config',
-    description: 'ServiceLoader registration for ForgeStuckModLocator allowing automatic mod discovery',
+    description: 'ServiceLoader registration for ForgeStuckModLocator as a secondary fallback scanner',
     code: `net.neoforged.forgestuck.locator.ForgeStuckModLocator
 `,
   },
@@ -422,7 +322,7 @@ import net.minecraft.world.item.component.CustomData;
 
 /**
  * Transparent bridge for ItemStack NBT operations.
- * 
+ *
  * In Minecraft 1.21+, arbitrary root NBT on ItemStack was replaced by Data Components.
  * 1.20.1 mods call:
  *   - stack.getTag()
@@ -430,7 +330,7 @@ import net.minecraft.world.item.component.CustomData;
  *   - stack.setTag(CompoundTag)
  *   - stack.hasTag()
  *   - stack.getTagElement(key)
- * 
+ *
  * This shim intercepts those calls via ASM bytecode redirection and translates them
  * directly into reads and writes on DataComponents.CUSTOM_DATA.
  */
@@ -442,13 +342,9 @@ public final class LegacyItemStackShim {
      * Replaces invokevirtual net/minecraft/world/item/ItemStack.getTag()Lnet/minecraft/nbt/CompoundTag;
      */
     public static CompoundTag getTag(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return null;
-        }
+        if (stack == null || stack.isEmpty()) return null;
         CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-        if (customData == null || customData.isEmpty()) {
-            return null;
-        }
+        if (customData == null || customData.isEmpty()) return null;
         return customData.copyTag();
     }
 
@@ -456,9 +352,7 @@ public final class LegacyItemStackShim {
      * Replaces invokevirtual net/minecraft/world/item/ItemStack.getOrCreateTag()Lnet/minecraft/nbt/CompoundTag;
      */
     public static CompoundTag getOrCreateTag(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return new CompoundTag();
-        }
+        if (stack == null || stack.isEmpty()) return new CompoundTag();
         CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
         if (customData == null || customData.isEmpty()) {
             CompoundTag newTag = new CompoundTag();
@@ -472,9 +366,7 @@ public final class LegacyItemStackShim {
      * Replaces invokevirtual net/minecraft/world/item/ItemStack.hasTag()Z
      */
     public static boolean hasTag(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) {
-            return false;
-        }
+        if (stack == null || stack.isEmpty()) return false;
         CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
         return customData != null && !customData.isEmpty();
     }
@@ -483,9 +375,7 @@ public final class LegacyItemStackShim {
      * Replaces invokevirtual net/minecraft/world/item/ItemStack.setTag(Lnet/minecraft/nbt/CompoundTag;)V
      */
     public static void setTag(ItemStack stack, CompoundTag tag) {
-        if (stack == null || stack.isEmpty()) {
-            return;
-        }
+        if (stack == null || stack.isEmpty()) return;
         if (tag == null || tag.isEmpty()) {
             stack.remove(DataComponents.CUSTOM_DATA);
         } else {
@@ -557,26 +447,9 @@ public class LegacyCapabilityBridge {
             Class clazz = entry.getKey();
             LegacyCapabilityAdapter adapter = entry.getValue();
 
-            // Energy Storage Bridge (FE / RF)
-            event.registerBlockEntity(
-                Capabilities.EnergyStorage.BLOCK,
-                clazz,
-                (be, side) -> adapter.getEnergy(be, side)
-            );
-
-            // Fluid Handler Bridge
-            event.registerBlockEntity(
-                Capabilities.FluidHandler.BLOCK,
-                clazz,
-                (be, side) -> adapter.getFluid(be, side)
-            );
-
-            // Item Handler Bridge
-            event.registerBlockEntity(
-                Capabilities.ItemHandler.BLOCK,
-                clazz,
-                (be, side) -> adapter.getItem(be, side)
-            );
+            event.registerBlockEntity(Capabilities.EnergyStorage.BLOCK, clazz, (be, side) -> adapter.getEnergy(be, side));
+            event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, clazz, (be, side) -> adapter.getFluid(be, side));
+            event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, clazz, (be, side) -> adapter.getItem(be, side));
         }
     }
 }
@@ -629,21 +502,13 @@ public class LegacyRegistryBridge<T> {
         }
 
         @Override
-        public T get() {
-            return holder.get();
-        }
+        public T get() { return holder.get(); }
 
-        public ResourceLocation getId() {
-            return holder.getId();
-        }
+        public ResourceLocation getId() { return holder.getId(); }
 
-        public ResourceKey<?> getKey() {
-            return holder.getKey();
-        }
+        public ResourceKey<?> getKey() { return holder.getKey(); }
 
-        public boolean isPresent() {
-            return holder.isBound();
-        }
+        public boolean isPresent() { return holder.isBound(); }
     }
 }
 `,
@@ -696,15 +561,14 @@ public class LegacyNetworkBridge {
     }
 
     public static <M> void registerMessage(ResourceLocation channel, int id, Class<M> clazz,
-                                          BiConsumer<M, FriendlyByteBuf> encoder,
-                                          Function<FriendlyByteBuf, M> decoder,
-                                          BiConsumer<M, IPayloadContext> handler) {
+                                           BiConsumer<M, FriendlyByteBuf> encoder,
+                                           Function<FriendlyByteBuf, M> decoder,
+                                           BiConsumer<M, IPayloadContext> handler) {
         REGISTERED_CHANNELS.add(new ChannelDefinition<>(channel, id, clazz, encoder, decoder, handler));
     }
 
     public static void registerPayloadHandlers(RegisterPayloadHandlersEvent event) {
         final PayloadRegistrar registrar = event.registrar("forgestuck");
-
         for (ChannelDefinition<?> def : REGISTERED_CHANNELS) {
             registerChannelPayload(registrar, def);
         }
@@ -729,9 +593,7 @@ public class LegacyNetworkBridge {
 
     public record BridgePayload<M>(Type<BridgePayload<M>> type, M message) implements CustomPacketPayload {
         @Override
-        public Type<? extends CustomPacketPayload> type() {
-            return type;
-        }
+        public Type<? extends CustomPacketPayload> type() { return type; }
     }
 }
 `,
@@ -768,8 +630,7 @@ public class ThermalSeriesAdapter {
     public static int getEnergyStored(ItemStack stack) {
         CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
         if (customData == null) return 0;
-        CompoundTag tag = customData.copyTag();
-        return tag.getInt(NBT_ENERGY);
+        return customData.copyTag().getInt(NBT_ENERGY);
     }
 
     public static void setEnergyStored(ItemStack stack, int energy) {
@@ -850,7 +711,6 @@ public class ForestryGeneticsAdapter {
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.forgestuck.ForgeStuckMod;
 
 /**
@@ -888,6 +748,7 @@ import org.objectweb.asm.tree.*;
 
 /**
  * ASM Class Transformer operating at classloading time.
+ * Redirects 1.20.1 ItemStack NBT methods to LegacyItemStackShim static equivalents.
  */
 public class ForgeClassTransformer {
 
@@ -914,39 +775,28 @@ public class ForgeClassTransformer {
                         "()Lnet/minecraft/nbt/CompoundTag;".equals(methodInsn.desc)) {
 
                         method.instructions.set(insn, new MethodInsnNode(
-                            Opcodes.INVOKESTATIC,
-                            SHIM_CLASS,
-                            "getTag",
-                            "(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/nbt/CompoundTag;",
-                            false
+                            Opcodes.INVOKESTATIC, SHIM_CLASS, "getTag",
+                            "(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/nbt/CompoundTag;", false
                         ));
                         modified = true;
-                    }
-                    else if (methodInsn.getOpcode() == Opcodes.INVOKEVIRTUAL &&
-                             TARGET_ITEMSTACK.equals(methodInsn.owner) &&
-                             "getOrCreateTag".equals(methodInsn.name) &&
-                             "()Lnet/minecraft/nbt/CompoundTag;".equals(methodInsn.desc)) {
+                    } else if (methodInsn.getOpcode() == Opcodes.INVOKEVIRTUAL &&
+                               TARGET_ITEMSTACK.equals(methodInsn.owner) &&
+                               "getOrCreateTag".equals(methodInsn.name) &&
+                               "()Lnet/minecraft/nbt/CompoundTag;".equals(methodInsn.desc)) {
 
                         method.instructions.set(insn, new MethodInsnNode(
-                            Opcodes.INVOKESTATIC,
-                            SHIM_CLASS,
-                            "getOrCreateTag",
-                            "(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/nbt/CompoundTag;",
-                            false
+                            Opcodes.INVOKESTATIC, SHIM_CLASS, "getOrCreateTag",
+                            "(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/nbt/CompoundTag;", false
                         ));
                         modified = true;
-                    }
-                    else if (methodInsn.getOpcode() == Opcodes.INVOKEVIRTUAL &&
-                             TARGET_ITEMSTACK.equals(methodInsn.owner) &&
-                             "setTag".equals(methodInsn.name) &&
-                             "(Lnet/minecraft/nbt/CompoundTag;)V".equals(methodInsn.desc)) {
+                    } else if (methodInsn.getOpcode() == Opcodes.INVOKEVIRTUAL &&
+                               TARGET_ITEMSTACK.equals(methodInsn.owner) &&
+                               "setTag".equals(methodInsn.name) &&
+                               "(Lnet/minecraft/nbt/CompoundTag;)V".equals(methodInsn.desc)) {
 
                         method.instructions.set(insn, new MethodInsnNode(
-                            Opcodes.INVOKESTATIC,
-                            SHIM_CLASS,
-                            "setTag",
-                            "(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/nbt/CompoundTag;)V;",
-                            false
+                            Opcodes.INVOKESTATIC, SHIM_CLASS, "setTag",
+                            "(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/nbt/CompoundTag;)V", false
                         ));
                         modified = true;
                     }
@@ -954,9 +804,7 @@ public class ForgeClassTransformer {
             }
         }
 
-        if (!modified) {
-            return basicClass;
-        }
+        if (!modified) return basicClass;
 
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         classNode.accept(writer);
@@ -976,7 +824,7 @@ public class ForgeClassTransformer {
     id 'net.neoforged.moddev' version '1.0.18'
 }
 
-version = '1.21.1-1.0.0'
+version = '1.21.1-1.1.0'
 group = 'net.neoforged.forgestuck'
 
 repositories {
@@ -1054,7 +902,7 @@ issueTrackerURL="https://github.com/example/forgestuck/issues"
 
 [[mods]]
 modId="forgestuck"
-version="1.21.1-1.0.0"
+version="1.21.1-1.1.0"
 displayName="Forge Stuck!!"
 logoFile="forgestuck.png"
 authors="Forge Stuck!! Team"
@@ -1062,6 +910,7 @@ description='''
 NeoForge 1.21.1 runtime compatibility mod and bytecode transformer allowing
 Minecraft Forge 1.20.1 mods to run on NeoForge 1.21.1!
 For when your favorite mods are stubbornly stuck in 1.20.1.
+Just drop your old Forge mods alongside forgestuck.jar — no subfolders needed.
 Includes deep compatibility for Thermal Series, Gendustry CE, and Advanced Generators.
 '''
 
@@ -1093,10 +942,10 @@ neoforge_version=21.1.72
 mod_id=forgestuck
 mod_name=Forge Stuck!!
 mod_license=LGPL-3.0
-mod_version=1.21.1-1.0.0
+mod_version=1.21.1-1.1.0
 mod_group_id=net.neoforged.forgestuck
 mod_authors=Forge Stuck!! Team
-mod_description=NeoForge 1.21.1 runtime compatibility layer for Forge 1.20.1 mods.
+mod_description=NeoForge 1.21.1 runtime compatibility layer for Forge 1.20.1 mods. Drop and launch.
 `,
   },
 ];

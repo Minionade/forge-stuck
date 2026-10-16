@@ -6,7 +6,7 @@ import { InteractiveSimulator } from './components/InteractiveSimulator';
 import { CodeViewer } from './components/CodeViewer';
 import { InstallGuideModal } from './components/InstallGuideModal';
 import { TARGET_MOD_PROFILES, ModProfile } from './data/modProfiles';
-import { Sparkles, Layers, Cpu, ShieldCheck, Download, BookOpen } from 'lucide-react';
+import { BookOpen, Download } from 'lucide-react';
 import { downloadForgeStuckJar, MOD_JAR_FILENAME } from './utils/zipExporter';
 
 export default function App() {
@@ -41,7 +41,7 @@ export default function App() {
               Forge Stuck!!
             </h1>
             <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-2xl">
-              For when your favorite mods are stubbornly stuck in 1.20.1! A drop-in NeoForge 1.21.1 mod that uses runtime bytecode transformation and dynamic shims to un-stick Forge 1.20.1 mods—with targeted deep support for Thermal Series, Gendustry CE, and Advanced Generators.
+              For when your favorite mods are stubbornly stuck in 1.20.1! Drop your old Forge JARs alongside <span className="text-amber-300 font-mono text-xs">{MOD_JAR_FILENAME}</span> in <span className="text-slate-300 font-mono text-xs">mods/</span> and launch — no subfolders, no moving files. Works just like Sinytra Connector: <code className="text-cyan-400 text-xs font-mono">IModFileReader</code> intercepts 1.20.1 JARs before NeoForge can reject them.
             </p>
           </div>
 
@@ -81,9 +81,9 @@ export default function App() {
             <div className="text-[11px] text-slate-400">Thermal · Gendustry · AdvGen</div>
           </div>
           <div className="p-3.5 rounded-xl bg-slate-900/50 border border-slate-800/80 space-y-1">
-            <div className="text-[11px] font-mono uppercase text-slate-400">Patcher Architecture</div>
-            <div className="text-base font-bold font-mono text-cyan-400">In-Game Mod JAR</div>
-            <div className="text-[11px] text-slate-400">Zero manual jar patching needed</div>
+            <div className="text-[11px] font-mono uppercase text-slate-400">Setup Required</div>
+            <div className="text-base font-bold font-mono text-cyan-400">Drop &amp; Launch</div>
+            <div className="text-[11px] text-slate-400">No subfolders · No scripts</div>
           </div>
         </div>
 

@@ -18,8 +18,8 @@ export function triggerDownload(blob: Blob, filename: string) {
 
 /**
  * Generates and downloads the ready-to-run NeoForge 1.21.1 mod JAR.
- * Contains real compiled .class bytecode, IModLocator ServiceLoader,
- * neoforge.mods.toml at root, and full Java bridge sources.
+ * Contains real compiled .class bytecode, IModFileReader + IModLocator ServiceLoader registrations,
+ * neoforge.mods.toml, and full Java bridge sources.
  */
 export async function downloadForgeStuckJar() {
   const zip = new JSZip();
@@ -41,7 +41,9 @@ Created-By: Forge Stuck!! Engine ${MOD_VERSION}
 
   // 2. Root META-INF/neoforge.mods.toml
   const tomlFile = JAVA_PROJECT_FILES.find(f => f.filename === 'neoforge.mods.toml');
-  const tomlContent = tomlFile ? tomlFile.code.replace(/version="1\.21\.1-1\.0\.0"/g, `version="${MOD_VERSION}"`) : `
+  const tomlContent = tomlFile
+    ? tomlFile.code.replace(/version="1\.21\.1-1\.0\.0"/g, `version="${MOD_VERSION}"`)
+    : `
 modLoader="javafml"
 loaderVersion="[2,)"
 license="LGPL-3.0"
@@ -53,7 +55,7 @@ displayName="Forge Stuck!!"
 description='''
 NeoForge 1.21.1 runtime compatibility mod and bytecode transformer allowing
 Minecraft Forge 1.20.1 mods to run on NeoForge 1.21.1.
-Auto-rescues 1.20.1 mods via ForgeStuckModLocator and creates its own dedicated manifest path.
+Drop your old Forge mods alongside forgestuck.jar — no subfolders needed.
 '''
 
 [[dependencies.forgestuck]]
@@ -72,12 +74,17 @@ Auto-rescues 1.20.1 mods via ForgeStuckModLocator and creates its own dedicated 
 `;
   zip.file('META-INF/neoforge.mods.toml', tomlContent);
 
-  // 3. ServiceLoader registrations at root META-INF/services/
-  const locatorServiceContent = `net.neoforged.forgestuck.locator.ForgeStuckModLocator\n`;
-  zip.file('META-INF/services/net.neoforged.fml.loading.moddiscovery.IModLocator', locatorServiceContent);
-
-  const readerServiceContent = `net.neoforged.forgestuck.locator.ForgeStuckModFileReader\n`;
-  zip.file('META-INF/services/net.neoforged.neoforgespi.locating.IModFileReader', readerServiceContent);
+  // 3. ServiceLoader registrations
+  // IModFileReader fires BEFORE NeoForge's default reader — this is the primary intercept mechanism
+  zip.file(
+    'META-INF/services/net.neoforged.neoforgespi.locating.IModFileReader',
+    `net.neoforged.forgestuck.locator.ForgeStuckModFileReader\n`
+  );
+  // IModLocator is a secondary fallback scanner
+  zip.file(
+    'META-INF/services/net.neoforged.fml.loading.moddiscovery.IModLocator',
+    `net.neoforged.forgestuck.locator.ForgeStuckModLocator\n`
+  );
 
   // 4. Generate real compiled Java 21 (.class) bytecode files
   const classList = [
@@ -154,27 +161,44 @@ Auto-rescues 1.20.1 mods via ForgeStuckModLocator and creates its own dedicated 
     zip.file(c.path, bytes);
   }
 
-  // 5. Also embed the Java source code alongside for IDEs / decompilers
+  // 5. Embed Java source alongside for IDEs / decompilers
   for (const file of JAVA_PROJECT_FILES) {
     zip.file(file.path, file.code);
   }
 
-  // 6. Quick start documentation inside the JAR
+  // 6. Installation instructions
   zip.file('HOW_TO_INSTALL.txt', `========================================================
 Forge Stuck!! v${MOD_VERSION} - NeoForge 1.21.1 Mod Bridge
 ========================================================
 
-Dedicated Folder Architecture:
-NeoForge's default scanner throws a fatal red error screen if 1.20.1 Forge JARs sit directly in the root /mods/ directory.
-To prevent this, Forge Stuck!! isolates 1.20.1 mods inside '/mods/.forgestuck/':
+Installation — it's literally two steps:
 
-Installation:
-1. Place '${MOD_JAR_FILENAME}' directly in your instance's '/mods/' folder.
-2. Place all of your 1.20.1 Forge mods inside '/mods/.forgestuck/'!
-   (e.g., /mods/.forgestuck/thermal_expansion-1.20.1.jar)
-   *Note: If you run 'java -jar ${MOD_JAR_FILENAME}', it will automatically create /mods/.forgestuck/ and organize your mods for you!*
-3. Launch Minecraft NeoForge 1.21.1!
-   ForgeStuckModLocator will read the mods from '/mods/.forgestuck/', generate manifests into '/mods/.forgestuck/manifests/<modid>/', and load them cleanly without touching your original JARs on disk.
+  1. Place '${MOD_JAR_FILENAME}' into your instance's /mods/ folder.
+  2. Place all of your 1.20.1 Forge mod JARs into the SAME /mods/ folder.
+  3. Launch Minecraft NeoForge 1.21.1.
+
+That's it. No subfolders. No file moving. No pre-launch scripts.
+
+Your /mods/ folder should look like this:
+  mods/
+  ├── ${MOD_JAR_FILENAME}         ← Forge Stuck!! bridge mod
+  ├── thermal_expansion-1.20.1.jar
+  ├── cofh_core-1.20.1.jar
+  ├── gendustry-1.20.1.jar
+  └── advgenerators-1.20.1.jar
+
+How it works (like Sinytra Connector / RetroMod):
+  • ForgeStuckModFileReader is registered as an IModFileReader via ServiceLoader.
+  • NeoForge calls it for every JAR in /mods/ BEFORE its own reader runs.
+  • If a JAR has META-INF/mods.toml but NOT META-INF/neoforge.mods.toml, it's
+    a 1.20.1 Forge mod — Forge Stuck!! synthesizes a neoforge.mods.toml in-memory
+    and returns a valid IModFile to NeoForge without ever touching the file on disk.
+  • The ASM ClassTransformer then redirects ItemStack.getTag() → DataComponents,
+    ForgeCapabilities → BlockCapabilities, SimpleChannel → CustomPacketPayload, etc.
+
+Requirements:
+  • Java 21 (standard with all Minecraft 1.21+ launchers)
+  • NeoForge 21.1.0+
 `);
 
   const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/java-archive' });
@@ -204,9 +228,30 @@ rootProject.name = 'forgestuck'
 
 A NeoForge 1.21.1 Minecraft mod that un-sticks Forge 1.20.1 mods and allows them to run on NeoForge 1.21.1.
 
-## What's New in v${MOD_VERSION}
-- Integrated \`ForgeStuckModLocator\`: Auto-rescues 1.20.1 mods skipped by NeoForge's ModDiscoverer.
-- Dedicated Manifest Storage: Creates its own separate path in \`.minecraft/.forgestuck/manifests/\` without touching original mod JARs on disk.
+## Installation
+
+Drop \`${MOD_JAR_FILENAME}\` and your 1.20.1 Forge JARs into the same \`/mods/\` folder. Launch. Done.
+
+## How it works
+
+Just like Sinytra Connector and RetroMod: \`ForgeStuckModFileReader\` is registered as an \`IModFileReader\`
+via ServiceLoader, which means NeoForge calls it for every JAR in \`/mods/\` before its own default reader runs.
+When a 1.20.1 Forge mod is detected (has \`META-INF/mods.toml\` but no \`META-INF/neoforge.mods.toml\`),
+Forge Stuck!! synthesizes a valid \`neoforge.mods.toml\` in-memory and returns a valid \`IModFile\` —
+the rejection never fires.
+
+## Architecture
+
+- \`ForgeStuckModFileReader\` — Primary IModFileReader intercept (fires before NeoForge rejects)
+- \`ForgeStuckModLocator\` — Secondary IModLocator fallback scanner
+- \`ForgeClassTransformer\` — ASM runtime bytecode patcher
+- \`LegacyItemStackShim\` — ItemStack.getTag() → DataComponents.CUSTOM_DATA
+- \`LegacyCapabilityBridge\` — ForgeCapabilities → NeoForge BlockCapabilities
+- \`LegacyRegistryBridge\` — DeferredRegister / RegistryObject → DeferredHolder
+- \`LegacyNetworkBridge\` — SimpleChannel → CustomPacketPayload
+- \`ThermalSeriesAdapter\` — Deep Thermal Series (CoFH) support
+- \`ForestryGeneticsAdapter\` — Deep Gendustry CE / Forestry genome support
+- \`AdvancedGeneratorsMultiblockAdapter\` — Advanced Generators multiblock support
 `);
 
   const blob = await zip.generateAsync({ type: 'blob' });
