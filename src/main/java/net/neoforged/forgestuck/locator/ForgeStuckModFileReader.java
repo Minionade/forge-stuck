@@ -48,8 +48,8 @@ public class ForgeStuckModFileReader implements IModFileReader {
                 } catch (Throwable ignored) {}
 
                 try {
-                    Method getInput = contents.getClass().getMethod("getInputStream", String.class);
-                    try (InputStream is = (InputStream) getInput.invoke(contents, "META-INF/neoforge.mods.toml")) {
+                    Method getInput2 = contents.getClass().getMethod("getInputStream", String.class);
+                    try (InputStream is = (InputStream) getInput2.invoke(contents, "META-INF/neoforge.mods.toml")) {
                         hasNeoToml = is != null;
                     } catch (Throwable ignored) {}
                 } catch (Throwable ignored) {}

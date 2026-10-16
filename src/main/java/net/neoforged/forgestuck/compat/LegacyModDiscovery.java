@@ -57,4 +57,13 @@ public final class LegacyModDiscovery {
         Matcher matcher = pattern.matcher(value);
         return matcher.find() ? matcher.group(1) : fallback;
     }
+
+    // Helper wrappers used by other code paths
+    public static String matchModIdFromToml(String toml) {
+        return matchFirst(MOD_ID_PATTERN, toml == null ? "" : toml, "unknown");
+    }
+
+    public static String matchDisplayNameFromToml(String toml, String fallback) {
+        return matchFirst(DISPLAY_NAME_PATTERN, toml == null ? "" : toml, fallback);
+    }
 }
