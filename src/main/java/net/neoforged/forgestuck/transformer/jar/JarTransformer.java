@@ -232,7 +232,7 @@ public class JarTransformer {
         }
         c.set("type", type.toLowerCase(Locale.ROOT));
         String range = dep.getOrElse("versionRange", "");
-        if (depId.equals("minecraft")) range = TARGET_MINECRAFT_RANGE;
+        if (depId.equalsIgnoreCase("minecraft")) range = TARGET_MINECRAFT_RANGE;
         if (!range.isEmpty()) c.set("versionRange", range);
         c.set("ordering", dep.getOrElse("ordering", "NONE"));
         c.set("side", dep.getOrElse("side", "BOTH"));

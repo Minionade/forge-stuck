@@ -60,8 +60,8 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
                     continue;
                 }
                 LOGGER.info("{} candidate found: {}", TAG, name);
-                JarTransformer.Result result = transformer.transformCached(jar, cacheDir);
                 context.addLocated(jar);
+                JarTransformer.Result result = transformer.transformCached(jar, cacheDir);
                 ModFileDiscoveryAttributes attributes = ModFileDiscoveryAttributes.DEFAULT.withLocator(this);
                 var modFile = pipeline.addPath(result.output(), attributes, IncompatibleFileReporting.ERROR);
                 if (modFile.isPresent()) {
@@ -71,7 +71,7 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
                 } else {
                     LOGGER.info("{} skipped {}: loader did not accept {}", TAG, name, result.output());
                 }
-            } catch (Throwable t) {
+            } catch (Exception | LinkageError t) {
                 LOGGER.error("{} skipped {}: {}", TAG, name, t.toString(), t);
             }
         }

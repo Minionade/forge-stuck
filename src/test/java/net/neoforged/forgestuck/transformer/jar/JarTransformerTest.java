@@ -118,7 +118,7 @@ class JarTransformerTest {
         assertEquals(2, deps.size());
         assertTrue(deps.stream().noneMatch(d -> "forge".equals(d.get("modId"))));
         UnmodifiableConfig mc = deps.stream().filter(d -> "minecraft".equals(d.get("modId"))).findFirst().orElseThrow();
-        assertEquals("[1.21.1,)", mc.get("versionRange"));
+        assertEquals(JarTransformer.TARGET_MINECRAFT_RANGE, mc.get("versionRange"));
         assertEquals("required", mc.get("type"));
         UnmodifiableConfig bd = deps.stream().filter(d -> "bdlib".equals(d.get("modId"))).findFirst().orElseThrow();
         assertEquals("[2,)", bd.get("versionRange"));
