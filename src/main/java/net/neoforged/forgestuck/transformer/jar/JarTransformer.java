@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "4";
+    public static final String TRANSFORMER_VERSION = "5";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     /** Targeted Thermal 1.20.1 -> NeoForge 1.21.1 compatibility shim: Thermal modules depend on id "thermal". */
     public static final String THERMAL_SOURCE_ID = "thermal_foundation";
@@ -75,19 +75,26 @@ public class JarTransformer {
 
     private final List<ClassTransformStep> steps;
     private final boolean removeUnknownLoaders;
+    private final LegacyNameMappings mappings;
 
     public JarTransformer(List<ClassTransformStep> steps) {
         this(steps, REMOVE_UNKNOWN_MODEL_LOADERS);
     }
 
     public JarTransformer(List<ClassTransformStep> steps, boolean removeUnknownLoaders) {
+        this(steps, removeUnknownLoaders, LegacyNameMappings.defaults());
+    }
+
+    public JarTransformer(List<ClassTransformStep> steps, boolean removeUnknownLoaders, LegacyNameMappings mappings) {
         this.steps = List.copyOf(steps);
         this.removeUnknownLoaders = removeUnknownLoaders;
+        this.mappings = mappings;
     }
 
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
-        return new JarTransformer(List.of(new ForgeClassTransformStep(), new ResourceLocationClassTransformStep()));
+        return new JarTransformer(List.of(new ForgeClassTransformStep(), new ResourceLocationClassTransformStep(),
+                new SrgMemberRemapStep()));
     }
 
     /** Returns the cached output for this source jar, creating it when missing. */
@@ -126,6 +133,9 @@ public class JarTransformer {
             String jarName = source.getFileName().toString();
             Map<String, String> rewritten = new LinkedHashMap<>();
             TreeSet<String> removed = new TreeSet<>();
+            MixinResourceRewriter mixins = new MixinResourceRewriter(mappings, jarName);
+            Map<String, JarEntry> pendingMixinEntries = new LinkedHashMap<>();
+            Map<String, byte[]> pendingMixinData = new LinkedHashMap<>();
             Enumeration<JarEntry> entries = in.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
@@ -152,6 +162,11 @@ public class JarTransformer {
                     data = stripManifestDigests(data);
                 } else if (name.endsWith(".class")) {
                     data = applySteps(name, data);
+                    mixins.inspectClass(name.substring(0, name.length() - ".class".length()).replace('/', '.'), data);
+                } else if (MixinResourceRewriter.isCandidate(name)) {
+                    pendingMixinEntries.put(name, entry);
+                    pendingMixinData.put(name, data);
+                    continue;
                 } else if (MODEL_JSON.matcher(name).matches()) {
                     data = rewriteModelLoader(name, data, rewritten, removed);
                 }
@@ -160,6 +175,11 @@ public class JarTransformer {
             if (modsToml == null) {
                 throw new IOException("No META-INF/mods.toml in " + source.getFileName());
             }
+            for (Map.Entry<String, JarEntry> pending : pendingMixinEntries.entrySet()) {
+                String name = pending.getKey();
+                putEntry(out, pending.getValue(), name, mixins.rewrite(name, pendingMixinData.get(name)));
+            }
+            mixins.logSummary();
             rewritten.forEach((from, to) -> LOGGER.info("{} {} model loader {} -> {}", TAG, jarName, from, to));
             for (String id : removed) {
                 LOGGER.warn("{} {} removed unknown model loader '{}' from model JSON(s); models may render or "
