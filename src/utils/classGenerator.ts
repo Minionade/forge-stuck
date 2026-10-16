@@ -1,6 +1,8 @@
 /**
  * Generates valid Java 21 (.class) bytecode binary structures.
  * Magic: 0xCAFEBABE, Major Version: 65 (Java 21).
+ *
+ * Extended: supports adding simple instance methods that return null (useful for interface stubs)
  */
 export function generateClassBytes(
   className: string,
@@ -53,32 +55,36 @@ export function generateClassBytes(
     ifaceIndices.push(addClass(ifaceUtf8));
   }
 
+  // Prepare method entries collection (we'll always add <init>, optionally more)
+  type MethodEntry = { nameIdx: number; descIdx: number; codeBytes: number[]; maxStack: number; maxLocals: number };
+  const methods: MethodEntry[] = [];
+
   // <init> method
   const initNameUtf8 = addUtf8('<init>');
   const initDescUtf8 = addUtf8('()V');
-  const codeAttrUtf8 = addUtf8('Code');
 
+  // Build <init> code: aload_0; invokespecial super.<init>; return
   const superInitNat = addNameAndType(initNameUtf8, initDescUtf8);
   const superInitMethodRef = addMethodRef(superClassIdx, superInitNat);
 
-  // Build Code attribute for <init>
-  // Instructions: aload_0 (0x2a), invokespecial super.<init> (0xb7 + u2), return (0xb1)
-  const codeBytes = [
+  const initCodeBytes = [
     0x2a, // aload_0
     0xb7, (superInitMethodRef >> 8) & 0xff, superInitMethodRef & 0xff, // invokespecial
-    0xb1  // return
+    0xb1 // return
   ];
 
-  const codeAttrBytes = [
-    (codeAttrUtf8 >> 8) & 0xff, codeAttrUtf8 & 0xff, // attribute_name_index
-    0x00, 0x00, 0x00, 0x11, // attribute_length: 4 (max_stack, max_locals) + 4 (code_len) + 5 (code) + 2 (exceptions) + 2 (attrs) = 17 bytes
-    0x00, 0x01, // max_stack = 1
-    0x00, 0x01, // max_locals = 1
-    0x00, 0x00, 0x00, 0x05, // code_length = 5
-    ...codeBytes,
-    0x00, 0x00, // exception_table_length = 0
-    0x00, 0x00  // attributes_count = 0
-  ];
+  methods.push({ nameIdx: initNameUtf8, descIdx: initDescUtf8, codeBytes: initCodeBytes, maxStack: 1, maxLocals: 1 });
+
+  // If implementing IModFileReader, add a stubbed instance method "read" with correct descriptor
+  if (interfaces.includes('net/neoforged/neoforgespi/locating/IModFileReader')) {
+    const readNameUtf8 = addUtf8('read');
+    const readDescUtf8 = addUtf8('(Lcpw/mods/jarhandling/JarContents;Lnet/neoforged/neoforgespi/locating/ModFileDiscoveryAttributes;)Lnet/neoforged/neoforgespi/locating/IModFile;');
+
+    // Method body: aconst_null; areturn
+    const readCodeBytes = [0x01, 0xb0];
+    // instance method: locals: 0=this,1=JarContents,2=ModFileDiscoveryAttributes => max_locals = 3
+    methods.push({ nameIdx: readNameUtf8, descIdx: readDescUtf8, codeBytes: readCodeBytes, maxStack: 1, maxLocals: 3 });
+  }
 
   // Assemble full byte array
   const buffer: number[] = [];
@@ -117,16 +123,65 @@ export function generateClassBytes(
   // fields_count: 0
   buffer.push(0x00, 0x00);
 
-  // methods_count: 1 (<init>)
-  buffer.push(0x00, 0x01);
+  // methods_count: methods.length
+  buffer.push((methods.length >> 8) & 0xff, methods.length & 0xff);
 
-  // method: ACC_PUBLIC (0x0001)
-  buffer.push(0x00, 0x01);
-  buffer.push((initNameUtf8 >> 8) & 0xff, initNameUtf8 & 0xff);
-  buffer.push((initDescUtf8 >> 8) & 0xff, initDescUtf8 & 0xff);
-  // attributes_count: 1 (Code)
-  buffer.push(0x00, 0x01);
-  buffer.push(...codeAttrBytes);
+  // For each method, emit method_info
+  for (const m of methods) {
+    // access_flags: public (0x0001)
+    buffer.push(0x00, 0x01);
+    // name_index
+    buffer.push((m.nameIdx >> 8) & 0xff, m.nameIdx & 0xff);
+    // descriptor_index
+    buffer.push((m.descIdx >> 8) & 0xff, m.descIdx & 0xff);
+
+    // Build Code attribute
+    const codeLen = m.codeBytes.length;
+    const attributeLength = 12 + codeLen; // as per spec: max_stack(2)+max_locals(2)+code_length(4)+code_len+exception(2)+attrs(2)
+
+    // attributes_count = 1 (Code)
+    buffer.push(0x00, 0x01);
+
+    // attribute_name_index -> code attribute name must be in cp; find or add
+    // We added 'Code' earlier for init, but not guaranteed here. Ensure it exists.
+    let codeAttrIndex = -1;
+    // find existing utf8 'Code'
+    for (let i = 0; i < cpEntries.length; i++) {
+      const e = cpEntries[i];
+      if (e.tag === 1) {
+        // bytes start with length two bytes then utf8 bytes
+        const len = (e.bytes[0] << 8) | e.bytes[1];
+        const strBytes = e.bytes.slice(2);
+        const s = new TextDecoder().decode(new Uint8Array(strBytes));
+        if (s === 'Code') {
+          codeAttrIndex = i + 1; // constant pool index
+          break;
+        }
+      }
+    }
+    if (codeAttrIndex === -1) {
+      // add utf8 'Code'
+      codeAttrIndex = addUtf8('Code');
+    }
+
+    // attribute_name_index
+    buffer.push((codeAttrIndex >> 8) & 0xff, codeAttrIndex & 0xff);
+    // attribute_length (u4)
+    buffer.push((attributeLength >> 24) & 0xff, (attributeLength >> 16) & 0xff, (attributeLength >> 8) & 0xff, attributeLength & 0xff);
+
+    // max_stack (u2)
+    buffer.push((m.maxStack >> 8) & 0xff, m.maxStack & 0xff);
+    // max_locals (u2)
+    buffer.push((m.maxLocals >> 8) & 0xff, m.maxLocals & 0xff);
+    // code_length (u4)
+    buffer.push((codeLen >> 24) & 0xff, (codeLen >> 16) & 0xff, (codeLen >> 8) & 0xff, codeLen & 0xff);
+    // code bytes
+    buffer.push(...m.codeBytes);
+    // exception_table_length (u2) = 0
+    buffer.push(0x00, 0x00);
+    // attributes_count (u2) = 0
+    buffer.push(0x00, 0x00);
+  }
 
   // class attributes_count: 0
   buffer.push(0x00, 0x00);
