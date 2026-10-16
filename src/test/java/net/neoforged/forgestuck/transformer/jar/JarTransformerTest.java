@@ -186,4 +186,58 @@ class JarTransformerTest {
         assertFalse(third.cacheHit());
         assertNotEquals(first.output(), third.output());
     }
+
+    private Path jarWith(Path dir, String entry, String json) throws IOException {
+        Path jar = dir.resolve("m.jar");
+        try (OutputStream os = Files.newOutputStream(jar); JarOutputStream out = new JarOutputStream(os)) {
+            put(out, "META-INF/mods.toml", MODS_TOML.getBytes(StandardCharsets.UTF_8));
+            put(out, entry, json.getBytes(StandardCharsets.UTF_8));
+        }
+        return jar;
+    }
+
+    private String transformedEntry(Path dir, String entry, String json, boolean fallback) throws IOException {
+        Path out = dir.resolve("out.jar");
+        new JarTransformer(List.of(), fallback).transform(jarWith(dir, entry, json), out);
+        return new String(read(out, entry), StandardCharsets.UTF_8);
+    }
+
+    @Test
+    void rewritesBucketLoader(@TempDir Path dir) throws Exception {
+        String r = transformedEntry(dir, "assets/x/models/item/b.json", "{\"loader\":\"forge:bucket\",\"fluid\":\"minecraft:water\"}", true);
+        assertTrue(r.contains("neoforge:fluid_container"));
+        assertFalse(r.contains("forge:bucket"));
+        assertTrue(r.contains("minecraft:water"));
+    }
+
+    @Test
+    void rewritesObjLoader(@TempDir Path dir) throws Exception {
+        String r = transformedEntry(dir, "assets/x/models/block/o.json", "{\"loader\":\"forge:obj\",\"model\":\"x:models/o.obj\"}", true);
+        assertTrue(r.contains("\"neoforge:obj\""));
+    }
+
+    @Test
+    void removesUnknownLoaderOnlyWhenFallbackEnabled(@TempDir Path dir) throws Exception {
+        String json = "{\"loader\":\"advgenerators:multiblock_model\",\"parent\":\"block/cube\"}";
+        String r = transformedEntry(dir, "assets/x/models/block/m.json", json, true);
+        assertFalse(r.contains("loader"));
+        assertTrue(r.contains("block/cube"));
+        assertEquals(json, transformedEntry(dir, "assets/x/models/block/m.json", json, false));
+    }
+
+    @Test
+    void nonModelJsonAndModelsWithoutLoaderAreUntouched(@TempDir Path dir) throws Exception {
+        String json = "{\"loader\":\"forge:bucket\"}";
+        assertEquals(json, transformedEntry(dir, "assets/x/lang/en_us.json", json, true));
+        String plain = "{ \"parent\" : \"block/cube\" }";
+        assertEquals(plain, transformedEntry(dir, "assets/x/models/block/p.json", plain, true));
+    }
+
+    @Test
+    void cacheFileNameContainsTransformerVersion(@TempDir Path dir) throws Exception {
+        Path jar = buildJar(dir, "a.jar", MODS_TOML, "1.0");
+        Path out = new JarTransformer(List.of()).transformCached(jar, dir.resolve("cache")).output();
+        assertTrue(out.getFileName().toString().endsWith("-t" + JarTransformer.TRANSFORMER_VERSION + ".jar"));
+        assertNotEquals("1", JarTransformer.TRANSFORMER_VERSION);
+    }
 }

@@ -16,6 +16,9 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.TreeSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.jar.JarEntry;
@@ -23,6 +26,10 @@ import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.GsonBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "1";
+    public static final String TRANSFORMER_VERSION = "2";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 
@@ -43,13 +50,36 @@ public class JarTransformer {
     private static final String TAG = "[Forge Stuck!!]";
     private static final Pattern SIGNATURE = Pattern.compile("META-INF/[^/]+\\.(SF|RSA|DSA)", Pattern.CASE_INSENSITIVE);
 
+    /**
+     * Default for {@link #removeUnknownLoaders}. When enabled, model JSONs naming a custom (non-vanilla,
+     * non-NeoForge) loader that has no known mapping get their {@code loader} property removed so they parse as
+     * plain vanilla models. This avoids startup failures but loses the custom model's fidelity/functionality.
+     */
+    public static final boolean REMOVE_UNKNOWN_MODEL_LOADERS = true;
+
+    /** Direct Forge 1.20.1 -> NeoForge 1.21.1 model loader id mappings. */
+    public static final Map<String, String> MODEL_LOADER_MAPPINGS = Map.of(
+            "forge:bucket", "neoforge:fluid_container",
+            "forge:obj", "neoforge:obj",
+            "forge:composite", "neoforge:composite",
+            "forge:separate_transforms", "neoforge:separate_transforms",
+            "forge:empty", "neoforge:empty");
+
+    private static final Pattern MODEL_JSON = Pattern.compile("assets/[^/]+/models/.+\\.json");
+
     /** Result of a cached transformation. */
     public record Result(Path output, boolean cacheHit) {}
 
     private final List<ClassTransformStep> steps;
+    private final boolean removeUnknownLoaders;
 
     public JarTransformer(List<ClassTransformStep> steps) {
+        this(steps, REMOVE_UNKNOWN_MODEL_LOADERS);
+    }
+
+    public JarTransformer(List<ClassTransformStep> steps, boolean removeUnknownLoaders) {
         this.steps = List.copyOf(steps);
+        this.removeUnknownLoaders = removeUnknownLoaders;
     }
 
     /** Transformer with the default step list. */
@@ -90,6 +120,9 @@ public class JarTransformer {
                 OutputStream fos = Files.newOutputStream(output);
                 JarOutputStream out = new JarOutputStream(fos)) {
             String modsToml = null;
+            String jarName = source.getFileName().toString();
+            Map<String, String> rewritten = new LinkedHashMap<>();
+            TreeSet<String> removed = new TreeSet<>();
             Enumeration<JarEntry> entries = in.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
@@ -116,11 +149,18 @@ public class JarTransformer {
                     data = stripManifestDigests(data);
                 } else if (name.endsWith(".class")) {
                     data = applySteps(name, data);
+                } else if (MODEL_JSON.matcher(name).matches()) {
+                    data = rewriteModelLoader(name, data, rewritten, removed);
                 }
                 putEntry(out, entry, name, data);
             }
             if (modsToml == null) {
                 throw new IOException("No META-INF/mods.toml in " + source.getFileName());
+            }
+            rewritten.forEach((from, to) -> LOGGER.info("{} {} model loader {} -> {}", TAG, jarName, from, to));
+            for (String id : removed) {
+                LOGGER.warn("{} {} removed unknown model loader '{}' from model JSON(s); models may render or "
+                        + "behave incorrectly", TAG, source, id);
             }
             String version = implementationVersion(in);
             String converted = convertModsToml(modsToml, version, source.getFileName().toString());
@@ -144,6 +184,37 @@ public class JarTransformer {
             }
         }
         return current;
+    }
+
+    /**
+     * Rewrites the root {@code loader} property of a model JSON: known Forge ids are mapped to NeoForge ids; other
+     * ids outside the {@code minecraft}/{@code neoforge} namespaces are removed when
+     * {@link #removeUnknownLoaders} is set. Returns the original bytes when nothing changes or the JSON is invalid.
+     */
+    private byte[] rewriteModelLoader(String name, byte[] data, Map<String, String> rewritten, TreeSet<String> removed) {
+        try {
+            JsonElement root = JsonParser.parseString(new String(data, StandardCharsets.UTF_8));
+            if (!root.isJsonObject()) return data;
+            JsonObject obj = root.getAsJsonObject();
+            JsonElement loaderEl = obj.get("loader");
+            if (loaderEl == null || !loaderEl.isJsonPrimitive() || !loaderEl.getAsJsonPrimitive().isString()) return data;
+            String loader = loaderEl.getAsString();
+            String mapped = MODEL_LOADER_MAPPINGS.get(loader);
+            if (mapped != null) {
+                obj.addProperty("loader", mapped);
+                rewritten.merge(loader, mapped, (a, b) -> a);
+            } else if (removeUnknownLoaders && !loader.startsWith("minecraft:") && !loader.startsWith("neoforge:")) {
+                obj.remove("loader");
+                removed.add(loader);
+            } else {
+                return data;
+            }
+            return new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(obj)
+                    .getBytes(StandardCharsets.UTF_8);
+        } catch (RuntimeException e) {
+            LOGGER.debug("{} could not parse model JSON {}, leaving it unchanged: {}", TAG, name, e.toString());
+            return data;
+        }
     }
 
     private static void putEntry(JarOutputStream out, JarEntry original, String name, byte[] data) throws IOException {
