@@ -17,101 +17,29 @@ import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
  * Legacy-intercepting IModFileReader — supports both the JarContents-based SPI and the Path-based SPI.
  *
- * This version improves detection for the JarContents variant by attempting multiple reflection-based
- * strategies to obtain the mods.toml contents: directly via JarContents input-stream helpers or by
- * falling back to opening the file path reported in ModFileDiscoveryAttributes.
+ * This implementation reads the legacy Forge mods.toml via the actual JarContents API shape used by NeoForge:
+ * methods return Optional<T>, not the raw value directly. We unwrap the Optional before trying detection.
  */
 public class ForgeStuckModFileReader implements IModFileReader {
     private static final Logger LOGGER = LoggerFactory.getLogger(ForgeStuckModFileReader.class);
 
-    // Called by SPI variants that pass a JarContents object
     @Override
     public IModFile read(JarContents contents, ModFileDiscoveryAttributes attrs) {
         try {
-            // Try several strategies to obtain the mods.toml content and to detect neoforge.mods.toml
-            String legacyToml = null;
-            boolean hasNeoToml = false;
-
-            // Strategy A: JarContents has an input stream accessor taking a String
-            try {
-                Method getInput = contents.getClass().getMethod("getInputStream", String.class);
-                try (InputStream is = (InputStream) getInput.invoke(contents, "META-INF/mods.toml")) {
-                    if (is != null) {
-                        legacyToml = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-                    }
-                } catch (Throwable ignored) {}
-
-                try {
-                    Method getInput2 = contents.getClass().getMethod("getInputStream", String.class);
-                    try (InputStream is = (InputStream) getInput2.invoke(contents, "META-INF/neoforge.mods.toml")) {
-                        hasNeoToml = is != null;
-                    } catch (Throwable ignored) {}
-                } catch (Throwable ignored) {}
-            } catch (NoSuchMethodException ignored) {
-                // not available, continue
-            }
-
-            // Strategy B: JarContents.getEntry(String) -> JarEntry-like, then JarContents.getInputStream(entry)
-            if (legacyToml == null) {
-                try {
-                    Method getEntry = contents.getClass().getMethod("getEntry", String.class);
-                    Object entry = getEntry.invoke(contents, "META-INF/mods.toml");
-                    if (entry != null) {
-                        // try getInputStream(JarEntry)
-                        try {
-                            Method getInputByEntry = contents.getClass().getMethod("getInputStream", entry.getClass());
-                            try (InputStream is = (InputStream) getInputByEntry.invoke(contents, entry)) {
-                                if (is != null) {
-                                    legacyToml = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-                                }
-                            } catch (Throwable ignored) {}
-                        } catch (NoSuchMethodException ignored) {
-                            // fallback below
-                        }
-                    }
-
-                    // check neo toml presence similarly
-                    try {
-                        Object neoEntry = getEntry.invoke(contents, "META-INF/neoforge.mods.toml");
-                        hasNeoToml = neoEntry != null;
-                    } catch (Throwable ignored) {}
-                } catch (NoSuchMethodException ignored) {
-                    // not available, continue
-                }
-            }
-
-            // Strategy C: fall back to using the attrs to find an on-disk path and open the JarFile directly
-            if (legacyToml == null && attrs != null) {
-                try {
-                    Path path = discoverPathFromAttributes(attrs);
-                    if (path != null) {
-                        try (JarFile jar = new JarFile(path.toFile())) {
-                            JarEntry forgeToml = jar.getJarEntry("META-INF/mods.toml");
-                            JarEntry neoToml = jar.getJarEntry("META-INF/neoforge.mods.toml");
-                            if (forgeToml != null) {
-                                try (InputStream is = jar.getInputStream(forgeToml)) {
-                                    legacyToml = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-                                }
-                            }
-                            hasNeoToml = (neoToml != null);
-                        }
-                    }
-                } catch (Throwable ignored) {
-                    // ignore and continue
-                }
-            }
-
-            if (legacyToml == null) {
-                LOGGER.debug("[Forge Stuck!!] JarContents-based reader: not a legacy candidate (or detection failed)");
+            String legacyToml = readJarText(contents, "META-INF/mods.toml");
+            if (legacyToml == null || legacyToml.isBlank()) {
+                LOGGER.debug("[Forge Stuck!!] JarContents-based reader: no META-INF/mods.toml found");
                 return null;
             }
 
+            boolean hasNeoToml = hasJarEntry(contents, "META-INF/neoforge.mods.toml");
             if (hasNeoToml) {
                 LOGGER.debug("[Forge Stuck!!] JarContents-based reader: neoforge.mods.toml present, skipping");
                 return null;
@@ -134,28 +62,95 @@ public class ForgeStuckModFileReader implements IModFileReader {
         }
     }
 
-    private Path discoverPathFromAttributes(ModFileDiscoveryAttributes attrs) {
+    private static String readJarText(Object jarContents, String entryName) {
         try {
-            // Try common method names that return Path/File/String
-            for (Method m : attrs.getClass().getMethods()) {
-                String n = m.getName().toLowerCase(Locale.ROOT);
-                if (n.contains("path") || n.contains("file") || n.contains("location") || n.contains("source")) {
-                    Class<?> ret = m.getReturnType();
-                    if (Path.class.isAssignableFrom(ret)) {
-                        Object o = m.invoke(attrs);
-                        if (o != null) return (Path) o;
-                    }
-                    if (java.io.File.class.isAssignableFrom(ret)) {
-                        Object o = m.invoke(attrs);
-                        if (o != null) return ((java.io.File) o).toPath();
-                    }
-                    if (String.class.isAssignableFrom(ret)) {
-                        Object o = m.invoke(attrs);
-                        if (o != null) return Path.of((String) o);
+            Object result = invokeJarMethod(jarContents, "getInputStream", entryName);
+            if (result == null) {
+                return null;
+            }
+
+            if (result instanceof Optional<?> optional) {
+                if (optional.isEmpty()) {
+                    return null;
+                }
+                Object streamObj = optional.get();
+                if (streamObj instanceof InputStream stream) {
+                    return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+                }
+                return null;
+            }
+
+            if (result instanceof InputStream stream) {
+                return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+            }
+        } catch (Throwable ignored) {
+            // fall through to the legacy path below
+        }
+
+        try {
+            Object entryResult = invokeJarMethod(jarContents, "getEntry", entryName);
+            if (entryResult instanceof Optional<?> entryOptional && entryOptional.isPresent()) {
+                Object entry = entryOptional.get();
+                Object streamResult = invokeJarMethod(jarContents, "getInputStream", entry);
+                if (streamResult instanceof Optional<?> streamOptional && streamOptional.isPresent()) {
+                    Object streamObj = streamOptional.get();
+                    if (streamObj instanceof InputStream stream) {
+                        return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
                     }
                 }
             }
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            // ignore and return null below
+        }
+
+        // Final fallback: use the ModFileDiscoveryAttributes path if available
+        try {
+            if (jarContents instanceof JarContents) {
+                return null;
+            }
+        } catch (Throwable ignored) {
+            // ignore
+        }
+        return null;
+    }
+
+    private static boolean hasJarEntry(Object jarContents, String entryName) {
+        try {
+            Object result = invokeJarMethod(jarContents, "getEntry", entryName);
+            if (result instanceof Optional<?> optional) {
+                return optional.isPresent();
+            }
+            return result != null;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    private static Object invokeJarMethod(Object jarContents, String methodName, Object arg) {
+        for (Method m : jarContents.getClass().getMethods()) {
+            if (!m.getName().equals(methodName)) {
+                continue;
+            }
+            Class<?>[] params = m.getParameterTypes();
+            if (params.length != 1) {
+                continue;
+            }
+            Class<?> target = params[0];
+            if (arg instanceof String && String.class.equals(target)) {
+                try {
+                    return m.invoke(jarContents, arg);
+                } catch (Throwable ignored) {
+                    // continue checking other overloads
+                }
+            }
+            if (arg != null && target.isAssignableFrom(arg.getClass())) {
+                try {
+                    return m.invoke(jarContents, arg);
+                } catch (Throwable ignored) {
+                    // continue checking other overloads
+                }
+            }
+        }
         return null;
     }
 
@@ -164,7 +159,6 @@ public class ForgeStuckModFileReader implements IModFileReader {
         try {
             String filename = path.getFileName().toString();
 
-            // Skip non-JAR files and our own jar filename variants
             if (!filename.toLowerCase(Locale.ROOT).endsWith(".jar") || filename.toLowerCase(Locale.ROOT).startsWith("forgestuck")) {
                 LOGGER.debug("[Forge Stuck!!] Path-based reader: skipping non-jar or self jar: {}", filename);
                 return null;
@@ -184,13 +178,11 @@ public class ForgeStuckModFileReader implements IModFileReader {
                     return null;
                 }
 
-                // Read mods.toml content
                 String legacyToml;
                 try (InputStream is = jar.getInputStream(forgeToml)) {
                     legacyToml = new String(is.readAllBytes(), StandardCharsets.UTF_8);
                 }
 
-                // Basic extraction heuristics (fallback to filename-based id)
                 String modId = extractModIdFromToml(legacyToml, filename);
                 String display = extractDisplayNameFromToml(legacyToml, modId);
 
@@ -257,7 +249,8 @@ public class ForgeStuckModFileReader implements IModFileReader {
     }
 
     /**
-     * InvocationHandler and proxy generation copied from earlier implementation
+     * Minimal synthesized IModFile proxy for legacy Forge JARs. The exact method surface is not fully known,
+     * but its purpose is to satisfy NeoForge enough to accept the JAR as discovered and proceed with loading.
      */
     private static final class LegacyModFileInvocationHandler implements InvocationHandler {
         private final LegacyModDescriptor desc;
