@@ -1,6 +1,7 @@
 plugins {
   id 'java'
-  id 'net.neoforged.moddev' version '1.0.18'
+  id 'idea'
+  id 'net.neoforged.moddev' version '2.0.147'
 }
 
 group = 'net.neoforged'
@@ -14,20 +15,29 @@ java {
 }
 
 repositories {
-  mavenCentral()
+  mavenLocal()
   maven { url = uri('https://maven.neoforged.net/releases') }
+  mavenCentral()
 }
 
-neoforge {
+neoForge {
   version = '21.1.262'
   mappings = 'official'
   runs {
     client {
+      client()
       workingDirectory = file('run/client')
       args '--username', 'dev'
     }
     server {
+      server()
       workingDirectory = file('run/server')
+    }
+  }
+
+  mods {
+    "${mod_name ?: 'forgestuck'}" {
+      sourceSet(sourceSets.main)
     }
   }
 }
@@ -47,8 +57,5 @@ jar {
       'Implementation-Title': 'Forge Stuck!!',
       'Implementation-Version': project.version
     )
-  }
-  from {
-    configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
   }
 }
