@@ -15,50 +15,103 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.Locale;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 /**
- * Legacy-intercepting IModFileReader.
+ * Legacy-intercepting IModFileReader — supports both the JarContents-based SPI and the Path-based SPI.
  *
- * If a JAR appears to be a 1.20.1 Forge mod (has META-INF/mods.toml but lacks
- * META-INF/neoforge.mods.toml), this reader synthesizes a minimal in-memory
- * IModFile and returns it so NeoForge will accept and load the JAR without
- * requiring the user to modify files on disk.
- *
- * The synthesized IModFile is implemented via a dynamic proxy to avoid a hard
- * compile-time dependency on NeoForge internal implementation classes. The
- * proxy implements the IModFile SPI and returns conservative metadata values
- * derived from the legacy mods.toml.
+ * Some NeoForge versions call the reader with a JarContents instance, others call it with a Path and a
+ * locator object. To ensure we are always invoked early in discovery, we implement both entry points.
  */
 public class ForgeStuckModFileReader implements IModFileReader {
     private static final Logger LOGGER = LoggerFactory.getLogger(ForgeStuckModFileReader.class);
 
+    // Called by SPI variants that pass a JarContents object
     @Override
     public IModFile read(JarContents contents, ModFileDiscoveryAttributes attrs) {
         try {
             LegacyModDescriptor descriptor = LegacyModDiscovery.detectLegacyMod(contents);
             if (descriptor == null) {
+                LOGGER.debug("[Forge Stuck!!] JarContents-based reader: not a legacy candidate (or detection failed)");
                 return null;
             }
 
-            LOGGER.info("[Forge Stuck!!] Intercepting legacy Forge mod: {} ({})", descriptor.displayName(), descriptor.modId());
+            LOGGER.info("[Forge Stuck!!] Intercepting legacy Forge mod (JarContents): {} ({})", descriptor.displayName(), descriptor.modId());
+            return synthesizeProxy(descriptor);
+        } catch (Throwable t) {
+            LOGGER.debug("[Forge Stuck!!] JarContents-based detection failed safely", t);
+            return null;
+        }
+    }
 
-            // Synthesize a minimal neoforge TOML content for this legacy mod
+    // Fallback entry point for SPI variants that pass a Path and locator
+    public IModFile read(Path path, Object locator) {
+        try {
+            String filename = path.getFileName().toString();
+
+            // Skip non-JAR files and our own jar filename variants
+            if (!filename.toLowerCase(Locale.ROOT).endsWith(".jar") || filename.toLowerCase(Locale.ROOT).startsWith("forgestuck")) {
+                LOGGER.debug("[Forge Stuck!!] Path-based reader: skipping non-jar or self jar: {}", filename);
+                return null;
+            }
+
+            try (JarFile jar = new JarFile(path.toFile())) {
+                JarEntry neoToml = jar.getJarEntry("META-INF/neoforge.mods.toml");
+                JarEntry forgeToml = jar.getJarEntry("META-INF/mods.toml");
+
+                if (forgeToml == null) {
+                    LOGGER.debug("[Forge Stuck!!] Path-based reader: no META-INF/mods.toml in {}", filename);
+                    return null;
+                }
+
+                if (neoToml != null) {
+                    LOGGER.debug("[Forge Stuck!!] Path-based reader: neoforge.mods.toml present, not a legacy jar: {}", filename);
+                    return null;
+                }
+
+                // Read mods.toml content
+                String legacyToml;
+                try (InputStream is = jar.getInputStream(forgeToml)) {
+                    legacyToml = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                }
+
+                // Basic extraction heuristics (fallback to filename-based id)
+                String modId = extractModIdFromToml(legacyToml, filename);
+                String display = extractDisplayNameFromToml(legacyToml, modId);
+
+                LegacyModDescriptor descriptor = LegacyModDescriptor.builder()
+                    .modId(modId)
+                    .displayName(display)
+                    .fileName(filename)
+                    .entryName("META-INF/mods.toml")
+                    .build();
+
+                LOGGER.info("[Forge Stuck!!] Intercepting legacy Forge mod (Path): {} ({})", descriptor.displayName(), descriptor.modId());
+                return synthesizeProxy(descriptor);
+            }
+        } catch (Throwable t) {
+            LOGGER.debug("[Forge Stuck!!] Path-based detection failed safely", t);
+            return null;
+        }
+    }
+
+    private IModFile synthesizeProxy(LegacyModDescriptor descriptor) {
+        try {
             String synthesizedToml = synthesizeNeoForgeToml(descriptor);
-
-            // Create a dynamic proxy that implements IModFile and returns conservative values.
             ClassLoader cl = IModFile.class.getClassLoader();
             InvocationHandler handler = new LegacyModFileInvocationHandler(descriptor, synthesizedToml);
             Object proxy = Proxy.newProxyInstance(cl, new Class[]{IModFile.class}, handler);
             return (IModFile) proxy;
         } catch (Throwable t) {
-            LOGGER.debug("[Forge Stuck!!] Failed to synthesize IModFile for legacy JAR (falling back)", t);
+            LOGGER.debug("[Forge Stuck!!] Failed to create synthesized IModFile proxy", t);
             return null;
         }
     }
 
     private static String synthesizeNeoForgeToml(LegacyModDescriptor desc) {
-        // Minimal neoforge mods toml that provides an id and display name. Keep conservative.
         String id = safeTomlString(desc.modId());
         String name = safeTomlString(desc.displayName());
         StringBuilder sb = new StringBuilder();
@@ -77,10 +130,22 @@ public class ForgeStuckModFileReader implements IModFileReader {
         return s.replace("\"", "'").replace("\n", " ").trim();
     }
 
+    private static String extractModIdFromToml(String toml, String filename) {
+        if (toml == null) return filename.replaceAll("\\.jar$", "");
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^modId\\s*=\\s*\"?([A-Za-z0-9_.-]+)\"?").matcher(toml);
+        if (m.find()) return m.group(1);
+        return filename.replaceAll("\\.jar$", "");
+    }
+
+    private static String extractDisplayNameFromToml(String toml, String fallback) {
+        if (toml == null) return fallback;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?m)^displayName\\s*=\\s*\"?([^\\n\\r\"]+)\"?").matcher(toml);
+        if (m.find()) return m.group(1);
+        return fallback;
+    }
+
     /**
-     * InvocationHandler for the synthesized IModFile proxy. Returns conservative values
-     * for commonly-accessed methods. Any unrecognized method returns null or a
-     * reasonable default to avoid breaking NeoForge.
+     * InvocationHandler and proxy generation copied from earlier implementation
      */
     private static final class LegacyModFileInvocationHandler implements InvocationHandler {
         private final LegacyModDescriptor desc;
@@ -95,7 +160,6 @@ public class ForgeStuckModFileReader implements IModFileReader {
         public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
             String name = method.getName().toLowerCase(Locale.ROOT);
 
-            // Basic Object methods
             if ("toString".equals(name)) {
                 return "LegacyIModFile[synthesized:" + desc.modId() + "]";
             }
@@ -106,8 +170,6 @@ public class ForgeStuckModFileReader implements IModFileReader {
                 return proxy == args[0];
             }
 
-            // Common IModFile-like accessors (best-effort; unknown exact SPI names).
-            // We attempt to support a few plausible method names used by different NeoForge versions.
             switch (name) {
                 case "getid":
                 case "id":
@@ -121,19 +183,15 @@ public class ForgeStuckModFileReader implements IModFileReader {
                 case "metadata":
                 case "gettoml":
                 case "toml":
-                    // Return an InputStream if the caller expects to read synthesized toml content
                     return new ByteArrayInputStream(toml.getBytes(StandardCharsets.UTF_8));
                 case "getinputstream":
                 case "openstream":
-                    // Some SPI variants ask to open the mods toml stream; return the synthesized toml
                     return new ByteArrayInputStream(toml.getBytes(StandardCharsets.UTF_8));
                 case "getlocation":
                 case "location":
                 case "getpath":
-                    // Unknown: return null so NeoForge falls back to other heuristics if needed
                     return null;
                 default:
-                    // If the method has a primitive return type, return a safe default
                     Class<?> ret = method.getReturnType();
                     if (ret == boolean.class) return false;
                     if (ret == int.class) return 0;
