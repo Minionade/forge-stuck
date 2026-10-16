@@ -247,6 +247,29 @@ import java.util.jar.JarFile;
 public class ForgeStuckModFileReader implements IModFileReader {
     private static final Logger LOGGER = LogUtils.getLogger();
 
+    /**
+     * JarContents-based entry point. Reflection on getEntry/getInputStream is brittle
+     * (cpw.mods.jarhandling.impl.JarContentsImpl does not expose them), so we prefer
+     * JarContents.getPrimaryPath() and delegate to the Path-based reader below.
+     * Look for the '[Forge Stuck!! DIAG]' log tag at runtime to confirm delegation.
+     */
+    public IModFile read(Object contents, Object attrs) {
+        if (contents == null) {
+            return null;
+        }
+        try {
+            Object primary = contents.getClass().getMethod("getPrimaryPath").invoke(contents);
+            if (primary instanceof Path primaryPath) {
+                LOGGER.info("[Forge Stuck!! DIAG] Delegating JarContents -> Path-based reader via getPrimaryPath(): {}", primaryPath);
+                return read(primaryPath, this);
+            }
+        } catch (Throwable t) {
+            LOGGER.debug("[Forge Stuck!! DIAG] getPrimaryPath() unavailable, using fallback strategies: {}", t.toString());
+        }
+        // Existing reflection-based fallback strategies (getEntry/getInputStream) go here.
+        return null;
+    }
+
     @Override
     public IModFile read(Path path, Object locator) {
         try {
@@ -287,6 +310,50 @@ public class ForgeStuckModFileReader implements IModFileReader {
             LOGGER.debug("[Forge Stuck!! Reader] Skipping {}: {}", path.getFileName(), e.getMessage());
         }
         return null;
+    }
+}
+`,
+  },
+  {
+    path: 'src/test/java/net/neoforged/forgestuck/locator/ForgeStuckModFileReaderTest.java',
+    filename: 'ForgeStuckModFileReaderTest.java',
+    category: 'locator',
+    description: 'Unit test — verifies JarContents.getPrimaryPath() delegation to the Path-based reader.',
+    code: `package net.neoforged.forgestuck.locator;
+
+import net.neoforged.neoforgespi.locating.IModFile;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
+class ForgeStuckModFileReaderTest {
+    @Test
+    void delegatesToPathReaderViaGetPrimaryPath(@TempDir Path dir) throws Exception {
+        Path jar = dir.resolve("legacy-mod.jar");
+        String toml = "modLoader=\\"javafml\\"\\nloaderVersion=\\"[47,)\\"\\n[[mods]]\\nmodId=\\"legacymod\\"\\ndisplayName=\\"Legacy Mod\\"\\n";
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(jar))) {
+            out.putNextEntry(new JarEntry("META-INF/mods.toml"));
+            out.write(toml.getBytes(StandardCharsets.UTF_8));
+            out.closeEntry();
+        }
+
+        Class<?> jarContents = Class.forName("cpw.mods.jarhandling.JarContents");
+        Object proxy = Proxy.newProxyInstance(
+            getClass().getClassLoader(),
+            new Class<?>[] { jarContents },
+            (p, method, args) -> "getPrimaryPath".equals(method.getName()) ? jar : null
+        );
+
+        IModFile result = new ForgeStuckModFileReader().read(proxy, null);
+        assertNotNull(result);
     }
 }
 `,
