@@ -1,0 +1,1 @@
+The web UI has been archived. Original source was removed from mainline to focus on Gradle Java mod development.
