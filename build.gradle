@@ -1,17 +1,40 @@
 plugins {
   id 'java'
+  id 'net.neoforged.moddev' version '1.0.18'
 }
 
 group = 'net.neoforged'
 version = '1.21.1-1.1.0'
-
-defaultTasks 'clean', 'build'
 
 java {
   toolchain {
     languageVersion = JavaLanguageVersion.of(21)
   }
   withSourcesJar()
+}
+
+repositories {
+  mavenCentral()
+  maven { url = uri('https://maven.neoforged.net/releases') }
+}
+
+neoforge {
+  version = '21.1.262'
+  mappings = 'official'
+  runs {
+    client {
+      workingDirectory = file('run/client')
+      args '--username', 'dev'
+    }
+    server {
+      workingDirectory = file('run/server')
+    }
+  }
+}
+
+dependencies {
+  implementation 'org.ow2.asm:asm:9.7'
+  implementation 'org.ow2.asm:asm-commons:9.7'
 }
 
 tasks.withType(JavaCompile) {
@@ -21,19 +44,11 @@ tasks.withType(JavaCompile) {
 jar {
   manifest {
     attributes(
-      'Manifest-Version': '1.0',
-      'Specification-Title': 'forgestuck',
-      'Specification-Vendor': 'Forge Stuck!! Team',
       'Implementation-Title': 'Forge Stuck!!',
-      'Implementation-Version': project.version,
-      'FMLModType': 'MOD',
-      'TweakClass': 'net.neoforged.forgestuck.transformer.ForgeClassTransformer',
-      'Automatic-Module-Name': 'net.neoforged.forgestuck',
-      'Created-By': "Forge Stuck!! Engine ${project.version}"
+      'Implementation-Version': project.version
     )
   }
   from {
-    // include compiled classes and resources
-    (compileJava.destinationDirectory)
+    configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
   }
 }

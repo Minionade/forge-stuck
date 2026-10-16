@@ -7,5 +7,5 @@ modId="forgestuck"
 version="1.21.1-1.1.0"
 displayName="Forge Stuck!!"
 description='''
-Placeholder mod artifact for packaging. Replace with real NeoForge implementation and sources.
+Core Forge Stuck!! bridge — runtime remapping and compatibility shims for NeoForge 1.21.1.
 '''
