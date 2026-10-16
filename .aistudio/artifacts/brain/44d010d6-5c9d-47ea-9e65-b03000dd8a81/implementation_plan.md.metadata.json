@@ -1,0 +1,6 @@
+{
+  "summary": "Revised implementation plan for ForgeBridge: The patcher is self-contained directly within the NeoForge 1.21.1 mod JAR (using runtime bytecode transformation & dynamic shims so users just drop it in their mods folder), while the web app serves as a rapid compatibility analyzer and mod downloader.",
+  "updatedAt": "2026-10-16T15:56:55.287110245Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

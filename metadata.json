@@ -1,0 +1,6 @@
+{
+  "name": "ForgeBridge: NeoForge 1.21.1 Mod & Compatibility Analyzer",
+  "description": "A NeoForge 1.21.1 runtime compatibility bridge mod allowing Forge 1.20.1 mods to run, paired with an instant compatibility analyzer for Thermal Series, Gendustry CE, and Advanced Generators.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
