@@ -1,0 +1,2 @@
+# Internal names of vanilla classes that exist in 1.20.1 but not in 1.21.1; mixins targeting them are dropped.
+net/minecraft/world/item/HorseArmorItem
