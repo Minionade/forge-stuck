@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "2";
+    public static final String TRANSFORMER_VERSION = "3";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 
@@ -84,7 +84,7 @@ public class JarTransformer {
 
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
-        return new JarTransformer(List.of(new ForgeClassTransformStep()));
+        return new JarTransformer(List.of(new ForgeClassTransformStep(), new ResourceLocationClassTransformStep()));
     }
 
     /** Returns the cached output for this source jar, creating it when missing. */
@@ -320,6 +320,11 @@ public class JarTransformer {
      * The jar is still produced so the failure is visible and diagnosable.
      */
     protected void onUnsupportedModLoader(String modLoader, String jarName) {
+        if ("kotori_scala".equals(modLoader)) {
+            LOGGER.warn("{} {} uses modLoader=\"kotori_scala\"; compatibility fallback: rewriting it to \"javafml\", "
+                    + "which may not preserve full scala-language semantics", TAG, jarName);
+            return;
+        }
         LOGGER.warn("{} {} uses modLoader=\"{}\" whose language provider is unavailable on this runtime; "
                 + "the mod will likely fail to load", TAG, jarName, modLoader);
     }

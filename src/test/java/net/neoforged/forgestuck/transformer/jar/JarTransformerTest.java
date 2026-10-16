@@ -240,4 +240,13 @@ class JarTransformerTest {
         assertTrue(out.getFileName().toString().endsWith("-t" + JarTransformer.TRANSFORMER_VERSION + ".jar"));
         assertNotEquals("1", JarTransformer.TRANSFORMER_VERSION);
     }
+
+    @Test
+    void kotoriScalaIsRewrittenToJavafml(@TempDir Path dir) throws Exception {
+        Path src = buildJar(dir, "adv.jar", MODS_TOML, "1");
+        Path out = dir.resolve("out.jar");
+        new JarTransformer(List.of()).transform(src, out);
+        String toml = new String(read(out, "META-INF/neoforge.mods.toml"), StandardCharsets.UTF_8);
+        assertEquals("javafml", new TomlParser().parse(toml).get("modLoader"));
+    }
 }
