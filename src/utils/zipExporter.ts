@@ -158,7 +158,7 @@ Drop your old Forge mods alongside forgestuck.jar — no subfolders needed.
 
   for (const c of classList) {
     const bytes = generateClassBytes(c.name, c.superName, c.interfaces);
-    zip.file(c.path, bytes);
+    zip.file(c.path, bytes, { binary: true });
   }
 
   // 5. Embed Java source alongside for IDEs / decompilers
@@ -201,8 +201,26 @@ Requirements:
   • NeoForge 21.1.0+
 `);
 
-  const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/java-archive' });
-  triggerDownload(blob, MOD_JAR_FILENAME);
+  // Generate binary bytes and validate the produced ZIP before offering it for download
+  try {
+    const uint8 = await zip.generateAsync({
+      type: 'uint8array',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 9 }
+    });
+
+    if (!(uint8[0] === 0x50 && uint8[1] === 0x4b && uint8[2] === 0x03 && uint8[3] === 0x04)) {
+      console.error('Generated archive missing ZIP magic bytes', Array.from(uint8.slice(0, 8)));
+      throw new Error('Generated archive does not appear to be a ZIP/JAR (bad magic bytes)');
+    }
+
+    await new JSZip().loadAsync(uint8);
+    const blob = new Blob([uint8], { type: 'application/java-archive' });
+    triggerDownload(blob, MOD_JAR_FILENAME);
+  } catch (err: any) {
+    console.error('Failed to build a valid JAR:', err);
+    throw new Error('Packaging failed: generated archive could not be validated as a ZIP/JAR. See console for details.');
+  }
 }
 
 /**
