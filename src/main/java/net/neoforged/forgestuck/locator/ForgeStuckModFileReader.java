@@ -22,16 +22,56 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Legacy-intercepting IModFileReader — supports both the JarContents-based SPI and the Path-based SPI.
+ * Diagnostic-enhanced ForgeStuckModFileReader — temporary instrumentation to inspect
+ * the actual JarContents implementation NeoForge supplies at runtime.
  *
- * This implementation reads the legacy Forge mods.toml via the actual JarContents API shape used by NeoForge:
- * methods return Optional<T>, not the raw value directly. We unwrap the Optional before trying detection.
+ * Add this temporarily to collect data; remove after debugging is complete.
  */
 public class ForgeStuckModFileReader implements IModFileReader {
     private static final Logger LOGGER = LoggerFactory.getLogger(ForgeStuckModFileReader.class);
 
     @Override
     public IModFile read(JarContents contents, ModFileDiscoveryAttributes attrs) {
+        // DIAGNOSTIC BLOCK — begin
+        try {
+            LOGGER.info("[Forge Stuck!! DIAG] JarContents class: {}", contents.getClass().getName());
+            StringBuilder mnames = new StringBuilder();
+            for (Method m : contents.getClass().getMethods()) {
+                mnames.append(m.getName()).append("(), ");
+            }
+            LOGGER.info("[Forge Stuck!! DIAG] JarContents methods: {}", mnames.toString());
+
+            for (Method m : contents.getClass().getMethods()) {
+                String n = m.getName().toLowerCase(Locale.ROOT);
+                if (n.contains("entries") || n.contains("entry") || n.contains("names") || n.contains("list")) {
+                    try {
+                        if (m.getParameterCount() != 0) continue;
+                        Object entries = m.invoke(contents);
+                        if (entries == null) {
+                            LOGGER.info("[Forge Stuck!! DIAG] entries method '{}' returned null", m.getName());
+                        } else {
+                            String preview = entries.toString();
+                            if (preview.length() > 200) preview = preview.substring(0, 200) + "...";
+                            LOGGER.info("[Forge Stuck!! DIAG] Found entries method '{}' -> type={} valuePreview={}", m.getName(), entries.getClass().getName(), preview);
+                        }
+                    } catch (Throwable t) {
+                        LOGGER.debug("[Forge Stuck!! DIAG] invoking entries method '{}' failed", m.getName(), t);
+                    }
+                }
+            }
+
+            if (attrs != null) {
+                try {
+                    Path p = discoverPathFromAttributes(attrs);
+                    LOGGER.info("[Forge Stuck!! DIAG] ModFileDiscoveryAttributes -> path: {}", p == null ? "null" : p.toString());
+                } catch (Throwable t) {
+                    LOGGER.debug("[Forge Stuck!! DIAG] attrs path discovery failed", t);
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        // DIAGNOSTIC BLOCK — end
+
         try {
             String legacyToml = readJarText(contents, "META-INF/mods.toml");
 
