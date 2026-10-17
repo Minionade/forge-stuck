@@ -119,6 +119,18 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                         call.name = mapped;
                         modified = true;
                     }
+                } else if (insn instanceof org.objectweb.asm.tree.InvokeDynamicInsnNode indy && indy.bsmArgs != null) {
+                    for (int i = 0; i < indy.bsmArgs.length; i++) {
+                        if (indy.bsmArgs[i] instanceof org.objectweb.asm.Handle h && ownerIsGame(h.getOwner())
+                                && LegacyNameMappings.looksLikeSrg(h.getName())) {
+                            String mapped = mappings.map(h.getOwner(), h.getName(), h.getDesc());
+                            if (mapped == null) continue;
+                            remapped.add(h.getName() + "->" + mapped);
+                            indy.bsmArgs[i] = new org.objectweb.asm.Handle(h.getTag(), h.getOwner(), mapped, h.getDesc(),
+                                    h.isInterface());
+                            modified = true;
+                        }
+                    }
                 } else if (insn instanceof FieldInsnNode field && LegacyNameMappings.looksLikeSrg(field.name)) {
                     String[] repl = isMixin ? null : REPLACEMENTS.get(field.owner + "." + field.name + field.desc);
                     if (repl != null) {
