@@ -49,12 +49,40 @@ public final class ForgeOwnerMappings {
         return entries.isEmpty();
     }
 
+    private static final String FU = "net/minecraftforge/common/util/";
+    private static final String COMPAT = "net/neoforged/forgestuck/compat/";
+
+    /**
+     * NeoForge 1.21.1 ships no equivalent of Forge's LazyOptional/NonNull* types, so they map to the stand-ins in
+     * {@code net.neoforged.forgestuck.compat}. Supported members are listed with their legacy (Forge) descriptors.
+     */
     public static ForgeOwnerMappings defaults() {
+        String lo = "L" + FU + "LazyOptional;";
+        String nnc = "L" + FU + "NonNullConsumer;";
+        String nnf = "L" + FU + "NonNullFunction;";
+        String nns = "L" + FU + "NonNullSupplier;";
         return new ForgeOwnerMappings().add(new Entry("net/minecraftforge/registries/RegistryObject",
                 "net/neoforged/neoforge/registries/DeferredHolder", Set.of(
                         "get()Ljava/lang/Object;",
                         "getId()Lnet/minecraft/resources/ResourceLocation;",
-                        "getKey()Lnet/minecraft/resources/ResourceKey;")));
+                        "getKey()Lnet/minecraft/resources/ResourceKey;")))
+                .add(new Entry(FU + "LazyOptional", COMPAT + "LazyOptional", Set.of(
+                        "of(" + nns + ")" + lo,
+                        "empty()" + lo,
+                        "isPresent()Z",
+                        "ifPresent(" + nnc + ")V",
+                        "resolve()Ljava/util/Optional;",
+                        "orElse(Ljava/lang/Object;)Ljava/lang/Object;",
+                        "orElseThrow(Ljava/util/function/Supplier;)Ljava/lang/Object;",
+                        "lazyMap(" + nnf + ")" + lo,
+                        "addListener(" + nnc + ")V",
+                        "invalidate()V")))
+                .add(new Entry(FU + "NonNullConsumer", COMPAT + "NonNullConsumer",
+                        Set.of("accept(Ljava/lang/Object;)V")))
+                .add(new Entry(FU + "NonNullFunction", COMPAT + "NonNullFunction",
+                        Set.of("apply(Ljava/lang/Object;)Ljava/lang/Object;")))
+                .add(new Entry(FU + "NonNullSupplier", COMPAT + "NonNullSupplier",
+                        Set.of("get()Ljava/lang/Object;")));
     }
 
     /** Cheap check on raw class bytes: could this class mention any mapped owner? */

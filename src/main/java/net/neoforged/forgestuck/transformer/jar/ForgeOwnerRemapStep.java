@@ -54,10 +54,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         new ClassReader(bytes).accept(node, 0);
 
         Set<String> blocked = new HashSet<>();
+        int[] adapted = {0};
         for (MethodNode m : node.methods) {
             for (AbstractInsnNode insn : m.instructions.toArray()) {
                 if (insn instanceof MethodInsnNode call) {
                     checkMember(className, call.owner, call.name, call.desc, blocked);
+                    if (!blocked.contains(call.owner) && changesDescriptor(call.desc, blocked)) adapted[0]++;
                 } else if (insn instanceof FieldInsnNode field) {
                     checkMember(className, field.owner, field.name, field.desc, blocked);
                 } else if (insn instanceof InvokeDynamicInsnNode indy) {
@@ -82,9 +84,14 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         ClassWriter writer = new ClassWriter(0);
         node.accept(new ClassRemapper(writer, mappings.remapper(blocked, counts)));
         if (counts.isEmpty()) return bytes;
-        if (report != null) report.record(counts, mappings);
+        if (report != null) report.record(counts, mappings, adapted[0]);
         LOGGER.debug("{} remapped Forge owners in {}: {}", TAG, className, counts);
         return writer.toByteArray();
+    }
+
+    /** True when the method descriptor mentions a mapped owner, i.e. it is adapted by the remap. */
+    private boolean changesDescriptor(String desc, Set<String> blocked) {
+        return !mappings.remapDescriptorTokens(desc, blocked, new java.util.HashMap<>()).equals(desc);
     }
 
     private void checkHandle(String className, Handle h, Set<String> blocked) {

@@ -9,9 +9,11 @@ public final class OwnerRemapReport {
     private final Map<String, Integer> counts = new TreeMap<>();
     private final Map<String, String> targets = new TreeMap<>();
     private int classesRewritten;
+    private int descriptorsAdapted;
 
-    void record(Map<String, Integer> classCounts, ForgeOwnerMappings mappings) {
+    void record(Map<String, Integer> classCounts, ForgeOwnerMappings mappings, int adapted) {
         classesRewritten++;
+        descriptorsAdapted += adapted;
         classCounts.forEach((old, n) -> {
             counts.merge(old, n, Integer::sum);
             targets.put(old, mappings.get(old).newOwner());
@@ -20,6 +22,10 @@ public final class OwnerRemapReport {
 
     public int total() {
         return counts.values().stream().mapToInt(Integer::intValue).sum();
+    }
+
+    public int descriptorsAdapted() {
+        return descriptorsAdapted;
     }
 
     public int classesRewritten() {
