@@ -34,6 +34,19 @@ class LegacyJarDetectorTest {
     }
 
     @Test
+    void nativeDescriptorIsAuthoritativeRegardlessOfFilename(@TempDir Path dir) throws Exception {
+        for (String name : new String[] {"native-1.21.1.jar", "looks-like-forge-1.20.1.jar"}) {
+            Path nativeJar = jar(dir, name, LegacyJarDetector.NEOFORGE_MODS_TOML);
+            assertTrue(LegacyJarDetector.isNativeNeoForge(nativeJar));
+            assertFalse(LegacyJarDetector.isLegacyCandidate(nativeJar));
+        }
+        assertTrue(LegacyJarDetector.isNativeNeoForge(jar(dir, "dual.jar",
+                LegacyJarDetector.FORGE_MODS_TOML, LegacyJarDetector.NEOFORGE_MODS_TOML)));
+        assertFalse(LegacyJarDetector.isNativeNeoForge(jar(dir, "legacy.jar", LegacyJarDetector.FORGE_MODS_TOML)));
+        assertFalse(LegacyJarDetector.isNativeNeoForge(jar(dir, "plain.jar", "foo.txt")));
+    }
+
+    @Test
     void neitherIsNotLegacy(@TempDir Path dir) throws Exception {
         assertFalse(LegacyJarDetector.isLegacyCandidate(jar(dir, "c.jar", "foo.txt")));
     }
