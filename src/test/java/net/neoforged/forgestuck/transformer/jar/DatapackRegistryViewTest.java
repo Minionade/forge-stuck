@@ -9,7 +9,7 @@ import net.neoforged.forgestuck.compat.ForgeRegistries;
 import net.neoforged.forgestuck.compat.LegacyDeferredRegister;
 import org.junit.jupiter.api.Test;
 
-/** Datapack-registry Forge fields (enchantments) link and expose their key; contents and registration fail per call. */
+/** Datapack-registry Forge fields (enchantments) link and expose their key; contents fail per call. */
 class DatapackRegistryViewTest {
     @Test
     void enchantmentsFieldHoldsKeyButLookupsFailAtTheCall() {
@@ -20,10 +20,16 @@ class DatapackRegistryViewTest {
     }
 
     @Test
-    void deferredRegisterCreationLinksButRegistrationFails() {
+    void deferredRegisterHoldsDatapackObjectsLocally() {
         var register = LegacyDeferredRegister.create(ForgeRegistries.ENCHANTMENTS, "ex");
-        var ex = assertThrows(UnsupportedOperationException.class, () -> register.register("thing", () -> null));
-        assertTrue(ex.getMessage().contains("datapack"), ex.getMessage());
+        var calls = new int[1];
+        var object = register.register("thing", () -> {
+            calls[0]++;
+            return (net.minecraft.world.item.enchantment.Enchantment) null;
+        });
+        assertEquals("ex:thing", object.getId().toString());
+        assertTrue(object.isPresent());
+        assertEquals(0, calls[0]);
     }
 
     @Test
