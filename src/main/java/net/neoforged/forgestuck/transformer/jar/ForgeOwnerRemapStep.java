@@ -82,12 +82,31 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             }
         }
 
+        dropBrokenInnerClasses(node, mappings.remapper(blocked, new TreeMap<>()));
         ClassWriter writer = new ClassWriter(0);
         node.accept(new ClassRemapper(writer, mappings.remapper(blocked, counts)));
         if (counts.isEmpty() && replaced == 0) return bytes;
         if (report != null) report.record(counts, mappings, adapted[0]);
         LOGGER.debug("{} remapped Forge owners in {}: {}", TAG, className, counts);
         return writer.toByteArray();
+    }
+
+    /**
+     * An InnerClasses entry names (inner, outer, simple name). When a mapping turns a nested legacy class into a
+     * top-level one (or into a differently nested one) the remapped triple no longer satisfies
+     * {@code inner == outer + "$" + simple} and can even name one class as its own outer, which the JVM rejects with
+     * "Class is both outer and inner class". Such entries describe a class that no longer exists in that shape, so
+     * they are dropped; references to the class itself are unaffected.
+     */
+    static void dropBrokenInnerClasses(ClassNode node, org.objectweb.asm.commons.Remapper remapper) {
+        if (node.innerClasses == null) return;
+        node.innerClasses.removeIf(ic -> {
+            if (ic.outerName == null || ic.innerName == null) return false;
+            String inner = remapper.map(ic.name);
+            String outer = remapper.map(ic.outerName);
+            if (inner.equals(ic.name) && outer.equals(ic.outerName)) return false;
+            return !inner.equals(outer + "$" + ic.innerName);
+        });
     }
 
     /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */

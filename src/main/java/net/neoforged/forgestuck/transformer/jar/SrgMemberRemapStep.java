@@ -43,7 +43,9 @@ public class SrgMemberRemapStep implements ClassTransformStep {
     /** Removed game members with a faithful runtime stand-in: {@code owner.name+desc} -> {owner, name}. */
     private static final java.util.Map<String, String[]> REPLACEMENTS = java.util.Map.of(
             "net/minecraft/core/registries/BuiltInRegistries.f_256876_Lnet/minecraft/core/Registry;",
-            new String[] {"net/neoforged/forgestuck/compat/LegacyEnchantmentRegistry", "ENCHANTMENT"});
+            new String[] {"net/neoforged/forgestuck/compat/LegacyEnchantmentRegistry", "ENCHANTMENT"},
+            "net/minecraft/core/registries/BuiltInRegistries.f_257047_Lnet/minecraft/core/Registry;",
+            new String[] {"net/neoforged/forgestuck/compat/LegacyRegistryRoot", "REGISTRY"});
 
     static boolean ownerIsGame(String owner) {
         return owner.startsWith("net/minecraft/") || owner.startsWith("com/mojang/") || owner.startsWith("net/neoforged/");
@@ -118,16 +120,16 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                         modified = true;
                     }
                 } else if (insn instanceof FieldInsnNode field && LegacyNameMappings.looksLikeSrg(field.name)) {
+                    String[] repl = isMixin ? null : REPLACEMENTS.get(field.owner + "." + field.name + field.desc);
+                    if (repl != null) {
+                        remapped.add(field.name + "->" + repl[0] + "." + repl[1]);
+                        field.owner = repl[0];
+                        field.name = repl[1];
+                        modified = true;
+                        continue;
+                    }
                     String mapped = mappings.map(field.owner, field.name, field.desc);
                     if (mapped == null) {
-                        String[] repl = REPLACEMENTS.get(field.owner + "." + field.name + field.desc);
-                        if (repl != null && !isMixin) {
-                            field.owner = repl[0];
-                            field.name = repl[1];
-                            remapped.add(field.name + "->" + repl[0] + "." + repl[1]);
-                            modified = true;
-                            continue;
-                        }
                         if (!isMixin && ownerIsGame(field.owner) && !field.owner.equals(node.name)) {
                             unmapped.put(field, field.owner.replace('/', '.') + "." + field.name);
                         }

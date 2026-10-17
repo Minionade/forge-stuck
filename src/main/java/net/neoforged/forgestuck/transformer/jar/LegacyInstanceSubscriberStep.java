@@ -39,13 +39,32 @@ public final class LegacyInstanceSubscriberStep implements ClassTransformStep {
             boolean removed = remove(m.visibleAnnotations) | remove(m.invisibleAnnotations);
             if (removed) dropped.add(m.name + m.desc);
         }
-        if (dropped.isEmpty()) return bytes;
-        LOGGER.warn("[Forge Stuck!!] {} is an @EventBusSubscriber class with instance @SubscribeEvent method(s) {}; "
-                + "Forge ignored these during automatic registration (static methods only), so the annotation was "
-                + "removed to match instead of failing in NeoForge", className, dropped);
+        boolean anyStatic = node.methods.stream().anyMatch(m -> (m.access & Opcodes.ACC_STATIC) != 0
+                && (hasSubscribe(m.visibleAnnotations) || hasSubscribe(m.invisibleAnnotations)));
+        boolean classStripped = false;
+        if (!anyStatic) {
+            // NeoForge throws when register(Class) finds no @SubscribeEvent methods; Forge registered nothing.
+            classStripped = node.visibleAnnotations != null && node.visibleAnnotations.removeIf(a -> SUBSCRIBER.contains(a.desc));
+            classStripped |= node.invisibleAnnotations != null && node.invisibleAnnotations.removeIf(a -> SUBSCRIBER.contains(a.desc));
+        }
+        if (dropped.isEmpty() && !classStripped) return bytes;
+        if (!dropped.isEmpty()) {
+            LOGGER.warn("[Forge Stuck!!] {} is an @EventBusSubscriber class with instance @SubscribeEvent method(s) {}; "
+                    + "Forge ignored these during automatic registration (static methods only), so the annotation was "
+                    + "removed to match instead of failing in NeoForge", className, dropped);
+        }
+        if (classStripped) {
+            LOGGER.warn("[Forge Stuck!!] {} has no static @SubscribeEvent methods left; its @EventBusSubscriber "
+                    + "annotation was removed because NeoForge rejects registering a class without handlers (Forge "
+                    + "registered nothing for it)", className);
+        }
         ClassWriter writer = new ClassWriter(0);
         node.accept(writer);
         return writer.toByteArray();
+    }
+
+    private static boolean hasSubscribe(List<AnnotationNode> list) {
+        return list != null && list.stream().anyMatch(a -> SUBSCRIBE.contains(a.desc));
     }
 
     private static boolean has(List<AnnotationNode> list) {

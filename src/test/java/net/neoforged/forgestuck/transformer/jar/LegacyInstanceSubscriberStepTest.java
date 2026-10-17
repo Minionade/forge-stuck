@@ -2,6 +2,8 @@ package net.neoforged.forgestuck.transformer.jar;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
@@ -47,5 +49,38 @@ class LegacyInstanceSubscriberStepTest {
     void classesWithoutTheSubscriberAnnotationAreUntouched() {
         byte[] in = subscriber(false);
         assertSame(in, new LegacyInstanceSubscriberStep().apply("com.ex.Obj$", in));
+    }
+
+    @Test
+    void instanceOnlyModuleClassLosesTheClassAnnotationAndRegistersOnARealBus() throws Exception {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/Mod$", null, "java/lang/Object", null);
+        cw.visitAnnotation("Lnet/neoforged/fml/common/EventBusSubscriber;", true).visitEnd();
+        var m = cw.visitMethod(Opcodes.ACC_PUBLIC, "on", "(Lnet/neoforged/bus/api/Event;)V", null, null);
+        m.visitAnnotation("Lnet/neoforged/bus/api/SubscribeEvent;", true).visitEnd();
+        m.visitCode();
+        m.visitInsn(Opcodes.RETURN);
+        m.visitMaxs(0, 0);
+        m.visitEnd();
+        cw.visitEnd();
+        byte[] in = cw.toByteArray();
+        var bus = net.neoforged.bus.api.BusBuilder.builder().build();
+        Class<?> before = define(in);
+        assertThrows(IllegalArgumentException.class, () -> bus.register(before));
+
+        byte[] out = new LegacyInstanceSubscriberStep().apply("com.ex.Mod$", in);
+        ClassNode n = new ClassNode();
+        new ClassReader(out).accept(n, 0);
+        assertTrue(n.visibleAnnotations == null || n.visibleAnnotations.isEmpty());
+        assertEquals("", annotated(out));
+        assertSame(out, new LegacyInstanceSubscriberStep().apply("com.ex.Mod$", out), "idempotent");
+    }
+
+    private static Class<?> define(byte[] bytes) {
+        return new ClassLoader(LegacyInstanceSubscriberStepTest.class.getClassLoader()) {
+            Class<?> def() {
+                return defineClass(null, bytes, 0, bytes.length);
+            }
+        }.def();
     }
 }

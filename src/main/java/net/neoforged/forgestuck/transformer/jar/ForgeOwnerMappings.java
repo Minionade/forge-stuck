@@ -117,6 +117,8 @@ public final class ForgeOwnerMappings {
                                 + "Ljava/util/function/Supplier;)V",
                         "register(Lnet/minecraft/resources/ResourceKey;Ljava/util/function/Consumer;)V",
                         "getRegistryKey()Lnet/minecraft/resources/ResourceKey;")))
+                // Legacy create(RegistryBuilder) returned Supplier<IForgeRegistry>; NeoForge returns Registry, so only the type links.
+                .add(entry(R + "NewRegistryEvent", "net/neoforged/neoforge/registries/NewRegistryEvent", Set.of()))
                 .add(entry(R + "RegisterEvent$RegisterHelper", "net/neoforged/neoforge/registries/RegisterEvent$RegisterHelper",
                         Set.of("register(Lnet/minecraft/resources/ResourceLocation;Ljava/lang/Object;)V",
                                 "register(Lnet/minecraft/resources/ResourceKey;Ljava/lang/Object;)V")))
