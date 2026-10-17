@@ -40,6 +40,8 @@ LegacyTickBridge
 LegacyClientTickBridge
 LegacyBufferBuilders
 LegacyMissingMappingsEvent
+LegacyEntityAdditionalSpawnData
+LegacyPotionColorCalculationEvent
 LegacyLootSerializer
 LegacyLootBridge
 LegacyLootBridge$1
