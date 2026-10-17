@@ -31,10 +31,9 @@ public final class LegacyEnchantmentSubclassStep implements ClassTransformStep {
         new ClassReader(bytes).accept(node, 0);
         node.superName = LEGACY;
         for (MethodNode method : node.methods) {
-            if (!method.name.equals("<init>")) continue;
             for (AbstractInsnNode insn : method.instructions.toArray()) {
                 if (insn instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKESPECIAL
-                        && ENCHANTMENT.equals(call.owner) && call.name.equals("<init>")) {
+                        && ENCHANTMENT.equals(call.owner)) {
                     call.owner = LEGACY;
                 }
             }

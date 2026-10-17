@@ -45,6 +45,25 @@ class SrgOwnerAwareMappingTest {
         assertEquals("byDesc", b);
     }
 
+    @Test
+    void addsNamedBridgeForSrgOverrideOfGameInterface() {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/E", null, "java/lang/Object",
+                new String[] {"net/minecraft/a/Iface"});
+        var m = cw.visitMethod(Opcodes.ACC_PUBLIC, "m_1_", "(I)Ljava/lang/String;", null, null);
+        m.visitCode();
+        m.visitInsn(Opcodes.ACONST_NULL);
+        m.visitInsn(Opcodes.ARETURN);
+        m.visitMaxs(0, 0);
+        m.visitEnd();
+        cw.visitEnd();
+        byte[] out = new SrgMemberRemapStep(M).apply("zz.E", cw.toByteArray());
+        ClassNode node = new ClassNode();
+        new ClassReader(out).accept(node, 0);
+        assertTrue(node.methods.stream().anyMatch(x -> x.name.equals("bare") && x.desc.equals("(I)Ljava/lang/String;")));
+        assertTrue(node.methods.stream().anyMatch(x -> x.name.equals("m_1_")));
+    }
+
     private static byte[] caller() {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/C", null, "java/lang/Object", null);

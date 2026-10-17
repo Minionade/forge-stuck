@@ -20,6 +20,11 @@ public class LegacyEnchantment {
         this.slots = slots;
     }
 
+    /** Target of {@code super.canEnchant(stack)} from legacy subclasses (SRG {@code m_6081_}). */
+    public boolean canEnchant(net.minecraft.world.item.ItemStack stack) {
+        return true;
+    }
+
     public LegacyEnchantmentRarity getRarity() {
         return rarity;
     }
