@@ -8,8 +8,18 @@ import org.slf4j.Logger;
 public final class OwnerRemapReport {
     private final Map<String, Integer> counts = new TreeMap<>();
     private final Map<String, String> targets = new TreeMap<>();
+    private final java.util.Set<String> jarBlocked = new java.util.TreeSet<>();
     private int classesRewritten;
     private int descriptorsAdapted;
+
+    /** Owners that at least one class of this jar uses in an unsupported way; they stay unmapped jar-wide. */
+    java.util.Set<String> jarBlocked() {
+        return jarBlocked;
+    }
+
+    public java.util.Set<String> blockedOwners() {
+        return java.util.Set.copyOf(jarBlocked);
+    }
 
     void record(Map<String, Integer> classCounts, ForgeOwnerMappings mappings, int adapted) {
         classesRewritten++;

@@ -16,4 +16,10 @@ public interface ClassTransformStep {
     default byte[] apply(String className, byte[] bytes, OwnerRemapReport report) {
         return apply(className, bytes);
     }
+
+    /**
+     * Optional pre-pass over the original bytes of every class of a jar, run before any {@link #apply}. Lets a step
+     * collect jar-wide facts so all classes of one jar are rewritten consistently.
+     */
+    default void scan(String className, byte[] bytes, OwnerRemapReport report) {}
 }

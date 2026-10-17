@@ -165,7 +165,7 @@ class SrgCompatTest {
         Path out = dir.resolve("out.jar");
         JarTransformer.withDefaultSteps().transform(jar(dir, "in.jar", files), out);
         assertEquals(lang, new String(read(out, "assets/ex/lang/en_us.json"), StandardCharsets.UTF_8));
-        assertEquals(other, new String(read(out, "data/ex/recipes/mixins.json"), StandardCharsets.UTF_8));
+        assertEquals(other, new String(read(out, "data/ex/recipe/mixins.json"), StandardCharsets.UTF_8));
         assertEquals(other, new String(read(out, "config.json"), StandardCharsets.UTF_8));
     }
 

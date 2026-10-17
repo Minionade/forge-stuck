@@ -35,21 +35,69 @@ The target versions are declared in [`gradle.properties`](../gradle.properties)
 Class-step details:
 
 - `ForgeClassTransformStep` delegates to `ForgeClassTransformer` for exact
-  ItemStack NBT calls. It emits calls to `shim/LegacyItemStackShim`, which is
-  **not present in this checkout**: verify the packaged runtime before assuming
-  those rewritten calls can execute.
+  ItemStack NBT calls. It emits calls to
+  [`shim/LegacyItemStackShim`](../src/main/java/net/neoforged/forgestuck/shim/LegacyItemStackShim.java)
+  (`getTag`/`getOrCreateTag`/`setTag`, backed by `DataComponents.CUSTOM_DATA`).
+  `ItemStackShimTest` loads transformed bytecode in a custom classloader and
+  asserts every emitted shim owner/method exists.
 - `ForgeOwnerRemapStep` handles owners, descriptors, signatures, and selected
-  mixin annotation strings. An unsupported member blocks that owner **for that
-  class**, not for the entire jar.
+  mixin annotation strings. An unsupported member blocks that owner **for the
+  whole jar** (a `scan` pre-pass in `JarTransformer`), so declarations,
+  descriptors and accesses cannot diverge between classes of one jar. Jars are
+  transformed independently: the same owner may be mapped in one jar and blocked
+  in another.
 - `ResourceLocationClassTransformStep` replaces supported constructor patterns
   with factory calls. `SrgMemberRemapStep` uses
   [`srg-members.properties`](../src/main/resources/forgestuck/srg-members.properties)
-  for game member names; [`LegacyNameMappings`](../src/main/java/net/neoforged/forgestuck/transformer/jar/LegacyNameMappings.java)
+  for game member names; lookup is owner/descriptor aware (precedence
+  `owner#name(desc)` > `name(desc)` > `owner#name` > bare name; fields use
+  `name@desc`). [`LegacyNameMappings`](../src/main/java/net/neoforged/forgestuck/transformer/jar/LegacyNameMappings.java)
   also reads the explicit
   [`missing-mixin-targets.txt`](../src/main/resources/forgestuck/missing-mixin-targets.txt).
-- Metadata conversion includes `thermal_foundation` → `thermal`, dependency
-  normalization, and the `kotori_scala` → `javafml` fallback. Metadata acceptance
-  does not establish API or language-provider compatibility.
+- Metadata conversion includes a pre-existing, unaudited `thermal_foundation` →
+  `thermal` mod-id/dependency rewrite (a Thermal-specific special case, kept
+  to avoid regressing that pack; it is not a model for other mods), dependency
+  normalization, and the `kotori_scala` → `javafml` string rewrite. Metadata
+  acceptance does not establish API or language-provider compatibility; it is
+  **not** evidence Scala mods are constructed.
+- Unknown custom model loaders are now **preserved** with a warning
+  (`REMOVE_UNKNOWN_MODEL_LOADERS=false`); stripping is opt-in only.
+- Locator logs say "discovered", not "registered": discovery is not construction.
+
+### Registration support (verified against NeoForge 21.1.262)
+
+Mapped Forge owners and their verified targets live in `ForgeOwnerMappings`;
+`ForgeOwnerMappingTargetsTest` reflects every whitelisted member against the real
+target. Adapters in `compat/`: `RegistryObject` (extends `DeferredHolder`),
+`LegacyDeferredRegister`, `IForgeRegistry`/`ForgeRegistries` (17 registries; no
+ENCHANTMENTS/BIOMES), `FMLJavaModLoadingContext`, `LazyOptional` (+`map`,
+`filter`, `orElseGet`, `cast`, `removeListener`), `NonNull*`. `@Mod`,
+`@Mod.EventBusSubscriber` (bus `FORGE`→`GAME`), `IEventBus`, `SubscribeEvent`,
+`RegisterEvent`, three lifecycle setup events and `IConfigSpec` map to NeoForge
+types. `RegistrationLifecycleTest` transforms a synthetic Forge-style mod in an
+unrelated namespace and shows the final id `<modid>:<name>` appears in a registry
+after `RegisterEvent`. Root-cause hypothesis (supported by this fixture, not by a
+real jar): `@Mod`/`DeferredRegister`/`ForgeRegistries` were previously unmapped, so
+FML never constructed entry points. The prior mapping of the Forge capability
+classes was wrong (`CapabilityToken` does not exist) and was removed.
+
+### Data-pack migration (`ResourceDataRewriteStep`, `DatapackSchemaRewriter`)
+
+Applied to `data/**` during the jar walk; idempotent, UTF-8, unaffected resources
+keep original bytes, malformed/unsupported data is reported
+(`ResourceRewriteReport`) and never deleted.
+
+- Legacy plural folders → 1.21.1 singular (`recipes`→`recipe`, `loot_tables`,
+  `advancements`, `structures`, `functions`, `predicates`, `item_modifiers`,
+  `tags/{blocks,items,entity_types,fluids,game_events}`). Existing target
+  entries are never overwritten (reported instead). Worldgen is not renamed.
+- Under `data/*/worldgen/**` only: `{"type":"minecraft:uniform","value":{…}}`
+  (also `biased_to_bottom`, `clamped`, `clamped_normal`, `trapezoid`) is flattened
+  when the key set exactly matches a verified 1.21.1 codec shape.
+- `forge:conditions` → `neoforge:conditions` and the 8 `forge:` condition types
+  that exist on NeoForge.
+- Not migrated (explicit boundaries): recipe `result.item`→`id`, `forge:` tags →
+  `c:` (ambiguous), custom types and namespaces.
 
 ### Cache behavior
 
@@ -222,3 +270,27 @@ PR description checklist (copy and fill):
 | Date | PR | Guidance change |
 | --- | --- | --- |
 | 2026-10-17 | [#13](https://github.com/Minionade/forge-stuck/pull/13) | Establish source-backed triage, log taxonomy, narrow patch boundaries, cache-aware validation, and the agent maintenance contract; link from README. |
+| 2026-10-16 | PR_LINK | Registration adapters, `LegacyItemStackShim`, jar-wide owner blocking, owner/descriptor-aware SRG lookup, data-pack migration, preserve-unknown-model-loaders; see "Remaining blockers" below. |
+
+## Remaining blockers and validation status
+
+- Validation run: `./gradlew test build` (Java 21). Baseline before this work:
+  32 of 51 tests failed with `NoClassDefFoundError: com/google/gson/JsonElement`
+  (fixed with a gson test dependency). Tests needing Minecraft classes use the MDG
+  `unitTest` config plus `testsupport/TestBootstrap`; because of the split
+  classloaders, fixture tests must resolve NeoForge types through the same loader
+  (see `RegistrationLifecycleTest`).
+- **Not run:** cold/warm game launch, world create/save/reload, any real mod jar
+  (Thermal, TConstruct, Mantle, BdLib, …). Pack-level compatibility is unproven.
+- **Unsupported:** Forge capability API, Forge events beyond the three lifecycle
+  events (NeoForge uses `ICancellableEvent`), `DeferredRegister.createOptional`/
+  `makeRegistry`/tag helpers, ENCHANTMENTS/BIOMES in compat `ForgeRegistries`,
+  Scala mods, Forge `forge:` tag → `c:` migration, recipe result schema.
+- **Hypotheses not yet proven with real jars:** Thermal `FURNACE_RECIPE` field
+  linkage and cross-jar descriptor mismatches (jar-wide blocking only removes
+  intra-jar divergence); the symptom list (`thermal:config`, `tconstruct:island`,
+  slime trees, shield banner sprite source, trim-material ingredients, JEI
+  linkage) is not explained by any real-jar reproduction yet.
+- Next steps: obtain real jars and reproduce with the transformed cache output;
+  extend `ForgeOwnerMappings` only with members verified by
+  `ForgeOwnerMappingTargetsTest`.

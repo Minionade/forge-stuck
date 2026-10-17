@@ -63,7 +63,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         if (isMixin) {
             for (MethodNode m : node.methods) {
                 String mapped = LegacyNameMappings.looksLikeSrg(m.name) && isShadow(m.invisibleAnnotations, m.visibleAnnotations)
-                        ? mappings.map(m.name) : null;
+                        ? mappings.map(node.name, m.name, m.desc) : null;
                 if (mapped != null) {
                     remapped.add(m.name + "->" + mapped);
                     ownRenamed.add("M" + m.name + m.desc + "=" + mapped);
@@ -73,7 +73,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
             }
             for (FieldNode f : node.fields) {
                 String mapped = LegacyNameMappings.looksLikeSrg(f.name) && isShadow(f.invisibleAnnotations, f.visibleAnnotations)
-                        ? mappings.map(f.name) : null;
+                        ? mappings.map(node.name, f.name, f.desc) : null;
                 if (mapped != null) {
                     remapped.add(f.name + "->" + mapped);
                     ownRenamed.add("F" + f.name + "=" + mapped);
@@ -96,7 +96,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         for (MethodNode m : node.methods) {
             for (AbstractInsnNode insn : m.instructions.toArray()) {
                 if (insn instanceof MethodInsnNode call && LegacyNameMappings.looksLikeSrg(call.name)) {
-                    String mapped = mappings.map(call.name);
+                    String mapped = mappings.map(call.owner, call.name, call.desc);
                     if (mapped == null) continue;
                     boolean own = call.owner.equals(node.name)
                             && ownRenamed.contains("M" + call.name + call.desc + "=" + mapped);
@@ -106,7 +106,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                         modified = true;
                     }
                 } else if (insn instanceof FieldInsnNode field && LegacyNameMappings.looksLikeSrg(field.name)) {
-                    String mapped = mappings.map(field.name);
+                    String mapped = mappings.map(field.owner, field.name, field.desc);
                     if (mapped == null) continue;
                     boolean own = field.owner.equals(node.name) && ownRenamed.contains("F" + field.name + "=" + mapped);
                     if (own || ownerIsGame(field.owner)) {
