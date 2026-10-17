@@ -112,12 +112,58 @@ public class JarTransformer {
         return new JarTransformer(all);
     }
 
+    private static volatile String codeFingerprint;
+
+    /**
+     * Cache file name for a source hash: {@code <sha>-t<VERSION>-<fp>.jar}. {@code fp} hashes Forge Stuck's own
+     * code/resources and this transformer's step list, so changed transformer code never reuses stale cache entries
+     * even while {@link #TRANSFORMER_VERSION} stays fixed.
+     */
+    public String cacheFileName(String sourceSha) {
+        var d = newDigest();
+        d.update(codeFingerprint().getBytes(StandardCharsets.UTF_8));
+        for (ClassTransformStep s : steps) d.update(s.getClass().getName().getBytes(StandardCharsets.UTF_8));
+        d.update((byte) (removeUnknownLoaders ? 1 : 0));
+        return sourceSha + "-t" + TRANSFORMER_VERSION + "-" + java.util.HexFormat.of().formatHex(d.digest(), 0, 6)
+                + ".jar";
+    }
+
+    private static java.security.MessageDigest newDigest() {
+        try {
+            return java.security.MessageDigest.getInstance("SHA-256");
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static String codeFingerprint() {
+        String fp = codeFingerprint;
+        if (fp != null) return fp;
+        var d = newDigest();
+        try {
+            Path root = Path.of(JarTransformer.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+            if (Files.isRegularFile(root)) {
+                d.update(Files.readAllBytes(root));
+            } else {
+                try (var walk = Files.walk(root)) {
+                    for (Path p : (Iterable<Path>) walk.filter(Files::isRegularFile).sorted()::iterator) {
+                        d.update(root.relativize(p).toString().getBytes(StandardCharsets.UTF_8));
+                        d.update(Files.readAllBytes(p));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warn("{} could not fingerprint transformer code ({}); cache keyed by version only", TAG, e.toString());
+        }
+        return codeFingerprint = java.util.HexFormat.of().formatHex(d.digest());
+    }
+
     /** Returns the cached output for this source jar, creating it when missing. */
     public Result transformCached(Path source, Path cacheDir) throws IOException {
         if (bypassNative(source)) return new Result(source, false);
         String jarName = source.getFileName().toString();
         Files.createDirectories(cacheDir);
-        Path target = cacheDir.resolve(sha256(source) + "-t" + TRANSFORMER_VERSION + ".jar");
+        Path target = cacheDir.resolve(cacheFileName(sha256(source)));
         if (Files.isRegularFile(target) && Files.size(target) > 0) {
             LOGGER.info("{} cache hit for {} -> {}", TAG, source.getFileName(), target);
             progress.cached(jarName);

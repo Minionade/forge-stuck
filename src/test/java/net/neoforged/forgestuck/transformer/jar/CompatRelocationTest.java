@@ -47,7 +47,7 @@ class CompatRelocationTest {
         assertTrue(java.util.Arrays.equals(first, Files.readAllBytes(jar)), "jar bytes are deterministic");
 
         try (JarFile jf = new JarFile(jar.toFile())) {
-            assertEquals("LIBRARY", jf.getManifest().getMainAttributes().getValue("FMLModType"));
+            assertEquals("GAMELIBRARY", jf.getManifest().getMainAttributes().getValue("FMLModType"));
             assertEquals(CompatRelocation.MODULE_NAME, jf.getManifest().getMainAttributes().getValue("Automatic-Module-Name"));
             for (var e : java.util.Collections.list(jf.entries())) {
                 if (!e.getName().endsWith(".class")) continue;
@@ -81,6 +81,54 @@ class CompatRelocationTest {
         }
         assertTrue(new String(SrgCompatTest.read(out, "com/ex/Bad.class"), StandardCharsets.ISO_8859_1)
                 .contains(CompatRelocation.TO + "UnsupportedForgeApi"));
+    }
+
+    @Test
+    void compatModuleReadsMinecraftInTheSameLayerButNotAcrossAnIsolatedLayer(@TempDir Path dir) throws Exception {
+        Path mods = Files.createDirectories(dir.resolve("game"));
+        Path jar = CompatRelocation.writeRuntimeJar(mods, getClass().getClassLoader());
+        writeFakeMinecraft(mods.resolve("minecraft.jar"));
+
+        // GAMELIBRARY: FML puts it in the game layer together with minecraft.
+        var finder = java.lang.module.ModuleFinder.of(jar, mods.resolve("minecraft.jar"));
+        var cfg = java.lang.ModuleLayer.boot().configuration().resolve(finder,
+                java.lang.module.ModuleFinder.of(), java.util.Set.of(CompatRelocation.MODULE_NAME, "minecraft"));
+        var layer = java.lang.ModuleLayer.defineModulesWithOneLoader(cfg, List.of(java.lang.ModuleLayer.boot()),
+                ClassLoader.getSystemClassLoader()).layer();
+        Module compat = layer.findModule(CompatRelocation.MODULE_NAME).orElseThrow();
+        Module mc = layer.findModule("minecraft").orElseThrow();
+        assertTrue(compat.canRead(mc));
+
+        // LIBRARY (the previous manifest): a separate earlier layer that cannot see minecraft at all.
+        var plugin = java.lang.module.ModuleFinder.of(jar);
+        var pcfg = java.lang.ModuleLayer.boot().configuration().resolve(plugin,
+                java.lang.module.ModuleFinder.of(), java.util.Set.of(CompatRelocation.MODULE_NAME));
+        var pLayer = java.lang.ModuleLayer.defineModulesWithOneLoader(pcfg, List.of(java.lang.ModuleLayer.boot()),
+                ClassLoader.getSystemClassLoader()).layer();
+        assertFalse(pLayer.findModule("minecraft").isPresent());
+        assertFalse(pLayer.findModule(CompatRelocation.MODULE_NAME).orElseThrow().canRead(mc));
+    }
+
+    private static void writeFakeMinecraft(Path jar) throws Exception {
+        var cw = new org.objectweb.asm.ClassWriter(0);
+        cw.visit(org.objectweb.asm.Opcodes.V21, org.objectweb.asm.Opcodes.ACC_MODULE, "module-info", null, null, null);
+        var mv = cw.visitModule("minecraft", 0, null);
+        mv.visitRequire("java.base", org.objectweb.asm.Opcodes.ACC_MANDATED, null);
+        mv.visitExport("net/minecraft/core/registries", 0);
+        mv.visitEnd();
+        cw.visitEnd();
+        var holder = new org.objectweb.asm.ClassWriter(0);
+        holder.visit(org.objectweb.asm.Opcodes.V21, org.objectweb.asm.Opcodes.ACC_PUBLIC,
+                "net/minecraft/core/registries/Registries", null, "java/lang/Object", null);
+        holder.visitEnd();
+        try (var out = new java.util.jar.JarOutputStream(Files.newOutputStream(jar))) {
+            out.putNextEntry(new java.util.jar.JarEntry("module-info.class"));
+            out.write(cw.toByteArray());
+            out.closeEntry();
+            out.putNextEntry(new java.util.jar.JarEntry("net/minecraft/core/registries/Registries.class"));
+            out.write(holder.toByteArray());
+            out.closeEntry();
+        }
     }
 
     @Test
