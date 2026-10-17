@@ -155,7 +155,7 @@ public final class ForgeOwnerMappings {
     static final java.util.List<String> FORGE_REGISTRY_FIELDS = java.util.List.of("BLOCKS", "FLUIDS", "ITEMS",
             "MOB_EFFECTS", "POTIONS", "ATTRIBUTES", "STAT_TYPES", "SOUND_EVENTS", "PARTICLE_TYPES", "BLOCK_ENTITY_TYPES",
             "ENTITY_TYPES", "MENU_TYPES", "RECIPE_TYPES", "RECIPE_SERIALIZERS", "VILLAGER_PROFESSIONS", "POI_TYPES",
-            "FEATURES");
+            "FEATURES", "ENTITY_DATA_SERIALIZERS");
 
     private static Iterable<Entry> configAndEnvironment() {
         return ConfigEnvironmentMappings.entries();
@@ -170,10 +170,16 @@ public final class ForgeOwnerMappings {
                 "enqueueWork(Ljava/util/function/Supplier;)Ljava/util/concurrent/CompletableFuture;");
     }
 
+    /** Forge Keys constants whose NeoForgeRegistries.Keys counterpart exists (reflection-verified, 21.1.262). */
+    static final java.util.List<String> NEOFORGE_KEY_FIELDS = java.util.List.of("GLOBAL_LOOT_MODIFIER_SERIALIZERS",
+            "BIOME_MODIFIER_SERIALIZERS", "STRUCTURE_MODIFIER_SERIALIZERS", "FLUID_TYPES", "HOLDER_SET_TYPES",
+            "BIOME_MODIFIERS", "STRUCTURE_MODIFIERS");
+
     private static Set<String> forgeRegistriesFields(boolean keys) {
         String desc = keys ? "Lnet/minecraft/resources/ResourceKey;" : "L" + R + "IForgeRegistry;";
         Set<String> out = new java.util.TreeSet<>();
         for (String f : FORGE_REGISTRY_FIELDS) out.add(f + desc);
+        if (keys) for (String f : NEOFORGE_KEY_FIELDS) out.add(f + desc);
         return out;
     }
 

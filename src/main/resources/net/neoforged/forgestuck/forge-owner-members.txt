@@ -362,3 +362,5 @@ net/minecraftforge/data/event/GatherDataEvent -> net/neoforged/neoforge/data/eve
   getLookupProvider()Ljava/util/concurrent/CompletableFuture;
   includeClient()Z
   includeServer()Z
+net/minecraftforge/data/loading/DatagenModLoader -> net/neoforged/neoforge/data/loading/DatagenModLoader
+  isRunningDataGen()Z

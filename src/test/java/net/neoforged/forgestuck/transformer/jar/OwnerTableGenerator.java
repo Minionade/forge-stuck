@@ -43,6 +43,7 @@ class OwnerTableGenerator {
     private static final String[][] PREFIXES = {
         {"net/minecraftforge/event/", "net/neoforged/neoforge/event/"},
         {"net/minecraftforge/data/event/", "net/neoforged/neoforge/data/event/"},
+        {"net/minecraftforge/data/loading/", "net/neoforged/neoforge/data/loading/"},
         {"net/minecraftforge/client/event/", "net/neoforged/neoforge/client/event/"},
         {"net/minecraftforge/fml/event/", "net/neoforged/fml/event/"},
         {"net/minecraftforge/forgespi/language/", "net/neoforged/neoforgespi/language/"},

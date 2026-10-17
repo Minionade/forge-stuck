@@ -21,6 +21,8 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.core.particles.ParticleType;
+import net.minecraft.network.syncher.EntityDataSerializer;
+import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 /**
  * Stand-in for Forge 1.20.1's {@code ForgeRegistries}, limited to fields whose registry is a static (non-datapack)
@@ -48,6 +50,9 @@ public final class ForgeRegistries {
     public static final IForgeRegistry<PoiType> POI_TYPES = of(Registries.POINT_OF_INTEREST_TYPE);
     public static final IForgeRegistry<Feature<?>> FEATURES = of(Registries.FEATURE);
 
+    public static final IForgeRegistry<EntityDataSerializer<?>> ENTITY_DATA_SERIALIZERS =
+            of(NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS);
+
     private static <V> IForgeRegistry<V> of(ResourceKey<? extends Registry<V>> key) {
         return new VanillaRegistryView<>(key);
     }
@@ -73,5 +78,18 @@ public final class ForgeRegistries {
         public static final ResourceKey<Registry<VillagerProfession>> VILLAGER_PROFESSIONS = Registries.VILLAGER_PROFESSION;
         public static final ResourceKey<Registry<PoiType>> POI_TYPES = Registries.POINT_OF_INTEREST_TYPE;
         public static final ResourceKey<Registry<Feature<?>>> FEATURES = Registries.FEATURE;
+        public static final ResourceKey<Registry<EntityDataSerializer<?>>> ENTITY_DATA_SERIALIZERS =
+                NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS;
+        public static final ResourceKey<? extends Registry<?>> GLOBAL_LOOT_MODIFIER_SERIALIZERS =
+                NeoForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS;
+        public static final ResourceKey<? extends Registry<?>> BIOME_MODIFIER_SERIALIZERS =
+                NeoForgeRegistries.Keys.BIOME_MODIFIER_SERIALIZERS;
+        public static final ResourceKey<? extends Registry<?>> STRUCTURE_MODIFIER_SERIALIZERS =
+                NeoForgeRegistries.Keys.STRUCTURE_MODIFIER_SERIALIZERS;
+        public static final ResourceKey<? extends Registry<?>> FLUID_TYPES = NeoForgeRegistries.Keys.FLUID_TYPES;
+        public static final ResourceKey<? extends Registry<?>> HOLDER_SET_TYPES = NeoForgeRegistries.Keys.HOLDER_SET_TYPES;
+        public static final ResourceKey<? extends Registry<?>> BIOME_MODIFIERS = NeoForgeRegistries.Keys.BIOME_MODIFIERS;
+        public static final ResourceKey<? extends Registry<?>> STRUCTURE_MODIFIERS =
+                NeoForgeRegistries.Keys.STRUCTURE_MODIFIERS;
     }
 }
