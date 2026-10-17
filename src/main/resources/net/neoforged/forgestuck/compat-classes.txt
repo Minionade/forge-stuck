@@ -56,3 +56,4 @@ LegacyEnchantmentRegistry
 LegacyEnchantmentRegistry$ClientAccess
 LegacyForgeMod
 LegacyForgeMod$1
+LegacyRegistryRoot

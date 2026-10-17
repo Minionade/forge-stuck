@@ -451,4 +451,12 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 - `TextureStitchEvent$Post` -> `TextureAtlasStitchedEvent` (`getAtlas()` only). `$Pre` and other members fail per call.
 - Validation: `.\gradlew.bat test build` passes. Not verified in game.
 | 2026-10-17 | t23: leftover SRG -> call-time failure, ENCHANTMENTS view, RenderGuiLayerEvent, registerMessage return type | PR (see GitHub) |
+## t25: fixes to t24 side effects (log t0-4637014005f8)
+
+- bdlib regression: `RecipeReloadListener$` (module class) and the companion `RecipeReloadListener` are both `@Mod.EventBusSubscriber`; only the companion has static `@SubscribeEvent` forwarders (javap-verified). NeoForge `register(Class)` throws for a class without handlers, Forge registered nothing. `LegacyInstanceSubscriberStep` now also removes the class-level annotation when no static `@SubscribeEvent` method remains (tested against a real `IEventBus`).
+- Mantle `RegistryLoadable(Registry)` does `BuiltInRegistries.REGISTRY.getKey(registry)` + `requireNonNull`; the enchantment view is not in the root registry. `f_257047_` is redirected to `compat/LegacyRegistryRoot`, a forwarding view of the root registry whose only addition is `getKey(enchantment view) = minecraft:enchantment`. Nothing is registered. Other registries are unaffected by the answer.
+- `net.minecraftforge.registries.NewRegistryEvent` -> NeoForge `NewRegistryEvent` (owner exists; verified). Legacy `create(RegistryBuilder)` returned `Supplier<IForgeRegistry>`, so no member is whitelisted: any call fails per call. cofh only declares it as a handler parameter (`CoFHCore.registrySetup`, which calls nothing on the event).
+- advgenerators `ClassFormatError: Class is both outer and inner class` (`Icons`): `TextureStitchEvent$Post` -> top-level `TextureAtlasStitchedEvent` left an InnerClasses entry with inner == outer. `ForgeOwnerRemapStep.dropBrokenInnerClasses` drops entries whose remapped triple is not `outer$simple` (tested by defining the class in a loader). A full define-scan of all transformed jars was not added.
+- Validation: `.\gradlew.bat test build` passes. Not verified in game.
 | 2026-10-17 | t24: enchantment registry view, ForgeMod, instance subscribers, TextureStitchEvent | PR (see GitHub) |
+| 2026-10-17 | t25: subscriber class annotation, root registry view, NewRegistryEvent, InnerClasses fix | PR (see GitHub) |
