@@ -26,6 +26,7 @@ final class ItemAbilityAndFluidMappings {
     private static Set<String> categoryMembers() {
         String d = "Lnet/minecraft/world/item/enchantment/EnchantmentCategory;";
         Set<String> out = new java.util.HashSet<>();
+        out.add("create(Ljava/lang/String;Ljava/util/function/Predicate;)" + d);
         for (String n : List.of("ARMOR", "ARMOR_FEET", "ARMOR_LEGS", "ARMOR_CHEST", "ARMOR_HEAD", "WEAPON", "DIGGER",
                 "FISHING_ROD", "TRIDENT", "BREAKABLE", "BOW", "WEARABLE", "CROSSBOW", "VANISHABLE")) {
             out.add(n + d);
@@ -65,6 +66,8 @@ final class ItemAbilityAndFluidMappings {
                 e("net/minecraftforge/common/loot/LootModifierManager",
                         "net/neoforged/forgestuck/compat/LegacyLootModifierManager",
                         Set.of("GSON_INSTANCELcom/google/gson/Gson;")),
+                e("net/minecraftforge/registries/MissingMappingsEvent",
+                        "net/neoforged/forgestuck/compat/LegacyMissingMappingsEvent", Set.of()),
                 e("net/minecraft/world/item/enchantment/Enchantment$Rarity",
                         "net/neoforged/forgestuck/compat/LegacyEnchantmentRarity", rarityMembers()),
                 e("net/minecraft/world/item/enchantment/EnchantmentCategory",
