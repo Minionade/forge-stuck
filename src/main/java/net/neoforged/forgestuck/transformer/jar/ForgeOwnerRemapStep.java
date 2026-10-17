@@ -56,7 +56,10 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         Set<String> blocked = new HashSet<>();
         if (report != null) blocked.addAll(report.jarBlocked());
         int[] adapted = {0};
-        collectBlocked(className, node, blocked, adapted);
+        Set<String> uses = new HashSet<>();
+        if (report != null) uses.addAll(report.memberUses());
+        collectBlocked(className, node, blocked, adapted, uses);
+        closeDependencies(uses, blocked);
 
         TreeMap<String, Integer> counts = new TreeMap<>();
         translateEventBusEnum(node.visibleAnnotations);
@@ -92,34 +95,66 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         }
         ClassNode node = new ClassNode();
         new ClassReader(bytes).accept(node, 0);
-        collectBlocked(className, node, report.jarBlocked(), new int[1]);
+        collectBlocked(className, node, report.jarBlocked(), new int[1], report.memberUses());
+        closeDependencies(report.memberUses(), report.jarBlocked());
     }
 
-    private void collectBlocked(String className, ClassNode node, Set<String> blocked, int[] adapted) {
+    private void collectBlocked(String className, ClassNode node, Set<String> blocked, int[] adapted,
+            Set<String> uses) {
         for (MethodNode m : node.methods) {
             for (AbstractInsnNode insn : m.instructions.toArray()) {
                 if (insn instanceof MethodInsnNode call) {
-                    checkMember(className, call.owner, call.name, call.desc, blocked);
+                    checkMember(className, call.owner, call.name, call.desc, blocked, uses);
                     if (!blocked.contains(call.owner) && changesDescriptor(call.desc, blocked)) adapted[0]++;
                 } else if (insn instanceof FieldInsnNode field) {
-                    checkMember(className, field.owner, field.name, field.desc, blocked);
+                    checkMember(className, field.owner, field.name, field.desc, blocked, uses);
                 } else if (insn instanceof InvokeDynamicInsnNode indy) {
-                    checkHandle(className, indy.bsm, blocked);
-                    for (Object arg : indy.bsmArgs) if (arg instanceof Handle h) checkHandle(className, h, blocked);
+                    checkHandle(className, indy.bsm, blocked, uses);
+                    for (Object arg : indy.bsmArgs) if (arg instanceof Handle h) checkHandle(className, h, blocked, uses);
                 }
             }
         }
     }
+
+    /**
+     * A member of mapped owner O whose descriptor mentions a mapped owner T that is blocked cannot be linked: the
+     * rewritten call would target NeoForge's O with a descriptor still naming the legacy T (or the reverse). O is
+     * therefore blocked as well, to a fixed point. Uses are {@code owner + '\0' + descriptor}.
+     */
+    private void closeDependencies(Set<String> uses, Set<String> blocked) {
+        boolean changed = true;
+        while (changed) {
+            changed = false;
+            for (String use : uses) {
+                int sep = use.indexOf('\0');
+                String owner = use.substring(0, sep);
+                if (blocked.contains(owner)) continue;
+                java.util.regex.Matcher t = TYPE_TOKEN.matcher(use.substring(sep + 1));
+                while (t.find()) {
+                    String dep = t.group(1);
+                    if (blocked.contains(dep) && mappings.get(dep) != null) {
+                        blocked.add(owner);
+                        LOGGER.warn("{} {} is used with {} which is unmapped in this jar; owner left unmapped too", TAG,
+                                owner, dep);
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private static final java.util.regex.Pattern TYPE_TOKEN = java.util.regex.Pattern.compile("L([^;()\\[]+);");
 
     /** True when the method descriptor mentions a mapped owner, i.e. it is adapted by the remap. */
     private boolean changesDescriptor(String desc, Set<String> blocked) {
         return !mappings.remapDescriptorTokens(desc, blocked, new java.util.HashMap<>()).equals(desc);
     }
 
-    private void checkHandle(String className, Handle h, Set<String> blocked) {
+    private void checkHandle(String className, Handle h, Set<String> blocked, Set<String> uses) {
         if (h.getTag() >= org.objectweb.asm.Opcodes.H_GETFIELD && h.getTag() <= org.objectweb.asm.Opcodes.H_PUTSTATIC
                 || h.getTag() >= org.objectweb.asm.Opcodes.H_INVOKEVIRTUAL) {
-            checkMember(className, h.getOwner(), h.getName(), h.getDesc(), blocked);
+            checkMember(className, h.getOwner(), h.getName(), h.getDesc(), blocked, uses);
         }
     }
 
@@ -130,8 +165,10 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 || "toString".equals(name) && "()Ljava/lang/String;".equals(desc);
     }
 
-    private void checkMember(String className, String owner, String name, String desc, Set<String> blocked) {
+    private void checkMember(String className, String owner, String name, String desc, Set<String> blocked,
+            Set<String> uses) {
         ForgeOwnerMappings.Entry e = mappings.get(owner);
+        if (e != null && desc.contains("L")) uses.add(owner + '\0' + desc);
         if (e == null || isObjectMethod(name, desc) || e.supports(name, desc) || !blocked.add(owner)) return;
         LOGGER.warn("{} {} uses {}.{}{} which has no verified equivalent on {}; owner left unmapped in this class",
                 TAG, className, owner, name, desc, e.newOwner());
