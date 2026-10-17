@@ -21,3 +21,4 @@ NonNullSupplier
 RegistryObject
 UnsupportedForgeApi
 VanillaRegistryView
+LegacyItemStackShim

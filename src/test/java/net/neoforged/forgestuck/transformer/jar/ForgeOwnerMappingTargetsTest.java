@@ -116,8 +116,12 @@ class ForgeOwnerMappingTargetsTest {
             java.util.regex.Pattern.compile("^(.+?)(\\[*(?:[ZBCSIJFD]|L(?:net|java|com|org)/[^;]+;))$");
 
     private static boolean hasConstructor(Class<?> c, String desc) {
-        for (java.lang.reflect.Constructor<?> k : c.getConstructors()) {
-            if (Type.getConstructorDescriptor(k).equals(desc)) return true;
+        for (java.lang.reflect.Constructor<?> k : c.getDeclaredConstructors()) {
+            int mod = k.getModifiers();
+            boolean subclassOnly = java.lang.reflect.Modifier.isProtected(mod)
+                    && java.lang.reflect.Modifier.isAbstract(c.getModifiers());
+            if ((java.lang.reflect.Modifier.isPublic(mod) || subclassOnly)
+                    && Type.getConstructorDescriptor(k).equals(desc)) return true;
         }
         return false;
     }

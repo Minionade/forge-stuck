@@ -1,4 +1,4 @@
-package net.neoforged.forgestuck.shim;
+package net.neoforged.forgestuck.compat;
 
 import java.util.Collections;
 import java.util.Map;
@@ -36,6 +36,11 @@ public final class LegacyItemStackShim {
         CustomData data = stack.get(DataComponents.CUSTOM_DATA);
         if (data == null) return null;
         return owned(stack, data).getUnsafe();
+    }
+
+    /** Forge 1.20.1 {@code hasTag()}: true when the stack carries a tag, i.e. custom data. */
+    public static boolean hasTag(ItemStack stack) {
+        return stack.get(DataComponents.CUSTOM_DATA) != null;
     }
 
     public static CompoundTag getOrCreateTag(ItemStack stack) {

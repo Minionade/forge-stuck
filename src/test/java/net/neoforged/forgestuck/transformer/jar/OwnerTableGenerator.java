@@ -134,8 +134,10 @@ class OwnerTableGenerator {
     static boolean exists(Class<?> target, String name, String desc) {
         try {
             if ("<init>".equals(name)) {
-                for (Constructor<?> c : target.getConstructors()) {
-                    if (Type.getConstructorDescriptor(c).equals(desc)) return true;
+                for (Constructor<?> c : target.getDeclaredConstructors()) {
+                    int mod = c.getModifiers();
+                    if ((java.lang.reflect.Modifier.isPublic(mod) || java.lang.reflect.Modifier.isProtected(mod))
+                            && Type.getConstructorDescriptor(c).equals(desc)) return true;
                 }
                 return false;
             }
