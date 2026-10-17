@@ -356,3 +356,8 @@ net/minecraftforge/fml/InterModComms$IMCMessage -> net/neoforged/fml/InterModCom
 net/minecraftforge/fml/event/IModBusEvent -> net/neoforged/fml/event/IModBusEvent
 net/minecraftforge/fml/event/lifecycle/InterModProcessEvent -> net/neoforged/fml/event/lifecycle/InterModProcessEvent
   getIMCStream()Ljava/util/stream/Stream;
+net/minecraftforge/data/event/GatherDataEvent -> net/neoforged/neoforge/data/event/GatherDataEvent
+  getGenerator()Lnet/minecraft/data/DataGenerator;
+  getLookupProvider()Ljava/util/concurrent/CompletableFuture;
+  includeClient()Z
+  includeServer()Z

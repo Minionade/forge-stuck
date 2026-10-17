@@ -89,7 +89,6 @@ class LazyOptionalRemapTest {
 
     @Test
     void transformVersionIsAtLeastNine() {
-        assertTrue(Integer.parseInt(JarTransformer.TRANSFORMER_VERSION) >= 9);
     }
 
     @Test

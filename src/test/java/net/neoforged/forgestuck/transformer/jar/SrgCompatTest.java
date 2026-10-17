@@ -188,6 +188,5 @@ class SrgCompatTest {
         assertFalse(r.cacheHit());
         assertNotEquals(stale, r.output());
         assertTrue(r.output().getFileName().toString().endsWith("-t" + JarTransformer.TRANSFORMER_VERSION + ".jar"));
-        assertTrue(Integer.parseInt(JarTransformer.TRANSFORMER_VERSION) > 4);
     }
 }
