@@ -72,6 +72,8 @@ final class ItemAbilityAndFluidMappings {
                         "net/neoforged/forgestuck/compat/LegacyEnchantmentRarity", rarityMembers()),
                 e("net/minecraft/world/item/enchantment/EnchantmentCategory",
                         "net/neoforged/forgestuck/compat/LegacyEnchantmentCategory", categoryMembers()),
+                e("net/minecraft/world/level/block/AbstractGlassBlock", "net/minecraft/world/level/block/TransparentBlock",
+                        Set.of("<init>(Lnet/minecraft/world/level/block/state/BlockBehaviour$Properties;)V")),
                 e("net/minecraft/world/level/block/GlassBlock", "net/minecraft/world/level/block/TransparentBlock",
                         Set.of("<init>(Lnet/minecraft/world/level/block/state/BlockBehaviour$Properties;)V")),
                 e(F, NF, Set.of("<init>(" + props + ")V")),
