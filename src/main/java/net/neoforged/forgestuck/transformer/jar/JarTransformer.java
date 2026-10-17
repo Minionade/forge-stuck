@@ -98,7 +98,7 @@ public class JarTransformer {
 
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
-        return new JarTransformer(List.of(new LegacyInstanceSubscriberStep(), new LegacyConditionCodecStep(), new LegacyResourceLocationSubclassStep(), new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new LegacyEnchantmentSubclassStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
+        return new JarTransformer(List.of(new LegacyInstanceSubscriberStep(), new LegacyConditionCodecStep(), new LegacyResourceLocationSubclassStep(), new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new LegacyEnchantmentSubclassStep(), new LegacyBufferBuilderRewriteStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
                 new ResourceLocationClassTransformStep(), new SrgMemberRemapStep(), new GameFieldRepairStep(), new LegacyGameTestGuardStep()));
     }
 
