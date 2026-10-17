@@ -98,7 +98,7 @@ public class JarTransformer {
 
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
-        return new JarTransformer(List.of(new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
+        return new JarTransformer(List.of(new LegacyResourceLocationSubclassStep(), new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
                 new ResourceLocationClassTransformStep(), new SrgMemberRemapStep(), new LegacyGameTestGuardStep()));
     }
 
@@ -221,6 +221,8 @@ public class JarTransformer {
             java.util.Set<String> allNames = new java.util.HashSet<>();
             in.stream().forEach(je -> allNames.add(je.getName()));
             ResourceDataRewriteStep resources = new ResourceDataRewriteStep(allNames, resourceReport);
+            boolean needsRlAccess = false;
+            byte[] existingAt = null;
             Map<String, JarEntry> pendingMixinEntries = new LinkedHashMap<>();
             Map<String, byte[]> pendingMixinData = new LinkedHashMap<>();
             Enumeration<JarEntry> entries = in.entries();
@@ -245,6 +247,10 @@ public class JarTransformer {
                 if (name.equals("META-INF/neoforge.mods.toml")) {
                     continue;
                 }
+                if (name.equals(LegacyResourceLocationSubclassStep.AT_PATH)) {
+                    existingAt = data;
+                    continue;
+                }
                 if (JIJ_JAR.matcher(name).matches()) {
                     data = transformNested(name, data);
                     putEntry(out, entry, name, data);
@@ -253,6 +259,7 @@ public class JarTransformer {
                 if (name.equals(JarFile.MANIFEST_NAME)) {
                     data = stripManifestDigests(data);
                 } else if (name.endsWith(".class")) {
+                    needsRlAccess |= LegacyResourceLocationSubclassStep.extendsResourceLocation(data);
                     data = applySteps(name, data, ownerReport);
                     mixins.inspectClass(name.substring(0, name.length() - ".class".length()).replace('/', '.'), data);
                 } else if (MixinResourceRewriter.isCandidate(name)) {
@@ -289,6 +296,18 @@ public class JarTransformer {
                     LOGGER.warn("{} {} preserved unknown model loader '{}' in model JSON(s); it works only if the "
                             + "loader is registered on this runtime", TAG, source, id);
                 }
+            }
+            if (needsRlAccess) {
+                LOGGER.info("{} {} has ResourceLocation subclass(es); emitting access transformer to open the final class and its constructor", TAG, jarName);
+            }
+            if (needsRlAccess || existingAt != null) {
+                JarEntry at = new JarEntry(LegacyResourceLocationSubclassStep.AT_PATH);
+                out.putNextEntry(at);
+                if (existingAt != null) out.write(existingAt);
+                if (needsRlAccess) {
+                    out.write(LegacyResourceLocationSubclassStep.AT_LINES.getBytes(StandardCharsets.UTF_8));
+                }
+                out.closeEntry();
             }
             String version = implementationVersion(in);
             Map<String, String> enumFiles = writeEnumExtensions(in, enumCandidates, modsToml, jarName, out);
