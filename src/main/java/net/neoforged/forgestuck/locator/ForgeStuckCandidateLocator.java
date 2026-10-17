@@ -23,6 +23,26 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
     private static final Logger LOGGER = LoggerFactory.getLogger("forgestuck");
     private static final String TAG = "[Forge Stuck!!]";
 
+    /**
+     * Transformed jars live here, directly under {@code mods/}. NeoForge's mods-folder locator lists {@code mods/}
+     * non-recursively and only accepts regular {@code *.jar} files, so jars in this subfolder are loaded only through
+     * this locator.
+     */
+    public static final String CACHE_DIR_NAME = ".forgestuck";
+    private static final String OLD_CACHE_DIR = ".forgestuck/cache";
+
+    public static Path cacheDir(Path gameDir) {
+        return gameDir.resolve("mods").resolve(CACHE_DIR_NAME);
+    }
+
+    private static void warnAboutLegacyCache(Path gameDir) {
+        Path old = gameDir.resolve(".forgestuck").resolve("cache");
+        if (Files.isDirectory(old)) {
+            LOGGER.info("{} old transformed-jar cache {}/ ({}) is no longer used and is left in place; delete it manually "
+                    + "if you want the disk space back", TAG, OLD_CACHE_DIR, old);
+        }
+    }
+
     // Provider/platform jars that should never be transformed by ForgeStuck.
     // Keep this list narrow and explicit.
     private static final Set<String> TRANSFORM_EXCLUDE_SUBSTRINGS = Set.of(
@@ -42,7 +62,8 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
     public void findCandidates(ILaunchContext context, IDiscoveryPipeline pipeline) {
         Path gameDir = FMLPaths.GAMEDIR.get();
         Path modsDir = gameDir.resolve("mods");
-        Path cacheDir = gameDir.resolve(".forgestuck").resolve("cache");
+        Path cacheDir = cacheDir(gameDir);
+        warnAboutLegacyCache(gameDir);
         if (!Files.isDirectory(modsDir)) return;
 
         List<Path> jars;
@@ -117,7 +138,7 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
         return TRANSFORM_EXCLUDE_SUBSTRINGS.stream().anyMatch(lowerJarName::contains);
     }
 
-    private static boolean isScannable(Path p) {
+    static boolean isScannable(Path p) {
         String n = p.getFileName().toString().toLowerCase(Locale.ROOT);
         return n.endsWith(".jar") && !n.startsWith("forgestuck") && Files.isRegularFile(p);
     }
