@@ -4,7 +4,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -165,6 +167,7 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
                 }
 
                 LOGGER.info("{} candidate found: {}", TAG, name);
+                reportMissingLanguageLoader(jar);
 
                 JarTransformer.Result result = transformer.transformCached(jar, cacheDir);
                 ModFileDiscoveryAttributes attributes = ModFileDiscoveryAttributes.DEFAULT.withLocator(this);
@@ -182,6 +185,22 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
             } catch (Exception | LinkageError t) {
                 LOGGER.error("{} skipped {}: {}", TAG, name, t.toString(), t);
             }
+        }
+    }
+
+    private static void reportMissingLanguageLoader(Path jar) {
+        Map<String, String> available = new HashMap<>();
+        try {
+            var providers = net.neoforged.fml.loading.FMLLoader.getLanguageLoadingProvider();
+            if (providers == null) {
+                LOGGER.debug("{} language loaders not known yet; leaving the check to FML", TAG);
+                return;
+            }
+            providers.forEach(l -> available.put(l.name(), l.version()));
+            LanguageLoaderCheck.Problem problem = LanguageLoaderCheck.check(jar, available);
+            if (problem != null) LOGGER.error("{} {}", TAG, problem.message());
+        } catch (IOException | RuntimeException | LinkageError e) {
+            LOGGER.warn("{} could not check language loaders for {}: {}", TAG, jar.getFileName(), e.toString());
         }
     }
 
