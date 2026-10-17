@@ -372,3 +372,20 @@ Moving failure from link/class-init time to the exact unsupported call is not sw
 - **Blocker, not mapped:** `net/minecraft/world/level/storage/loot/Serializer` (removed in 1.21; used by TConstruct `*ConditionSerializer` classes). Loot conditions/functions are codec-based now; no faithful adapter exists.
 - Still-unmapped owner ranking on the converted pack (counts of class-file references): fluids (FluidStack 2366, IFluidHandler($FluidAction) ~1180, FluidType 200, ForgeFlowingFluid), capabilities (Capability 574, IItemHandler 284, IEnergyStorage 95, ForgeCapabilities), ExistingFileHelper 378, ICondition 366, client model geometry (IGeometryBakingContext 264, ModelData 211), NetworkEvent$Context 178, ToolAction 156. These are API redesigns in 1.21 and need dedicated, individually verified adapters; none is a cheap rename.
 - Unchanged blockers: IConditionSerializer, NetworkRegistry$ChannelBuilder, ItemDisplayContext.create, MobEffectEvent$Remove, ModelEvent$RegisterAdditional. Not verified in game.
+
+## t19 (2026-10-17): Scala mod event bus, loot `Serializer` analysis
+
+Log: t0-cd293aa1fed8 (PR #22 code).
+
+### Root cause fixed: "The active mod container has no event bus" (second uncaught parallel error)
+`advgenerators` `Generators$.<clinit>` -> `bdlib` `RegistryManager.init` -> `FMLJavaModLoadingContext.getModEventBus()` threw, during `ScalaModContainer.constructMod` (javap of the kotori_scala container). That container sets the active `ModLoadingContext` container to `null` before reading `MODULE$`; `ModLoadingContext.getActiveContainer()` then falls back to the `minecraft` container, whose `getEventBus()` is `null`. (Not a pre-existing bdlib bug: Forge's context was always the mod being constructed.)
+Fix (`compat/FMLJavaModLoadingContext`): when the active container has no bus, resolve the caller's named module via `StackWalker`, match it to `IModInfo.getOwningFile().moduleName()` in `ModList`, and use that mod container's bus. Same behaviour as before whenever the active container has a bus. Not verified in game.
+
+### Analysis, not implemented (documented blockers)
+- `net/minecraft/world/level/storage/loot/Serializer` (bdlib `BdLib$.<clinit>`, TConstruct/Mantle/CoFH condition serializers): in bdlib it is not a bare class reference. `LootFunctionTypes$` does `new LootItemFunctionType(Serializer)` with a `KeepDataLootFunctionSerializer`. In 1.21.1 `LootItemFunctionType` is a record over `MapCodec<T>`, so a compat `Serializer` interface alone would only move the failure to `NoSuchMethodError` on the constructor. A faithful fix needs a `new/dup/invokespecial` rewrite to a factory that wraps a JSON `Serializer` as a `MapCodec` (JsonOps bridge, plus `LootItemConditionType` and `LootNbtProviderType` equivalents). Not done: not verifiable without running the codecs; no stub registrations were added.
+- `ItemDisplayContext.create(String, ResourceLocation, ItemDisplayContext)`: 1.21.1 uses `IExtensibleEnum` + `META-INF/enumextensions.json`. Feasible design: statically detect constant args in `TinkerItemDisplays.create`, emit the JSON entry (ctor descriptor from the 1.21.1 enum) into the transformed jar, and rewrite the call to `ItemDisplayContext.valueOf(name)`. Not implemented (needs bytecode constant tracing and the real enum constructor signature check).
+- `IConditionSerializer` and `NetworkRegistry$ChannelBuilder`: unchanged. Conditions are now `MapCodec`-based, and SimpleChannel has no 1:1 payload-registration equivalent (needs per-message codecs from reflection on legacy encoder/decoder lambdas). No verified adapter.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-17 | t19: mod-event-bus fallback for providers that clear the active container (Scala); loot `Serializer`, `ItemDisplayContext.create`, conditions, `ChannelBuilder` analysed and left documented. |
