@@ -54,6 +54,11 @@ final class ItemAbilityAndFluidMappings {
                 e("net/minecraftforge/common/ForgeMod", "net/neoforged/forgestuck/compat/LegacyForgeMod", Set.of(
                         "LAVA_TYPE" + ro, "WATER_TYPE" + ro, "SWIM_SPEED" + ro, "NAMETAG_DISTANCE" + ro,
                         "enableMilkFluid()V")),
+                // NeoForge 1.21.1 removed PlantType; the compat class is a name-interned token holder with the 1.20.1
+                // constants. Engine hooks (IPlantable.getPlantType, canSustainPlant) are not mapped.
+                e("net/minecraftforge/common/PlantType", "net/neoforged/forgestuck/compat/PlantType", Set.of(
+                        "get(Ljava/lang/String;)"+"Lnet/minecraftforge/common/PlantType;","getName()Ljava/lang/String;",
+                        "PLAINS"+"Lnet/minecraftforge/common/PlantType;","DESERT"+"Lnet/minecraftforge/common/PlantType;","BEACH"+"Lnet/minecraftforge/common/PlantType;","CAVE"+"Lnet/minecraftforge/common/PlantType;","WATER"+"Lnet/minecraftforge/common/PlantType;","NETHER"+"Lnet/minecraftforge/common/PlantType;","CROP"+"Lnet/minecraftforge/common/PlantType;")),
                 // Atlas stitching: only the Post event has a counterpart (TextureAtlasStitchedEvent, mod bus);
                 // Pre is unmapped.
                 e("net/minecraftforge/client/event/TextureStitchEvent",

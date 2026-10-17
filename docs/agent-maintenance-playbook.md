@@ -302,6 +302,17 @@ PR description checklist (copy and fill):
 
 | Date | PR | Guidance change |
 | --- | --- | --- |
+## t26: retyped game fields, PlantType (log t0-b3ae421ed24b)
+
+- `transformer/jar/GameFieldRepairStep.java` (after `SrgMemberRemapStep`) repairs `net/minecraft` field accesses whose 1.21.1 type differs from the legacy descriptor:
+  - Holder-wrapped statics (MobEffects, Attributes, Potions, SoundEvents, GameEvent...; table `forgestuck/game-field-holders.txt`, generated from the 1.21.1 jar): GETSTATIC target desc + `Holder.value()` + CHECKCAST legacy type. Limit: `value()` needs a bootstrapped registry; identity differs from the Holder.
+  - `BuiltInRegistries.POTION` DefaultedRegistry -> Registry; `invokeinterface DefaultedRegistry.*` (except `getDefaultKey`, no counterpart) re-owned to `Registry`.
+  - `BuiltInLootTables.EMPTY` -> ResourceKey + `location()`; `AttributeModifier$Operation` and `EquipmentSlot$Type.ARMOR` renames.
+  - `Enchantments.*` (now ResourceKey): per-call failure.
+- `compat/PlantType` replaces the removed Forge `PlantType`: interned by name, legacy constants, `getName`. No engine behavior (`IPlantable.getPlantType`, `canSustainPlant` unmapped).
+- Scanned but NOT repaired (retyped): `Advancement$Builder.criteria`, `ModelBakery.MISSING_MODEL_LOCATION`, `CauldronInteraction.EMPTY/WATER`, `CraftingBookCategory.CODEC`, `LootPool.entries`, `PotionBrewing$Mix.from/to`. Missing names left to call-time failure (e.g. `ItemStack` tag field, `Item` UUID fields, `Options.f_92063_`).
+- Top remaining unmapped/unverified owners in the log: RegistryObject, IEventBus, Mod, FluidStack, GatherDataEvent, FMLJavaModLoadingContext, FMLClientSetupEvent (counts are mentions, not all failures); `MobEffectEvent$Remove`, `NotCondition.<init>`, `RenderGuiOverlayEvent$Post.<init>` have no verified equivalent.
+- Not verified in game.
 | 2026-10-17 | [#13](https://github.com/Minionade/forge-stuck/pull/13) | Establish source-backed triage, log taxonomy, narrow patch boundaries, cache-aware validation, and the agent maintenance contract; link from README. |
 | 2026-10-16 | [#14](https://github.com/Minionade/forge-stuck/pull/14) | Registration adapters, `LegacyItemStackShim`, jar-wide owner blocking, owner/descriptor-aware SRG lookup, data-pack migration, preserve-unknown-model-loaders; see "Remaining blockers" below. |
 | 2026-10-17 | follow-up PR (t11) | Root cause of `fml.modloadingissue.javafml.dangling_entrypoint [thermal_foundation; …]` from the real-jar run of #14 (t10): `JarTransformer.convertModsToml` renamed modId `thermal_foundation`→`thermal` while `cofh.thermal.foundation.ThermalFoundation` still had `@Mod("thermal_foundation")`, so no container matched and ModLoader entered a broken state (all later "Cowardly refusing" errors are downstream). Fix: no id rewriting; `@Mod`/modId validation + regression tests; `Object` methods no longer block owner mapping; `enqueueWork(Supplier)` supported; `TRANSFORMER_VERSION` 11. Only the next real `runClient` can verify pack-level behavior. |
@@ -460,3 +471,4 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 - Validation: `.\gradlew.bat test build` passes. Not verified in game.
 | 2026-10-17 | t24: enchantment registry view, ForgeMod, instance subscribers, TextureStitchEvent | PR (see GitHub) |
 | 2026-10-17 | t25: subscriber class annotation, root registry view, NewRegistryEvent, InnerClasses fix | PR (see GitHub) |
+| 2026-10-17 | t26: retyped game field repair, PlantType | PR (see GitHub) |
