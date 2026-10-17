@@ -74,7 +74,9 @@ final class ItemAbilityAndFluidMappings {
                         "net/neoforged/forgestuck/compat/LegacyEnchantmentCategory", categoryMembers()),
                 e("net/minecraft/advancements/critereon/AbstractCriterionTriggerInstance",
                         "net/neoforged/forgestuck/compat/LegacyCriterionInstance",
-                        Set.of("<init>(Lnet/minecraft/advancements/critereon/ContextAwarePredicate;)V")),
+                        Set.of("<init>(Lnet/minecraft/resources/ResourceLocation;"
+                                + "Lnet/minecraft/advancements/critereon/ContextAwarePredicate;)V",
+                                "getCriterion()Lnet/minecraft/resources/ResourceLocation;")),
                 e("net/minecraft/world/level/block/AbstractGlassBlock", "net/minecraft/world/level/block/TransparentBlock",
                         Set.of("<init>(Lnet/minecraft/world/level/block/state/BlockBehaviour$Properties;)V")),
                 e("net/minecraft/world/level/block/GlassBlock", "net/minecraft/world/level/block/TransparentBlock",

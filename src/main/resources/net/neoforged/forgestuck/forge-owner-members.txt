@@ -194,6 +194,14 @@ net/minecraftforge/event/entity/living/LivingGetProjectileEvent -> net/neoforged
   getProjectileItemStack()Lnet/minecraft/world/item/ItemStack;
   getProjectileWeaponItemStack()Lnet/minecraft/world/item/ItemStack;
   setProjectileItemStack(Lnet/minecraft/world/item/ItemStack;)V
+net/minecraftforge/event/entity/living/ShieldBlockEvent -> net/neoforged/neoforge/event/entity/living/LivingShieldBlockEvent
+  getBlockedDamage()F
+  getDamageSource()Lnet/minecraft/world/damagesource/DamageSource;
+  getEntity()Lnet/minecraft/world/entity/LivingEntity;
+  getOriginalBlockedDamage()F
+  isCanceled()Z
+  setBlockedDamage(F)V
+  setCanceled(Z)V
 net/minecraftforge/event/entity/living/LivingKnockBackEvent -> net/neoforged/neoforge/event/entity/living/LivingKnockBackEvent
   getEntity()Lnet/minecraft/world/entity/LivingEntity;
   getRatioX()D
