@@ -88,6 +88,70 @@ class JarTransformerTest {
     }
 
     @Test
+    void nativeAndDualLoaderJarsBypassAllRewritesAndCache(@TempDir Path dir) throws Exception {
+        for (boolean dual : new boolean[] {false, true}) {
+            Path source = dir.resolve("native-" + dual + ".jar");
+            try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(source))) {
+                put(out, "META-INF/neoforge.mods.toml", """
+                        modLoader = "javafml"
+                        loaderVersion = "[4,)"
+                        [[mods]]
+                        modId = "native_example"
+                        version = "1"
+                        [[dependencies.native_example]]
+                        modId = "minecraft"
+                        versionRange = "[1.21.1]"
+                        [[dependencies.native_example]]
+                        modId = "neoforge"
+                        versionRange = "[21.1,)"
+                        """.getBytes(StandardCharsets.UTF_8));
+                if (dual) put(out, "META-INF/mods.toml", MODS_TOML.getBytes(StandardCharsets.UTF_8));
+                put(out, "META-INF/EXAMPLE.SF", new byte[] {1, 2, 3});
+                put(out, "example/Hook.class", LegacyGameTestGuardStepTest.hook(
+                        "net/neoforged/neoforge/event/RegisterGameTestsEvent", true, "example.gametest.Missing"));
+                put(out, "assets/x/models/test.json", "{\"loader\":\"forge:bucket\"}".getBytes(StandardCharsets.UTF_8));
+            }
+            byte[] original = Files.readAllBytes(source);
+            Path cache = dir.resolve("cache");
+            JarTransformer transformer = JarTransformer.withDefaultSteps();
+            JarTransformer.Result result = transformer.transformCached(source, cache);
+            assertEquals(source, result.output());
+            assertFalse(result.cacheHit());
+            assertFalse(Files.exists(cache));
+            Path output = dir.resolve("out-" + dual + ".jar");
+            transformer.transform(source, output);
+            assertArrayEquals(original, Files.readAllBytes(output));
+            assertArrayEquals(original, Files.readAllBytes(source));
+        }
+    }
+
+    @Test
+    void defaultLegacyPipelineAddsGuardAndStillConvertsMetadata(@TempDir Path dir) throws Exception {
+        Path source = dir.resolve("legacy.jar");
+        byte[] hook = LegacyGameTestGuardStepTest.hook("net/minecraftforge/event/RegisterGameTestsEvent",
+                true, "example.gametest.Missing");
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(source))) {
+            put(out, "META-INF/mods.toml", MODS_TOML.getBytes(StandardCharsets.UTF_8));
+            put(out, "example/Hook.class", hook);
+        }
+        Path output = JarTransformer.withDefaultSteps().transformCached(source, dir.resolve("cache")).output();
+        assertNotEquals(source, output);
+        assertNotNull(read(output, "META-INF/neoforge.mods.toml"));
+        assertNull(read(output, "META-INF/mods.toml"));
+        var node = new org.objectweb.asm.tree.ClassNode();
+        new org.objectweb.asm.ClassReader(read(output, "example/Hook.class")).accept(node, 0);
+        assertTrue(node.methods.stream().anyMatch(method -> {
+            for (var insn : method.instructions) {
+                if (insn instanceof org.objectweb.asm.tree.MethodInsnNode call
+                        && call.owner.equals("net/neoforged/forgestuck/compat/LegacyGameTestSupport")
+                        && call.name.equals("shouldSkip")) return true;
+            }
+            return false;
+        }));
+        assertArrayEquals(hook, read(source, "example/Hook.class"));
+    }
+
+    @Test
     void transformsMetadataAndLeavesSourceUntouched(@TempDir Path dir) throws Exception {
         Path src = buildJar(dir, "adv.jar", MODS_TOML, "1.6.0.6");
         String before = JarTransformer.sha256(src);

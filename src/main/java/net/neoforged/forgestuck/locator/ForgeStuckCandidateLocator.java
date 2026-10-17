@@ -63,6 +63,12 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
             String lower = name.toLowerCase(Locale.ROOT);
 
             try {
+                if (LegacyJarDetector.isNativeNeoForge(jar)) {
+                    LOGGER.info("{} bypass transform (native NeoForge descriptor; runtime validation left to NeoForge): {}",
+                            TAG, name);
+                    continue;
+                }
+
                 // For provider/platform jars: register the ORIGINAL jar, untransformed.
                 if (shouldSkipTransformation(lower)) {
                     LOGGER.info("{} bypass transform (provider/platform jar): {}", TAG, name);

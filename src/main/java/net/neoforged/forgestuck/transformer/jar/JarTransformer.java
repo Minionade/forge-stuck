@@ -30,6 +30,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.GsonBuilder;
+import net.neoforged.forgestuck.locator.LegacyJarDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "7";
+    public static final String TRANSFORMER_VERSION = "8";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     /** Targeted Thermal 1.20.1 -> NeoForge 1.21.1 compatibility shim: Thermal modules depend on id "thermal". */
     public static final String THERMAL_SOURCE_ID = "thermal_foundation";
@@ -70,7 +71,7 @@ public class JarTransformer {
 
     private static final Pattern MODEL_JSON = Pattern.compile("assets/[^/]+/models/.+\\.json");
 
-    /** Result of a cached transformation. */
+    /** Result of a cached transformation; a native bypass returns the source with {@code cacheHit=false}. */
     public record Result(Path output, boolean cacheHit) {}
 
     private final List<ClassTransformStep> steps;
@@ -94,11 +95,12 @@ public class JarTransformer {
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
         return new JarTransformer(List.of(new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
-                new ResourceLocationClassTransformStep(), new SrgMemberRemapStep()));
+                new ResourceLocationClassTransformStep(), new SrgMemberRemapStep(), new LegacyGameTestGuardStep()));
     }
 
     /** Returns the cached output for this source jar, creating it when missing. */
     public Result transformCached(Path source, Path cacheDir) throws IOException {
+        if (bypassNative(source)) return new Result(source, false);
         Files.createDirectories(cacheDir);
         Path target = cacheDir.resolve(sha256(source) + "-t" + TRANSFORMER_VERSION + ".jar");
         if (Files.isRegularFile(target) && Files.size(target) > 0) {
@@ -125,6 +127,10 @@ public class JarTransformer {
     public void transform(Path source, Path output) throws IOException {
         if (source.toAbsolutePath().normalize().equals(output.toAbsolutePath().normalize())) {
             throw new IOException("Refusing to overwrite the source jar " + source);
+        }
+        if (bypassNative(source)) {
+            Files.copy(source, output, StandardCopyOption.REPLACE_EXISTING);
+            return;
         }
         try (JarFile in = new JarFile(source.toFile());
                 OutputStream fos = Files.newOutputStream(output);
@@ -198,6 +204,13 @@ public class JarTransformer {
             out.write(converted.getBytes(StandardCharsets.UTF_8));
             out.closeEntry();
         }
+    }
+
+    private static boolean bypassNative(Path source) throws IOException {
+        if (!LegacyJarDetector.isNativeNeoForge(source)) return false;
+        LOGGER.info("{} bypass transform (native NeoForge descriptor; runtime validation left to NeoForge): {}",
+                TAG, source.getFileName());
+        return true;
     }
 
     private byte[] applySteps(String entryName, byte[] data, OwnerRemapReport report) {

@@ -16,6 +16,16 @@ public final class LegacyJarDetector {
 
     private LegacyJarDetector() {}
 
+    /**
+     * NeoForge's own descriptor is authoritative, including in dual-loader jars. Leave runtime/version
+     * validation to NeoForge rather than rewriting an incompatible native mod into a legacy candidate.
+     */
+    public static boolean isNativeNeoForge(Path jar) throws IOException {
+        try (ZipFile zip = new ZipFile(jar.toFile())) {
+            return zip.getEntry(NEOFORGE_MODS_TOML) != null;
+        }
+    }
+
     /** A legacy candidate has a {@code mods.toml} and no {@code neoforge.mods.toml}. */
     public static boolean isLegacyCandidate(Path jar) throws IOException {
         try (ZipFile zip = new ZipFile(jar.toFile())) {
