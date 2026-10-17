@@ -105,7 +105,7 @@ keep original bytes, malformed/unsupported data is reported
 
 ### Cache behavior
 
-- Outputs live at `<gameDir>/.forgestuck/cache/<source-sha256>-t<TRANSFORMER_VERSION>.jar`.
+- Outputs live at `<gameDir>/mods/.forgestuck/<source-sha256>-t<TRANSFORMER_VERSION>.jar`.
   A nonempty existing file is a hit; content is not revalidated on a hit.
 - A miss transforms into a temporary file, then moves it into place (atomically
   where supported). Original mods remain untouched.
@@ -277,6 +277,7 @@ PR description checklist (copy and fill):
 | 2026-10-16 | [#14](https://github.com/Minionade/forge-stuck/pull/14) | Registration adapters, `LegacyItemStackShim`, jar-wide owner blocking, owner/descriptor-aware SRG lookup, data-pack migration, preserve-unknown-model-loaders; see "Remaining blockers" below. |
 | 2026-10-17 | follow-up PR (t11) | Root cause of `fml.modloadingissue.javafml.dangling_entrypoint [thermal_foundation; …]` from the real-jar run of #14 (t10): `JarTransformer.convertModsToml` renamed modId `thermal_foundation`→`thermal` while `cofh.thermal.foundation.ThermalFoundation` still had `@Mod("thermal_foundation")`, so no container matched and ModLoader entered a broken state (all later "Cowardly refusing" errors are downstream). Fix: no id rewriting; `@Mod`/modId validation + regression tests; `Object` methods no longer block owner mapping; `enqueueWork(Supplier)` supported; `TRANSFORMER_VERSION` 11. Only the next real `runClient` can verify pack-level behavior. |
 | 2026-10-17 | [#15](https://github.com/Minionade/forge-stuck/pull/15) follow-up (t12) | Transform legacy jar-in-jar nested jars (t11 log: all thermal_* modules failed with `Mod ID thermal ... [MISSING]`). `TRANSFORMER_VERSION` 12. Read-only scan of the 19 local mod jars: only nested legacy jar is thermal_core; other nested jars are native; remaining missing dependency ids (`jei`, `jsonthings`, `mezz_config_gui`) are optional/not-legacy gaps. |
+| 2026-10-17 | [#16](https://github.com/Minionade/forge-stuck/pull/16) | Transformed-jar cache moved from `<gameDir>/.forgestuck/cache` to `<gameDir>/mods/.forgestuck` (`ForgeStuckCandidateLocator.CACHE_DIR_NAME`). NeoForge's `ModsFolderLocator` (verified with javap on loader 4.0.42) lists `mods/` non-recursively and accepts only regular `*.jar` files, and `isScannable` is also non-recursive, so subfolder jars are not loaded twice. The old `.forgestuck/cache` is left untouched and logged. Output unchanged, so `TRANSFORMER_VERSION` stays 12. |
 
 ## Remaining blockers and validation status
 
