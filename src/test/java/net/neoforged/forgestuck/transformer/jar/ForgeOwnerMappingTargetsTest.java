@@ -45,6 +45,12 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/fml/DistExecutor$SafeCallable", "net/minecraftforge/fml/DistExecutor$SafeSupplier",
             "net/minecraftforge/fml/DistExecutor$SafeRunnable");
 
+    private static List<String> owners() {
+        List<String> all = new ArrayList<>(OWNERS);
+        for (ForgeOwnerMappings.Entry e : GeneratedOwnerTable.entries()) all.add(e.oldOwner());
+        return all;
+    }
+
     private static Class<?> load(String internal) throws ClassNotFoundException {
         String name = internal.replace('/', '.');
         try {
@@ -58,7 +64,7 @@ class ForgeOwnerMappingTargetsTest {
     @Test
     void everyMappedOwnerIsPresentAndTargetsExist() throws Exception {
         ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
-        for (String owner : OWNERS) {
+        for (String owner : owners()) {
             assertNotNull(mappings.get(owner), "no mapping for " + owner);
             assertDoesNotThrow(() -> load(mappings.get(owner).newOwner()), "missing target for " + owner);
         }
@@ -77,7 +83,7 @@ class ForgeOwnerMappingTargetsTest {
     void everyWhitelistedMemberExistsOnTarget() throws Exception {
         ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
         List<String> missing = new ArrayList<>();
-        for (String owner : OWNERS) {
+        for (String owner : owners()) {
             ForgeOwnerMappings.Entry e = mappings.get(owner);
             if (e.supportedMembers() == null) continue;
             Class<?> target = load(e.newOwner());

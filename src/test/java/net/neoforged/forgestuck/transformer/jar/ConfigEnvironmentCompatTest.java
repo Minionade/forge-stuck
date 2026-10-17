@@ -234,7 +234,7 @@ class ConfigEnvironmentCompatTest {
     }
 
     @Test
-    void ownerWithBlockedDescriptorDependencyStaysConsistentJarWide() {
+    void unsupportedPostNoLongerUnmapsEventBusOrMinecraftForge() {
         // MinecraftForge.EVENT_BUS is typed IEventBus; post(Event) has no verified equivalent, so IEventBus stays
         // unmapped and MinecraftForge must stay unmapped too (a mapped getstatic would carry the legacy descriptor).
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
@@ -269,17 +269,17 @@ class ConfigEnvironmentCompatTest {
 
         ForgeOwnerRemapStep step = new ForgeOwnerRemapStep();
         OwnerRemapReport report = new OwnerRemapReport();
-        step.scan("zz.cfg.OnlyBus", onlyBus, report);
-        step.scan("zz.cfg.Post", in, report);
-        assertTrue(report.blockedOwners().contains("net/minecraftforge/eventbus/api/IEventBus"));
-        assertTrue(report.blockedOwners().contains("net/minecraftforge/common/MinecraftForge"));
-        byte[] out = step.apply("zz.cfg.OnlyBus", onlyBus, report);
-        assertTrue(new String(out, java.nio.charset.StandardCharsets.ISO_8859_1)
-                .contains("net/minecraftforge/common/MinecraftForge"));
+        byte[] outPost = step.apply("zz.cfg.Post", in, report);
+        byte[] outBus = step.apply("zz.cfg.OnlyBus", onlyBus, report);
+        // Unsupported IEventBus.post no longer unmaps IEventBus/MinecraftForge: the call site fails at call time.
+        assertEquals(Set.of(), report.blockedOwners());
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(outPost));
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(outBus));
+        assertEquals(1, report.unsupportedCalls().size());
     }
 
     @Test
-    void registryFieldBlockedByItsRegistryTypeIsNotMappedAlone() {
+    void unsupportedRegistryUsesLinkAndReportInsteadOfUnmapping() {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/cfg/Reg", null, "java/lang/Object", null);
         var m = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "go", "()V", null, null);
@@ -295,9 +295,9 @@ class ConfigEnvironmentCompatTest {
         cw.visitEnd();
         byte[] in = cw.toByteArray();
         OwnerRemapReport report = new OwnerRemapReport();
-        ForgeOwnerRemapStep step = new ForgeOwnerRemapStep();
-        step.scan("zz.cfg.Reg", in, report);
-        assertTrue(report.blockedOwners().containsAll(Set.of("net/minecraftforge/registries/IForgeRegistry",
-                "net/minecraftforge/registries/ForgeRegistries")), report.blockedOwners().toString());
+        byte[] out = new ForgeOwnerRemapStep().apply("zz.cfg.Reg", in, report);
+        assertEquals(Set.of(), report.blockedOwners());
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(out));
+        assertTrue(report.unsupportedCalls().keySet().iterator().next().contains("IForgeRegistry.tags"));
     }
 }

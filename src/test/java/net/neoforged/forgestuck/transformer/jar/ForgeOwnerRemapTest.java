@@ -153,27 +153,26 @@ class ForgeOwnerRemapTest {
         files.put("ex.mixins.json", "{\"package\":\"com.ex\",\"mixins\":[\"Ok\",\"Bad\"]}".getBytes(StandardCharsets.UTF_8));
         Path out = dir.resolve("out.jar");
         JarTransformer.withDefaultSteps().transform(SrgCompatTest.jar(dir, "in.jar", files), out);
-        // jar-wide consistency: Bad uses an unsupported member, so the owner stays unmapped in Ok as well
-        assertEquals(OLD, ((MethodInsnNode) parse(SrgCompatTest.read(out, "com/ex/Ok.class")).methods.get(0)
+        // Ok is remapped; Bad is a Mixin using an unsupported member, so it keeps the legacy owner and is dropped
+        assertEquals(NEW, ((MethodInsnNode) parse(SrgCompatTest.read(out, "com/ex/Ok.class")).methods.get(0)
+                .instructions.toArray()[1]).owner);
+        assertEquals(OLD, ((MethodInsnNode) parse(SrgCompatTest.read(out, "com/ex/Bad.class")).methods.get(0)
                 .instructions.toArray()[1]).owner);
         String cfg = new String(SrgCompatTest.read(out, "ex.mixins.json"), StandardCharsets.UTF_8);
         assertFalse(cfg.contains("Bad"));
     }
 
     @Test
-    void ownerBlockedInOneClassStaysUnmappedInWholeJarButNotInOtherJars(@TempDir Path dir) throws Exception {
+    void unsupportedMemberInOneClassDoesNotUnmapTheOwnerElsewhere(@TempDir Path dir) throws Exception {
         var a = new java.util.LinkedHashMap<String, byte[]>();
         a.put("com/ex/Ok.class", caller("com/ex/Ok", false, "get", "()Ljava/lang/Object;"));
         a.put("com/ex/Bad.class", caller("com/ex/Bad", false, "noSuchMember", "()Z"));
-        var b = new java.util.LinkedHashMap<String, byte[]>();
-        b.put("com/ex/Ok.class", caller("com/ex/Ok", false, "get", "()Ljava/lang/Object;"));
         Path outA = dir.resolve("a-out.jar");
-        Path outB = dir.resolve("b-out.jar");
         JarTransformer.withDefaultSteps().transform(SrgCompatTest.jar(dir, "a.jar", a), outA);
-        JarTransformer.withDefaultSteps().transform(SrgCompatTest.jar(dir, "b.jar", b), outB);
-        assertEquals(OLD, ((MethodInsnNode) parse(SrgCompatTest.read(outA, "com/ex/Ok.class")).methods.get(0)
+        assertEquals(NEW, ((MethodInsnNode) parse(SrgCompatTest.read(outA, "com/ex/Ok.class")).methods.get(0)
                 .instructions.toArray()[1]).owner);
-        assertEquals(NEW, ((MethodInsnNode) parse(SrgCompatTest.read(outB, "com/ex/Ok.class")).methods.get(0)
-                .instructions.toArray()[1]).owner);
+        byte[] bad = SrgCompatTest.read(outA, "com/ex/Bad.class");
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(bad));
+        assertTrue(new String(bad, StandardCharsets.ISO_8859_1).contains("UnsupportedForgeApi"));
     }
 }
