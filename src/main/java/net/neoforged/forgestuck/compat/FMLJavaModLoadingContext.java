@@ -16,6 +16,7 @@ public final class FMLJavaModLoadingContext {
     private FMLJavaModLoadingContext() {}
 
     public static FMLJavaModLoadingContext get() {
+        LegacyTickBridge.install();
         return INSTANCE;
     }
 
