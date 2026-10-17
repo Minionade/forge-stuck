@@ -416,5 +416,10 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 
 - ResourceId-style subclasses: ctor adaptation + AT (public-f ResourceLocation) in META-INF/accesstransformer.cfg; AT application unverified in game.
 - IConditionSerializer/CraftingHelper.register/getCondition/processConditions/serialize map to compat LegacyConditions (MapCodec bridge registered at RegisterEvent for CONDITION_CODECS). Legacy ICondition implementers get a generated codec(). Not preserved: forge:* builtin ids, And/Or array ctors, ConditionalRecipe builders, ICondition.getID() calls.
-- Not done in this PR: NetworkRegistry/SimpleChannel adapter, FluidType, language-loader error for kotori_scala. Not verified in game.
+- NetworkRegistry/SimpleChannel (cofh_core, bdlib, advgenerators): compat LegacySimpleChannel/LegacyNetworkRegistry/LegacyNetworkContext/LegacyNetworkDirection/LegacyPacketDistributor over NeoForge payload registration (RegisterPayloadHandlersEvent on the registering mod's bus; one payload type <ns>:<path>/<id> per registerMessage). Preserved: encoder/decoder over FriendlyByteBuf, consumer on the network thread, enqueueWork/getSender/getDirection/setPacketHandled, direction restriction, PLAYER/ALL/SERVER/DIMENSION/NEAR/TRACKING_* targets. Not preserved (fail at the call): accepted-version predicates (exact version compare; ACCEPTVANILLA/ABSENT -> optional), LOGIN messages, messageBuilder, isRemotePresent, registering after the registry event. Timing relative to FMLCommonSetupEvent unverified. Tested: codec round trip + handler/context with a proxy IPayloadContext (LegacySimpleChannelTest).
+- FluidType/FluidType.Properties map to the NeoForge classes with a reflection-verified whitelist (BlockPathTypes-based members are not whitelisted).
+- LanguageLoaderCheck: before transforming, a legacy jar with a non-javafml modLoader is checked against FMLLoader.getLanguageLoadingProvider(); an ERROR naming mods, loader id, range and install hint (kotori_scala -> ScalableCatsForce NeoForge 1.21.1 with-library) is logged. Metadata keeps modLoader/loaderVersion; FML still reports the missing provider itself. If providers are not yet known at locator time the check is skipped (debug log). Not verified in game.
+
+| 2026-10-17 | t21: ResourceLocation subclasses, conditions, network adapter, FluidType, language-loader check | PR #25 |
+
 

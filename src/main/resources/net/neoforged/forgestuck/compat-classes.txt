@@ -32,3 +32,14 @@ LegacyResourceLocations
 LegacyConditionSerializer
 LegacyConditions
 LegacyConditions$1
+LegacyNetworkDirection
+LegacyNetworkContext
+LegacyPacketDistributor
+LegacyPacketDistributor$LegacyPacketTarget
+LegacyPacketDistributor$LegacyTargetPoint
+LegacyPacketDistributor$Dispatch
+LegacySimpleChannel
+LegacySimpleChannel$Payload
+LegacySimpleChannel$Message
+LegacyNetworkRegistry
+LegacyNetworkRegistry$LegacyChannelBuilder
