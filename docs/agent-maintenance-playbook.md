@@ -348,3 +348,19 @@ Moving failure from link/class-init time to the exact unsupported call is not sw
 - ItemDisplayContext.create: NeoForge extends enums only through META-INF/enumextensions.json (+ IExtensibleEnum.getExtensionInfo); generating it would need the constant args, ordinal/id semantics and a rewrite of every static-field initializer to `valueOf`. Not implemented; not verifiable without the format spec and a real run. It already fails per call (NoSuchMethodError), but tconstruct calls it from a static initializer.
 - NetworkRegistry/SimpleChannel (cofh_core): the owner is unmapped, so linking fails with NoClassDefFoundError. A stub mapping with per-call failure would only move the failure, since cofh_core builds its channel during construction; no faithful payload adapter exists. Blocker.
 - IConditionSerializer (mantle JEI plugin) and Scala mods (bdlib, advgenerators: language provider kotori_scala finds no public constructor): unchanged blockers.
+
+## t17 notes (2026-10-17)
+
+- **Root cause of NoSuchFieldError ... Registries f_279569_:** `srg-members.properties` held ~6 hand-written entries. `f_279569_` = `Registries.CREATIVE_MODE_TAB` (exists in 1.21.1). The table is now generated (~50k entries) by `tools/SrgTableGenerator.java` from Mojang 1.20.1 client.txt + MCPConfig 1.20.1 joined.tsrg + the 1.21.1 merged jar; an entry is emitted only if the Mojang-named declaring class exists in 1.21.1 and declares a same-named member (name + arg count checked, not full descriptors).
+- `SrgResidualTest` guards residual `f_/m_` refs to game owners (opt-in `FORGESTUCK_SCAN_DIR` for real jars). Remaining residuals on real jars are 1.20.1 members removed in 1.21 (e.g. `VertexConsumer.endVertex`, vertex/uv/color builders, `Tesselator.end`): genuinely unsupported, fail with `NoSuchMethodError` at the call.
+- `Event.<init>` is protected in NeoForge; mapping now declares it.
+- `ForgeClassTransformer` now also matches the SRG names of ItemStack `getTag/getOrCreateTag/setTag/hasTag` (production jars use SRG); `LegacyItemStackShim` moved to `compat` (game-layer relocated jar) and gained `hasTag`.
+- **Blockers (documented, not mapped):** `ModelEvent$RegisterAdditional` (NeoForge takes `ModelResourceLocation`, not `ResourceLocation`), `MobEffectEvent$Remove` (requires new `EffectCure`), `IConditionSerializer`, `NetworkRegistry$ChannelBuilder`, `ItemDisplayContext.create`, Scala mods.
+- Not verified in game; only a real runClient can verify.
+
+## Scala mods (kotori_scala) - t17 (2026-10-17)
+
+- **Root cause:** `JarTransformer.convertModsToml` rewrote every non-javafml `modLoader` to `javafml`, so FML's Java provider tried to construct Scala `object` mods (private ctor, `MODULE$`) and failed with *exactly 1 public constructor, found 0* (bdlib `BdLib`, advgenerators `Generators`).
+- **Finding:** `ScalableCatsForce-NeoForge-3.7.1-build-11-with-library.jar` in the pack is a NeoForge 1.21.1 `IModLanguageLoader` named `kotori_scala` (`com.kotori316.scala_lib.ScalaLanguageProvider`, FMLModType LIBRARY, bundles the Scala library). javap shows its `ScalaModContainer` reads the `MODULE$` field of Scala objects, falls back to a constructor taking IEventBus/ModContainer/Dist, creates the mod event bus and runs `AutomaticEventSubscriber.inject`. It already does what a Forge Stuck provider would, so no second provider was written.
+- **Fix:** non-javafml loaders keep their loader id and `loaderVersion` in `neoforge.mods.toml`; javafml still maps to `[1,)`. If no matching provider jar is installed FML reports it explicitly.
+- **Unverified:** that 1.20.1 Scala bytecode (bdlib/advgenerators, Scala library version) links under the bundled Scala library, and that the version `3.7.1-build-11` satisfies `[3.3.0,)`. Only a real runClient verifies this.

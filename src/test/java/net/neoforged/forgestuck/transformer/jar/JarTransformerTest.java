@@ -168,7 +168,7 @@ class JarTransformerTest {
         assertArrayEquals("hello".getBytes(StandardCharsets.UTF_8), read(out, "assets/readme.txt"));
 
         Config toml = new TomlParser().parse(new String(read(out, "META-INF/neoforge.mods.toml"), StandardCharsets.UTF_8));
-        assertEquals("javafml", toml.get("modLoader"));
+        assertEquals("kotori_scala", toml.get("modLoader"));
         assertEquals("[1,)", toml.get("loaderVersion"));
         assertEquals("MIT", toml.get("license"));
         List<UnmodifiableConfig> mods = toml.get("mods");
@@ -315,12 +315,24 @@ class JarTransformerTest {
     }
 
     @Test
-    void kotoriScalaIsRewrittenToJavafml(@TempDir Path dir) throws Exception {
+    void nonJavafmlLoaderVersionRangeIsKept() {
+        String toml = new JarTransformer(List.of()).convertModsToml(
+                "modLoader=\"kotori_scala\"\nloaderVersion=\"[3.3.0,)\"\nlicense=\"x\"\n[[mods]]\nmodId=\"sc\"\n", "1", "sc.jar");
+        var parsed = new TomlParser().parse(toml);
+        assertEquals("kotori_scala", parsed.get("modLoader"));
+        assertEquals("[3.3.0,)", parsed.get("loaderVersion"));
+        String java = new JarTransformer(List.of()).convertModsToml(
+                "modLoader=\"javafml\"\nloaderVersion=\"[47,)\"\nlicense=\"x\"\n[[mods]]\nmodId=\"j\"\n", "1", "j.jar");
+        assertEquals("[1,)", new TomlParser().parse(java).get("loaderVersion"));
+    }
+    @Test
+    void nonJavafmlLoaderIsPreserved(@TempDir Path dir) throws Exception {
         Path src = buildJar(dir, "adv.jar", MODS_TOML, "1");
         Path out = dir.resolve("out.jar");
         new JarTransformer(List.of()).transform(src, out);
         String toml = new String(read(out, "META-INF/neoforge.mods.toml"), StandardCharsets.UTF_8);
-        assertEquals("javafml", new TomlParser().parse(toml).get("modLoader"));
+        assertEquals("kotori_scala", new TomlParser().parse(toml).get("modLoader"));
+        assertEquals("[1,)", new TomlParser().parse(toml).get("loaderVersion"));
     }
 
     @Test

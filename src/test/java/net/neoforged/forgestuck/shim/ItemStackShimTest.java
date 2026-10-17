@@ -1,5 +1,7 @@
 package net.neoforged.forgestuck.shim;
 
+import net.neoforged.forgestuck.compat.LegacyItemStackShim;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.lang.reflect.Method;
@@ -112,44 +114,44 @@ class ItemStackShimTest {
     /** Every shim call the transformer can emit must resolve to a real public static method. */
     @Test
     void everyEmittedShimCallExists() throws Exception {
-        List<String> emitted = new ArrayList<>();
-        for (String name : List.of("getTag", "getOrCreateTag", "setTag")) {
-            String desc = name.equals("setTag") ? "(L" + CT + ";)V" : "()L" + CT + ";";
-            ClassWriter cw = new ClassWriter(0);
-            cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/G" + name, null, "java/lang/Object", null);
-            var mv = cw.visitMethod(Opcodes.ACC_PUBLIC, "m", "(L" + IS + ";L" + CT + ";)V", null, null);
-            mv.visitCode();
-            mv.visitVarInsn(Opcodes.ALOAD, 1);
-            mv.visitVarInsn(Opcodes.ALOAD, 2);
-            mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, IS, name, desc, false);
-            if (!name.equals("setTag")) mv.visitInsn(Opcodes.POP);
-            mv.visitInsn(Opcodes.RETURN);
-            mv.visitMaxs(3, 3);
-            mv.visitEnd();
-            cw.visitEnd();
-            byte[] out = ForgeClassTransformer.transform("com.ex.G" + name, cw.toByteArray());
-            ClassNode node = new ClassNode();
-            new ClassReader(out).accept(node, 0);
-            for (MethodNode mn : node.methods) {
-                for (AbstractInsnNode insn : mn.instructions) {
-                    if (insn instanceof MethodInsnNode call && call.owner.startsWith("net/neoforged/forgestuck/shim/")) {
-                        emitted.add(call.owner + "." + call.name + call.desc);
-                    }
-                }
-            }
-        }
-        assertEquals(3, emitted.size(), emitted.toString());
-        for (String e : emitted) {
-            int dot = e.indexOf('.');
-            int paren = e.indexOf('(');
-            Class<?> owner = Class.forName(e.substring(0, dot).replace('/', '.'));
+        assertEquals(4, ForgeClassTransformer.emittedShimCalls().size());
+        for (String[] call : ForgeClassTransformer.emittedShimCalls()) {
             boolean found = false;
-            for (Method method : owner.getMethods()) {
-                found |= method.getName().equals(e.substring(dot + 1, paren))
-                        && Type.getMethodDescriptor(method).equals(e.substring(paren))
+            for (Method method : LegacyItemStackShim.class.getMethods()) {
+                found |= method.getName().equals(call[0]) && Type.getMethodDescriptor(method).equals(call[1])
                         && Modifier.isStatic(method.getModifiers());
             }
-            assertTrue(found, "missing shim method " + e);
+            assertTrue(found, "missing shim method " + call[0] + call[1]);
         }
+    }
+
+    /** Production 1.20.1 jars reference SRG names; they must reach the shim too. */
+    @Test
+    void srgNamedCallsAreRedirectedLinkAndExecute() throws Exception {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+        cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/Srg", null, "java/lang/Object", null);
+        var m = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "run", "(L" + IS + ";)Z", null, null);
+        m.visitCode();
+        m.visitVarInsn(Opcodes.ALOAD, 0);
+        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL, IS, "m_41784_", "()L" + CT + ";", false);
+        m.visitLdcInsn("k");
+        m.visitLdcInsn(3);
+        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL, CT, "putInt", "(Ljava/lang/String;I)V", false);
+        m.visitVarInsn(Opcodes.ALOAD, 0);
+        m.visitVarInsn(Opcodes.ALOAD, 0);
+        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL, IS, "m_41783_", "()L" + CT + ";", false);
+        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL, IS, "m_41751_", "(L" + CT + ";)V", false);
+        m.visitVarInsn(Opcodes.ALOAD, 0);
+        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL, IS, "m_41782_", "()Z", false);
+        m.visitInsn(Opcodes.IRETURN);
+        m.visitMaxs(0, 0);
+        m.visitEnd();
+        cw.visitEnd();
+
+        byte[] out = ForgeClassTransformer.transform("com.ex.Srg", cw.toByteArray());
+        Class<?> c = new Loader().define("com.ex.Srg", out);
+        ItemStack stack = new ItemStack(Items.STICK);
+        assertTrue((Boolean) c.getMethod("run", ItemStack.class).invoke(null, stack));
+        assertEquals(3, LegacyItemStackShim.getTag(stack).getInt("k"));
     }
 }

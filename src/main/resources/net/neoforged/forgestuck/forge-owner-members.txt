@@ -349,6 +349,7 @@ net/minecraftforge/event/village/VillagerTradesEvent -> net/neoforged/neoforge/e
 net/minecraftforge/event/village/WandererTradesEvent -> net/neoforged/neoforge/event/village/WandererTradesEvent
   getRareTrades()Ljava/util/List;
 net/minecraftforge/eventbus/api/Event -> net/neoforged/bus/api/Event
+  <init>()V
 net/minecraftforge/fml/InterModComms -> net/neoforged/fml/InterModComms
 net/minecraftforge/fml/InterModComms$IMCMessage -> net/neoforged/fml/InterModComms$IMCMessage
   messageSupplier()Ljava/util/function/Supplier;
