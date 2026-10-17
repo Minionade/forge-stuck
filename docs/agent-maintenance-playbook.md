@@ -389,3 +389,25 @@ Fix (`compat/FMLJavaModLoadingContext`): when the active container has no bus, r
 | Date | Change |
 | --- | --- |
 | 2026-10-17 | t19: mod-event-bus fallback for providers that clear the active container (Scala); loot `Serializer`, `ItemDisplayContext.create`, conditions, `ChannelBuilder` analysed and left documented. |
+## t20 (2026-10-17): `ItemDisplayContext.create` enum extensions, legacy loot `Serializer` bridge
+
+Supersedes the "not implemented" bullets for these two items in t16/t19 above.
+
+### `ItemDisplayContext.create` -> `META-INF/enumextensions.json`
+- Schema verified against FML loader 4.0.42 `EnumPrototype.load` / `RuntimeEnumExtender`: entry `{enum, name, constructor, parameters}`; `name` must be a Java identifier starting (case-insensitively) with the owning mod id; the `@NamedEnum` parameter must be `modid:path`; the `@IndexedEnum` parameter is `-1`. The 1.21.1 constructor is `ItemDisplayContext(int, String, String fallbackName)`; the `(int,String)` one is `@ReservedConstructor`. The file is referenced by `enumExtensions` in the mod's `[[mods]]` entry (read by `LoadingModList.addEnumExtenders`).
+- `transformer/jar/LegacyEnumExtensionPlanner` is a small concrete bytecode interpreter run on the **original** classes (before `ResourceLocation` rewriting). Roots: `<clinit>` and static no-arg methods of classes mentioning `ItemDisplayContext`. It follows same-jar static calls with real arguments, `getstatic` of `ItemDisplayContext` constants, `Locale.ROOT`, `String.toUpperCase/toLowerCase/concat`, `makeConcatWithConstants`, `ResourceLocation` constructors/factories, and branches on known values. Any unknown value on a branch aborts that root; create sites that are never resolved are logged as WARN.
+- `EnumExtensionJson` writes `META-INF/forgestuck/enumextensions-<modId>.json` per mod id, containing only entries whose id namespace is that mod id (FML validates the prefix per mod). Constant names are `MODID_KEY`-style and unique.
+- `LegacyEnumCreateRewriteStep` redirects every `ItemDisplayContext.create(String,ResourceLocation,ItemDisplayContext)` to `compat/LegacyEnumExtensions.itemDisplayContext`, which looks up the generated constant by serialized id at run time. If no constant exists (non-constant args, wrong namespace) it throws `UnsupportedOperationException` naming the id, only when that call runs.
+- Limits: roots are static initializers/static no-arg methods only; instance-state or event-driven creation is not resolved. Ordinals differ from Forge (constants are appended by NeoForge). Verified by unit tests (planner, schema, end-to-end jar, rewritten call); the real `RuntimeEnumExtender` was not run on the generated file and nothing was run in game.
+
+### Legacy loot `Serializer` -> `MapCodec`
+- 1.21.1 `LootItemFunctionType`, `LootItemConditionType`, `LootNbtProviderType`, `LootPoolEntryType`, `LootNumberProviderType`, `LootScoreProviderType` are records over `MapCodec` (javap-verified). 1.20's `Serializer<T>` is mapped to `compat/LegacyLootSerializer` (same erased `serialize(JsonObject,Object,JsonSerializationContext)V` / `deserialize(JsonObject,JsonDeserializationContext)Object`).
+- `LegacyLootTypeRewriteStep` (runs before owner remapping) turns `new XType(Serializer)` into `LegacyLootBridge.xType(serializer)`, which builds a `MapCodec` over the legacy JSON methods: decode converts the `MapLike` to a `JsonObject` (JsonOps), calls `deserialize`, errors become `DataResult` errors; encode calls `serialize` and converts the result back. A runtime test round-trips a JSON object through rewritten fixture classes in a real classloader.
+- Limits: the serialization/deserialization contexts are plain Gson, so nested loot elements requested through the context fail with an error naming the type. Subclasses of Forge/vanilla 1.20 serializer base classes (e.g. `LootItemConditionalFunction.Serializer`) and `getSerializer()` callers are not covered and still fail per call or at link time.
+
+### `IConditionSerializer` (Mantle): evaluated, not implemented
+Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own `DataLoadedConditionContext` implements it), `CraftingHelper` registration/JSON lookup, `TrueCondition`/`FalseCondition`/`NotCondition`. NeoForge 1.21.1 conditions are `MapCodec`-based, `ICondition.IContext` differs, and `CraftingHelper` has no equivalent, so a linking-only interface would move the failure to the first `CraftingHelper` call without preserving registration or JSON semantics. Not done; `NetworkRegistry$ChannelBuilder` unchanged.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-17 | t20: enum-extension generation for `ItemDisplayContext.create`, loot `Serializer` -> `MapCodec` bridge; conditions and `ChannelBuilder` still documented blockers. Not verified in game. |
