@@ -23,6 +23,7 @@ UnsupportedForgeApi
 VanillaRegistryView
 LegacyItemStackShim
 LegacyEnumExtensions
+LegacyLootModifierManager
 LegacyLootSerializer
 LegacyLootBridge
 LegacyLootBridge$1
