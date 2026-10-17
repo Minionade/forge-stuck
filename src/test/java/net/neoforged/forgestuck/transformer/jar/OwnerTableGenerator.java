@@ -42,6 +42,7 @@ import org.objectweb.asm.tree.MethodNode;
 class OwnerTableGenerator {
     private static final String[][] PREFIXES = {
         {"net/minecraftforge/event/", "net/neoforged/neoforge/event/"},
+        {"net/minecraftforge/data/event/", "net/neoforged/neoforge/data/event/"},
         {"net/minecraftforge/client/event/", "net/neoforged/neoforge/client/event/"},
         {"net/minecraftforge/fml/event/", "net/neoforged/fml/event/"},
         {"net/minecraftforge/forgespi/language/", "net/neoforged/neoforgespi/language/"},
@@ -73,9 +74,11 @@ class OwnerTableGenerator {
         }
 
         ForgeOwnerMappings existing = ForgeOwnerMappings.defaults();
+        Set<String> generated = new TreeSet<>();
+        for (ForgeOwnerMappings.Entry e : GeneratedOwnerTable.entries()) generated.add(e.oldOwner());
         Map<String, String> candidates = new TreeMap<>();
         for (String old : owners) {
-            if (existing.get(old) != null) continue;
+            if (existing.get(old) != null && !generated.contains(old)) continue;
             String neo = newOwnerFor(old);
             if (neo != null && classExists(neo)) candidates.put(old, neo);
         }

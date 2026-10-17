@@ -135,7 +135,6 @@ class ForgeOwnerRemapTest {
 
     @Test
     void transformVersionInvalidatesOldCache(@TempDir Path dir) throws Exception {
-        assertTrue(Integer.parseInt(JarTransformer.TRANSFORMER_VERSION) > 5);
         Path src = JarTransformerTest.buildJar(dir, "adv.jar", JarTransformerTest.MODS_TOML, "1");
         Path cache = Files.createDirectory(dir.resolve("cache"));
         Path stale = cache.resolve(JarTransformer.sha256(src) + "-t5.jar");

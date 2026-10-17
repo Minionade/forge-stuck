@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Stream;
+import net.neoforged.forgestuck.transformer.jar.CompatRelocation;
 import net.neoforged.forgestuck.transformer.jar.JarTransformer;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforgespi.ILaunchContext;
@@ -77,11 +78,61 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
             return;
         }
 
-        JarTransformer transformer = JarTransformer.withDefaultSteps();
+        JarTransformer transformer = JarTransformer.forRuntime();
+        addRuntimeCompatJar(context, pipeline, cacheDir);
 
+        StartupProgress progress = new StartupProgress(createDisplay(), jars.size());
+        transformer.withProgress(progress);
+        progress.begin();
+        try {
+            processJars(context, pipeline, jars, transformer, cacheDir, progress);
+        } finally {
+            progress.end();
+            LOGGER.info("{} done: {} transformed ({} ms), {} cached", TAG, progress.transformedCount(),
+                    progress.transformMillis(), progress.cachedCount());
+        }
+    }
+
+    /**
+     * Compat classes loaded from this jar live in the FML service layer and cannot see Minecraft; a relocated copy is
+     * registered as a library so it lands in the game layer next to the transformed mods.
+     */
+    private void addRuntimeCompatJar(ILaunchContext context, IDiscoveryPipeline pipeline, Path cacheDir) {
+        try {
+            Path jar = CompatRelocation.writeRuntimeJar(cacheDir, ForgeStuckCandidateLocator.class.getClassLoader());
+            var added = pipeline.addPath(jar, ModFileDiscoveryAttributes.DEFAULT.withLocator(this),
+                    IncompatibleFileReporting.ERROR);
+            LOGGER.info("{} game-layer compat library {} ({})", TAG, jar.getFileName(),
+                    added.isPresent() ? "registered" : "not accepted by the loader");
+        } catch (Exception | LinkageError e) {
+            LOGGER.error("{} could not provide the game-layer compat library; transformed mods will fail to link: {}",
+                    TAG, e.toString(), e);
+        }
+    }
+
+    private static StartupDisplay createDisplay() {
+        try {
+            return new FmlStartupDisplay();
+        } catch (Exception | LinkageError e) {
+            LOGGER.debug("{} early-window progress unavailable: {}", TAG, e.toString());
+            return new StartupDisplay() {
+                public void begin(String title, int total) {}
+
+                public void update(int position, String text) {}
+
+                public void message(String text) {}
+
+                public void end(String text) {}
+            };
+        }
+    }
+
+    private void processJars(ILaunchContext context, IDiscoveryPipeline pipeline, List<Path> jars,
+            JarTransformer transformer, Path cacheDir, StartupProgress progress) {
         for (Path jar : jars) {
             String name = jar.getFileName().toString();
             String lower = name.toLowerCase(Locale.ROOT);
+            progress.next(name);
 
             try {
                 if (LegacyJarDetector.isNativeNeoForge(jar)) {

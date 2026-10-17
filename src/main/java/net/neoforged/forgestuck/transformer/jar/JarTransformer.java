@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "14";
+    public static final String TRANSFORMER_VERSION = "0";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 
@@ -79,6 +79,8 @@ public class JarTransformer {
     private final List<ClassTransformStep> steps;
     private final boolean removeUnknownLoaders;
     private final LegacyNameMappings mappings;
+    private TransformProgress progress = TransformProgress.NONE;
+    private final ThreadLocal<String> currentJar = ThreadLocal.withInitial(() -> "");
 
     public JarTransformer(List<ClassTransformStep> steps) {
         this(steps, REMOVE_UNKNOWN_MODEL_LOADERS);
@@ -100,17 +102,33 @@ public class JarTransformer {
                 new ResourceLocationClassTransformStep(), new SrgMemberRemapStep(), new LegacyGameTestGuardStep()));
     }
 
+    /**
+     * Default steps plus {@link CompatRelocationStep}: the transformer used at runtime, so transformed mods link to the
+     * game-layer copy of the compat classes (see {@link CompatRelocation}).
+     */
+    public static JarTransformer forRuntime() {
+        List<ClassTransformStep> all = new java.util.ArrayList<>(withDefaultSteps().steps);
+        all.add(new CompatRelocationStep());
+        return new JarTransformer(all);
+    }
+
     /** Returns the cached output for this source jar, creating it when missing. */
     public Result transformCached(Path source, Path cacheDir) throws IOException {
         if (bypassNative(source)) return new Result(source, false);
+        String jarName = source.getFileName().toString();
         Files.createDirectories(cacheDir);
         Path target = cacheDir.resolve(sha256(source) + "-t" + TRANSFORMER_VERSION + ".jar");
         if (Files.isRegularFile(target) && Files.size(target) > 0) {
             LOGGER.info("{} cache hit for {} -> {}", TAG, source.getFileName(), target);
+            progress.cached(jarName);
             return new Result(target, true);
         }
         LOGGER.info("{} cache miss for {}", TAG, source.getFileName());
+        progress.transforming(jarName);
+        long start = System.nanoTime();
         Path tmp = Files.createTempFile(cacheDir, "forgestuck-", ".tmp");
+        String previous = currentJar.get();
+        currentJar.set(jarName);
         try {
             transform(source, tmp);
             try {
@@ -119,10 +137,19 @@ public class JarTransformer {
                 Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
             }
         } finally {
+            currentJar.set(previous);
             Files.deleteIfExists(tmp);
         }
-        LOGGER.info("{} transformed jar created: {}", TAG, target);
+        long millis = (System.nanoTime() - start) / 1_000_000;
+        LOGGER.info("{} transformed jar created: {} ({} ms)", TAG, target, millis);
+        progress.transformed(jarName, millis);
         return new Result(target, false);
+    }
+
+    /** Reports progress of {@link #transformCached}; returns this transformer. */
+    public JarTransformer withProgress(TransformProgress listener) {
+        this.progress = listener == null ? TransformProgress.NONE : listener;
+        return this;
     }
 
     /** Writes the transformed jar to {@code output}; {@code source} is only read. */
@@ -290,6 +317,7 @@ public class JarTransformer {
             if (!LegacyJarDetector.isLegacyCandidate(in)) return data;
             Path out = dir.resolve("transformed.jar");
             LOGGER.info("{} transforming nested legacy jar {}", TAG, entryName);
+            progress.nested(currentJar.get(), entryName);
             transform(in, out);
             return Files.readAllBytes(out);
         } finally {

@@ -1,0 +1,23 @@
+# Classes of net.neoforged.forgestuck.compat copied (relocated) into the game-layer runtime jar.
+# Kept in sync by CompatRelocationTest; add new compat classes here.
+DistExecutor$1
+DistExecutor$SafeCallable
+DistExecutor$SafeReferent
+DistExecutor$SafeRunnable
+DistExecutor$SafeSupplier
+DistExecutor
+FMLJavaModLoadingContext
+ForgeRegistries$Keys
+ForgeRegistries
+IForgeRegistry
+LazyOptional
+LegacyDeferredRegister
+LegacyGameTestSupport
+ModLoadingContext
+NonNullConsumer
+NonNullFunction
+NonNullPredicate
+NonNullSupplier
+RegistryObject
+UnsupportedForgeApi
+VanillaRegistryView
