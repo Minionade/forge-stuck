@@ -41,6 +41,11 @@ public final class ForgeOwnerMappings {
         return add(new Entry(oldOwner, newOwner, null));
     }
 
+    public ForgeOwnerMappings addAll(Iterable<Entry> more) {
+        for (Entry e : more) add(e);
+        return this;
+    }
+
     public Entry get(String owner) {
         return entries.get(owner);
     }
@@ -121,7 +126,10 @@ public final class ForgeOwnerMappings {
                         "unregister(Ljava/lang/Object;)V",
                         "addListener(Ljava/util/function/Consumer;)V",
                         "addListener(L" + EB + "EventPriority;Ljava/util/function/Consumer;)V",
-                        "addListener(L" + EB + "EventPriority;ZLjava/util/function/Consumer;)V")))
+                        "addListener(L" + EB + "EventPriority;ZLjava/util/function/Consumer;)V",
+                        "addListener(Ljava/lang/Class;Ljava/util/function/Consumer;)V",
+                        "addListener(L" + EB + "EventPriority;Ljava/lang/Class;Ljava/util/function/Consumer;)V",
+                        "addListener(L" + EB + "EventPriority;ZLjava/lang/Class;Ljava/util/function/Consumer;)V")))
                 .add(EB + "SubscribeEvent", "net/neoforged/bus/api/SubscribeEvent")
                 .add(EB + "EventPriority", "net/neoforged/bus/api/EventPriority")
                 .add(entry("net/minecraftforge/fml/javafmlmod/FMLJavaModLoadingContext", COMPAT + "FMLJavaModLoadingContext",
@@ -130,6 +138,7 @@ public final class ForgeOwnerMappings {
                 .add(entry("net/minecraftforge/fml/config/IConfigSpec", "net/neoforged/fml/config/IConfigSpec", Set.of()))
                 .add("net/minecraftforge/api/distmarker/Dist", "net/neoforged/api/distmarker/Dist")
                 .add("net/minecraftforge/api/distmarker/OnlyIn", "net/neoforged/api/distmarker/OnlyIn")
+                .addAll(configAndEnvironment())
                 .add(entry(FE + "FMLCommonSetupEvent", "net/neoforged/fml/event/lifecycle/FMLCommonSetupEvent", enqueue()))
                 .add(entry(FE + "FMLClientSetupEvent", "net/neoforged/fml/event/lifecycle/FMLClientSetupEvent", enqueue()))
                 .add(entry(FE + "FMLDedicatedServerSetupEvent",
@@ -146,6 +155,10 @@ public final class ForgeOwnerMappings {
             "MOB_EFFECTS", "POTIONS", "ATTRIBUTES", "STAT_TYPES", "SOUND_EVENTS", "PARTICLE_TYPES", "BLOCK_ENTITY_TYPES",
             "ENTITY_TYPES", "MENU_TYPES", "RECIPE_TYPES", "RECIPE_SERIALIZERS", "VILLAGER_PROFESSIONS", "POI_TYPES",
             "FEATURES");
+
+    private static Iterable<Entry> configAndEnvironment() {
+        return ConfigEnvironmentMappings.entries();
+    }
 
     private static Entry entry(String oldOwner, String newOwner, Set<String> members) {
         return new Entry(oldOwner, newOwner, members);

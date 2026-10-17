@@ -30,10 +30,29 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/fml/event/lifecycle/FMLDedicatedServerSetupEvent",
             "net/minecraftforge/common/util/LazyOptional", "net/minecraftforge/common/util/NonNullConsumer",
             "net/minecraftforge/common/util/NonNullFunction", "net/minecraftforge/common/util/NonNullSupplier",
-            "net/minecraftforge/common/util/NonNullPredicate");
+            "net/minecraftforge/common/util/NonNullPredicate",
+            "net/minecraftforge/common/ForgeConfigSpec", "net/minecraftforge/common/ForgeConfigSpec$Builder",
+            "net/minecraftforge/common/ForgeConfigSpec$ConfigValue", "net/minecraftforge/common/ForgeConfigSpec$BooleanValue",
+            "net/minecraftforge/common/ForgeConfigSpec$IntValue", "net/minecraftforge/common/ForgeConfigSpec$LongValue",
+            "net/minecraftforge/common/ForgeConfigSpec$DoubleValue", "net/minecraftforge/common/ForgeConfigSpec$EnumValue",
+            "net/minecraftforge/fml/config/ModConfig", "net/minecraftforge/fml/config/ModConfig$Type",
+            "net/minecraftforge/fml/event/config/ModConfigEvent", "net/minecraftforge/fml/event/config/ModConfigEvent$Loading",
+            "net/minecraftforge/fml/event/config/ModConfigEvent$Reloading", "net/minecraftforge/common/MinecraftForge",
+            "net/minecraftforge/fml/ModLoadingContext", "net/minecraftforge/fml/ModContainer",
+            "net/minecraftforge/fml/ModList", "net/minecraftforge/fml/loading/FMLEnvironment",
+            "net/minecraftforge/fml/loading/FMLPaths", "net/minecraftforge/fml/LogicalSide",
+            "net/minecraftforge/fml/DistExecutor", "net/minecraftforge/fml/DistExecutor$SafeReferent",
+            "net/minecraftforge/fml/DistExecutor$SafeCallable", "net/minecraftforge/fml/DistExecutor$SafeSupplier",
+            "net/minecraftforge/fml/DistExecutor$SafeRunnable");
 
     private static Class<?> load(String internal) throws ClassNotFoundException {
-        return Class.forName(internal.replace('/', '.'), false, ForgeOwnerMappingTargetsTest.class.getClassLoader());
+        String name = internal.replace('/', '.');
+        try {
+            return Class.forName(name, false, ForgeOwnerMappingTargetsTest.class.getClassLoader());
+        } catch (LinkageError e) {
+            // Other tests' app-parented loaders may already have defined the same NeoForge classes.
+            return Class.forName(name, false, ClassLoader.getSystemClassLoader());
+        }
     }
 
     @Test
@@ -71,17 +90,30 @@ class ForgeOwnerMappingTargetsTest {
                     name = member.substring(0, paren);
                     desc = member.substring(paren);
                 } else {
-                    int l = member.indexOf("Lnet/");
-                    name = member.substring(0, l);
-                    desc = member.substring(l);
+                    java.util.regex.Matcher fm = FIELD.matcher(member);
+                    assertTrue(fm.matches(), "unparsable field member " + member);
+                    name = fm.group(1);
+                    desc = fm.group(2);
                 }
                 desc = mappings.remapDescriptorTokens(desc, new HashSet<>(), new HashMap<>());
-                if (isMethod ? !hasMethod(target, name, desc) : !hasField(target, name, desc)) {
+                boolean ok = !isMethod ? hasField(target, name, desc)
+                        : name.equals("<init>") ? hasConstructor(target, desc) : hasMethod(target, name, desc);
+                if (!ok) {
                     missing.add(e.newOwner() + "." + name + desc);
                 }
             }
         }
         assertEquals(List.of(), missing);
+    }
+
+    private static final java.util.regex.Pattern FIELD =
+            java.util.regex.Pattern.compile("^(.+?)(\\[*(?:[ZBCSIJFD]|L(?:net|java|com|org)/[^;]+;))$");
+
+    private static boolean hasConstructor(Class<?> c, String desc) {
+        for (java.lang.reflect.Constructor<?> k : c.getConstructors()) {
+            if (Type.getConstructorDescriptor(k).equals(desc)) return true;
+        }
+        return false;
     }
 
     private static boolean hasMethod(Class<?> c, String name, String desc) {

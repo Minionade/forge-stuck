@@ -85,6 +85,35 @@ real jar): `@Mod`/`DeferredRegister`/`ForgeRegistries` were previously unmapped,
 FML never constructed entry points. The prior mapping of the Forge capability
 classes was wrong (`CapabilityToken` does not exist) and was removed.
 
+### Config, environment and dist adapters (t12 log follow-up)
+
+Mapped in `ConfigEnvironmentMappings`; `ModConfigSpec.Builder` has the same names and
+erased descriptors as `ForgeConfigSpec.Builder` (javap-verified on 21.1.262).
+`DistExecutor` does not exist in NeoForge, so `compat/DistExecutor` reimplements the
+run/call-when-on and run-for-dist methods over `FMLEnvironment.dist` (the dev-only
+safe-referent validation is not reproduced). `ModLoadingContext.registerConfig`
+forwards to the active `ModContainer`. Runtime classloader tests:
+`ConfigEnvironmentCompatTest`.
+
+Real referrers in the t12 log: Forestry (native, untouched) failed on
+`MinecraftForge` only because its module manager loaded the legacy-transformed
+**gendustry** (`RecipeCacheRegistry.<init>`). `bdlib` and `advgenerators` fail in FML's
+Java language provider ("must have exactly 1 public constructor, found 0"): Scala
+`object` mods need a Scala language provider; this is a **provider blocker, not a link
+error**, and is not fixed here.
+
+Unmapped owners ranked by references in the 13 transformed t12 jars (refs/classes):
+`fluids/FluidStack` 5025/459, `IFluidHandler$FluidAction` 949/147, `IFluidHandler`
+786/111, `crafting/conditions/ICondition` 773/84, `FluidType$Properties` 767/44,
+`capabilities/Capability` 677/174, `Tags$Items` 608/30, `ItemModelBuilder` 432/10,
+`IItemHandler` 368/69, `IGeometryBakingContext` 362/41, `ExistingFileHelper` 342/111,
+`ModelData` 320/58, `ToolAction` 276/48. Documented blockers, deliberately not faked:
+conditions (NeoForge `ICondition` is codec-based with a different `IContext`; Mantle),
+capabilities and fluid/item handlers (redesigned), component-based `FluidStack`,
+`NetworkDirection`/networking, datagen model builders, `IEventBus.post(Event)Z` and
+`addGenericListener`, and `Tags$Items` (NeoForge uses `c:` tags whereas Forge mods ship
+`forge:` data, so a mapping would silently mismatch).
+
 ### Data-pack migration (`ResourceDataRewriteStep`, `DatapackSchemaRewriter`)
 
 Applied to `data/**` during the jar walk; idempotent, UTF-8, unaffected resources
@@ -278,6 +307,7 @@ PR description checklist (copy and fill):
 | 2026-10-17 | follow-up PR (t11) | Root cause of `fml.modloadingissue.javafml.dangling_entrypoint [thermal_foundation; …]` from the real-jar run of #14 (t10): `JarTransformer.convertModsToml` renamed modId `thermal_foundation`→`thermal` while `cofh.thermal.foundation.ThermalFoundation` still had `@Mod("thermal_foundation")`, so no container matched and ModLoader entered a broken state (all later "Cowardly refusing" errors are downstream). Fix: no id rewriting; `@Mod`/modId validation + regression tests; `Object` methods no longer block owner mapping; `enqueueWork(Supplier)` supported; `TRANSFORMER_VERSION` 11. Only the next real `runClient` can verify pack-level behavior. |
 | 2026-10-17 | [#15](https://github.com/Minionade/forge-stuck/pull/15) follow-up (t12) | Transform legacy jar-in-jar nested jars (t11 log: all thermal_* modules failed with `Mod ID thermal ... [MISSING]`). `TRANSFORMER_VERSION` 12. Read-only scan of the 19 local mod jars: only nested legacy jar is thermal_core; other nested jars are native; remaining missing dependency ids (`jei`, `jsonthings`, `mezz_config_gui`) are optional/not-legacy gaps. |
 | 2026-10-17 | [#16](https://github.com/Minionade/forge-stuck/pull/16) | Transformed-jar cache moved from `<gameDir>/.forgestuck/cache` to `<gameDir>/mods/.forgestuck` (`ForgeStuckCandidateLocator.CACHE_DIR_NAME`). NeoForge's `ModsFolderLocator` (verified with javap on loader 4.0.42) lists `mods/` non-recursively and accepts only regular `*.jar` files, and `isScannable` is also non-recursive, so subfolder jars are not loaded twice. The old `.forgestuck/cache` is left untouched and logged. Output unchanged, so `TRANSFORMER_VERSION` stays 12. |
+| 2026-10-17 | follow-up PR (t13, config/dist/closure) | t12 real-run "Failed to wait for future Mod Construction, 6 errors". Adapters (all members reflection-checked in `ForgeOwnerMappingTargetsTest`): `ForgeConfigSpec`(+`Builder`, `ConfigValue`, Boolean/Int/Long/Double/Enum values)→`ModConfigSpec`, `ModConfig`/`ModConfig$Type`/`ModConfigEvent`, `MinecraftForge.EVENT_BUS`→`NeoForge.EVENT_BUS`, `FMLEnvironment`/`FMLPaths`/`ModList`/`ModContainer`/`LogicalSide`, compat `DistExecutor` and `ModLoadingContext` (`registerConfig` forwards to the active `ModContainer`), widened `IEventBus.addListener` overloads. New generic **dependency closure** in `ForgeOwnerRemapStep`: if a member of a mapped owner has a descriptor mentioning a blocked mapped owner, that owner is blocked too (e.g. `MinecraftForge.EVENT_BUS` when `IEventBus` is blocked) so field descriptors never diverge. `TRANSFORMER_VERSION` 13. Only the next real `runClient` can verify pack-level behavior. |
 
 ## Remaining blockers and validation status
 
