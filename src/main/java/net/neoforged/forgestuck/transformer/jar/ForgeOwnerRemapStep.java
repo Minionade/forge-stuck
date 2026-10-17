@@ -7,6 +7,12 @@ import java.util.TreeMap;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Handle;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import net.neoforged.forgestuck.compat.UnsupportedForgeApi;
+import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.tree.InsnNode;
+import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.commons.ClassRemapper;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.AnnotationNode;
@@ -54,12 +60,13 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         new ClassReader(bytes).accept(node, 0);
 
         Set<String> blocked = new HashSet<>();
-        if (report != null) blocked.addAll(report.jarBlocked());
         int[] adapted = {0};
         Set<String> uses = new HashSet<>();
-        if (report != null) uses.addAll(report.memberUses());
+        boolean mixin = isMixin(node);
+        int replaced = mixin ? 0 : replaceUnsupported(className, node, report);
         collectBlocked(className, node, blocked, adapted, uses);
         closeDependencies(uses, blocked);
+        if (report != null) report.jarBlocked().addAll(blocked);
 
         TreeMap<String, Integer> counts = new TreeMap<>();
         translateEventBusEnum(node.visibleAnnotations);
@@ -77,27 +84,90 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
 
         ClassWriter writer = new ClassWriter(0);
         node.accept(new ClassRemapper(writer, mappings.remapper(blocked, counts)));
-        if (counts.isEmpty()) return bytes;
+        if (counts.isEmpty() && replaced == 0) return bytes;
         if (report != null) report.record(counts, mappings, adapted[0]);
         LOGGER.debug("{} remapped Forge owners in {}: {}", TAG, className, counts);
         return writer.toByteArray();
     }
 
     /**
-     * Jar-wide pre-pass: an owner used unsupportedly by any class stays unmapped in every class of the jar, so field
-     * declarations, descriptors and accesses cannot diverge between classes of one jar.
+     * Unsupported members no longer leave their owner unmapped (which guaranteed NoClassDefFoundError for every
+     * other use of that owner). The call site is instead replaced by a call to {@link UnsupportedForgeApi#fail}
+     * followed by stack-neutral pops and a default value, so the class links and verifies, and only executing that
+     * exact path throws {@link UnsupportedOperationException}. Constructors (uninitialized-object stack shape),
+     * method handles and Mixin classes cannot be rewritten this way and keep the owner unmapped in that class.
+     */
+    private int replaceUnsupported(String className, ClassNode node, OwnerRemapReport report) {
+        int replaced = 0;
+        for (MethodNode m : node.methods) {
+            for (AbstractInsnNode insn : m.instructions.toArray()) {
+                String owner, name, desc;
+                boolean field = false;
+                if (insn instanceof MethodInsnNode c) {
+                    owner = c.owner;
+                    name = c.name;
+                    desc = c.desc;
+                } else if (insn instanceof FieldInsnNode f) {
+                    owner = f.owner;
+                    name = f.name;
+                    desc = f.desc;
+                    field = true;
+                } else {
+                    continue;
+                }
+                ForgeOwnerMappings.Entry e = mappings.get(owner);
+                if (e == null || "<init>".equals(name) || isObjectMethod(name, desc) || e.supports(name, desc)) continue;
+                String member = owner.replace('/', '.') + (field ? "." + name : "." + name + desc);
+                InsnList list = new InsnList();
+                list.add(new LdcInsnNode(member));
+                list.add(new LdcInsnNode(className + "." + m.name));
+                list.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "net/neoforged/forgestuck/compat/UnsupportedForgeApi",
+                        "fail", "(Ljava/lang/String;Ljava/lang/String;)V", false));
+                int op = insn.getOpcode();
+                if (field) {
+                    Type t = Type.getType(desc);
+                    if (op == Opcodes.PUTSTATIC || op == Opcodes.PUTFIELD) list.add(pop(t));
+                    if (op == Opcodes.GETFIELD || op == Opcodes.PUTFIELD) list.add(new InsnNode(Opcodes.POP));
+                    if (op == Opcodes.GETSTATIC || op == Opcodes.GETFIELD) list.add(defaultValue(t));
+                } else {
+                    Type[] args = Type.getArgumentTypes(desc);
+                    for (int i = args.length - 1; i >= 0; i--) list.add(pop(args[i]));
+                    if (op != Opcodes.INVOKESTATIC) list.add(new InsnNode(Opcodes.POP));
+                    Type ret = Type.getReturnType(desc);
+                    if (ret.getSort() != Type.VOID) list.add(defaultValue(ret));
+                }
+                m.instructions.insertBefore(insn, list);
+                m.instructions.remove(insn);
+                m.maxStack += 2;
+                replaced++;
+                if (report != null) report.unsupportedCall(member);
+                LOGGER.debug("{} {} calls {} which has no verified equivalent; rewritten to fail at call time", TAG,
+                        className, member);
+            }
+        }
+        return replaced;
+    }
+
+    private static InsnNode pop(Type t) {
+        return new InsnNode(t.getSize() == 2 ? Opcodes.POP2 : Opcodes.POP);
+    }
+
+    private static InsnNode defaultValue(Type t) {
+        return new InsnNode(switch (t.getSort()) {
+            case Type.LONG -> Opcodes.LCONST_0;
+            case Type.FLOAT -> Opcodes.FCONST_0;
+            case Type.DOUBLE -> Opcodes.DCONST_0;
+            case Type.OBJECT, Type.ARRAY -> Opcodes.ACONST_NULL;
+            default -> Opcodes.ICONST_0;
+        });
+    }
+
+    /**
+     * Retained for API compatibility: blocking is now class-local (see {@link #apply}), so there is no jar-wide
+     * pre-pass state to collect.
      */
     @Override
-    public void scan(String className, byte[] bytes, OwnerRemapReport report) {
-        if (report == null || bytes == null || className.startsWith("net.neoforged.forgestuck")
-                || !mappings.mayReference(bytes)) {
-            return;
-        }
-        ClassNode node = new ClassNode();
-        new ClassReader(bytes).accept(node, 0);
-        collectBlocked(className, node, report.jarBlocked(), new int[1], report.memberUses());
-        closeDependencies(report.memberUses(), report.jarBlocked());
-    }
+    public void scan(String className, byte[] bytes, OwnerRemapReport report) {}
 
     private void collectBlocked(String className, ClassNode node, Set<String> blocked, int[] adapted,
             Set<String> uses) {

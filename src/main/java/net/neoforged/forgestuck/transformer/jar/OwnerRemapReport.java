@@ -13,7 +13,7 @@ public final class OwnerRemapReport {
     private int classesRewritten;
     private int descriptorsAdapted;
 
-    /** Owners that at least one class of this jar uses in an unsupported way; they stay unmapped jar-wide. */
+    /** Owners left unmapped in at least one class (constructor/method-handle/Mixin uses that cannot be rewritten). */
     java.util.Set<String> jarBlocked() {
         return jarBlocked;
     }
@@ -52,8 +52,26 @@ public final class OwnerRemapReport {
         return Map.copyOf(counts);
     }
 
+    private final Map<String, Integer> unsupportedCalls = new TreeMap<>();
+
+    /** Records a call site rewritten to fail at execution time because the member has no verified equivalent. */
+    void unsupportedCall(String member) {
+        unsupportedCalls.merge(member, 1, Integer::sum);
+    }
+
+    /** Member (owner.name+descriptor) -> number of call sites rewritten to throw when executed. */
+    public Map<String, Integer> unsupportedCalls() {
+        return Map.copyOf(unsupportedCalls);
+    }
+
     void log(Logger logger, String tag, String jarName) {
         counts.forEach((old, n) -> logger.info("{} {} owner remap {} -> {} ({} reference(s))", tag, jarName, old,
                 targets.get(old), n));
+        unsupportedCalls.forEach((member, n) -> logger.warn(
+                "{} {} {} call site(s) of {} have no verified NeoForge equivalent; they link but throw "
+                        + "UnsupportedOperationException if executed", tag, jarName, n, member));
+        jarBlocked.forEach(owner -> logger.error(
+                "{} {} owner {} left UNMAPPED in some class (constructor, method handle or Mixin use); that class "
+                        + "will not link", tag, jarName, owner));
     }
 }
