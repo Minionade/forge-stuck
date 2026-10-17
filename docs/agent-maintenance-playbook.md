@@ -357,3 +357,10 @@ Moving failure from link/class-init time to the exact unsupported call is not sw
 - `ForgeClassTransformer` now also matches the SRG names of ItemStack `getTag/getOrCreateTag/setTag/hasTag` (production jars use SRG); `LegacyItemStackShim` moved to `compat` (game-layer relocated jar) and gained `hasTag`.
 - **Blockers (documented, not mapped):** `ModelEvent$RegisterAdditional` (NeoForge takes `ModelResourceLocation`, not `ResourceLocation`), `MobEffectEvent$Remove` (requires new `EffectCure`), `IConditionSerializer`, `NetworkRegistry$ChannelBuilder`, `ItemDisplayContext.create`, Scala mods.
 - Not verified in game; only a real runClient can verify.
+
+## Scala mods (kotori_scala) - t17 (2026-10-17)
+
+- **Root cause:** `JarTransformer.convertModsToml` rewrote every non-javafml `modLoader` to `javafml`, so FML's Java provider tried to construct Scala `object` mods (private ctor, `MODULE$`) and failed with *exactly 1 public constructor, found 0* (bdlib `BdLib`, advgenerators `Generators`).
+- **Finding:** `ScalableCatsForce-NeoForge-3.7.1-build-11-with-library.jar` in the pack is a NeoForge 1.21.1 `IModLanguageLoader` named `kotori_scala` (`com.kotori316.scala_lib.ScalaLanguageProvider`, FMLModType LIBRARY, bundles the Scala library). javap shows its `ScalaModContainer` reads the `MODULE$` field of Scala objects, falls back to a constructor taking IEventBus/ModContainer/Dist, creates the mod event bus and runs `AutomaticEventSubscriber.inject`. It already does what a Forge Stuck provider would, so no second provider was written.
+- **Fix:** non-javafml loaders keep their loader id and `loaderVersion` in `neoforge.mods.toml`; javafml still maps to `[1,)`. If no matching provider jar is installed FML reports it explicitly.
+- **Unverified:** that 1.20.1 Scala bytecode (bdlib/advgenerators, Scala library version) links under the bundled Scala library, and that the version `3.7.1-build-11` satisfies `[3.3.0,)`. Only a real runClient verifies this.

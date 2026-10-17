@@ -480,8 +480,11 @@ public class JarTransformer {
         }
 
         Config out = Config.inMemory();
-        out.set("modLoader", "javafml");
-        out.set("loaderVersion", "[1,)");
+        // Only the Forge Java provider is replaced by FML's own javafml; any other language provider (e.g. a
+        // NeoForge-native Scala provider) keeps its loader id and version range so FML routes construction to it.
+        boolean javaLoader = "javafml".equals(loader);
+        out.set("modLoader", loader);
+        out.set("loaderVersion", javaLoader ? "[1,)" : source.getOrElse("loaderVersion", "[1,)"));
         out.set("license", source.getOrElse("license", "All Rights Reserved"));
         copyIfPresent(source, out, "issueTrackerURL");
 
@@ -555,18 +558,13 @@ public class JarTransformer {
     }
 
     /**
-     * Extension point for mods whose language provider is not available on this runtime (e.g. {@code kotori_scala}).
-     * The jar is still produced so the failure is visible and diagnosable.
+     * Extension point for mods that use a non-javafml language provider. The loader id is preserved in the output
+     * metadata; FML reports a missing provider explicitly if no matching provider jar is installed.
      */
     protected void onUnsupportedModLoader(String modLoader, String jarName) {
-        if ("kotori_scala".equals(modLoader)) {
-            LOGGER.warn("{} {} uses modLoader=\"kotori_scala\"; only the mods.toml loader string is rewritten to "
-                    + "\"javafml\". This is metadata conversion, NOT evidence that the Scala mod is constructed or "
-                    + "works", TAG, jarName);
-            return;
-        }
-        LOGGER.warn("{} {} uses modLoader=\"{}\" whose language provider is unavailable on this runtime; "
-                + "the mod will likely fail to load", TAG, jarName, modLoader);
+        LOGGER.info("{} {} uses modLoader=\"{}\"; preserving it. Construction is delegated to that language "
+                + "provider, which must be installed as a NeoForge-compatible jar (not verified here)",
+                TAG, jarName, modLoader);
     }
 
     public static String sha256(Path file) throws IOException {
