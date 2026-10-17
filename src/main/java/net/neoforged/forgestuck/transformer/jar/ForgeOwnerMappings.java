@@ -50,6 +50,7 @@ public final class ForgeOwnerMappings {
     }
 
     private static final String FU = "net/minecraftforge/common/util/";
+    private static final String FC = "net/minecraftforge/common/capabilities/";
     private static final String COMPAT = "net/neoforged/forgestuck/compat/";
 
     /**
@@ -82,7 +83,14 @@ public final class ForgeOwnerMappings {
                 .add(new Entry(FU + "NonNullFunction", COMPAT + "NonNullFunction",
                         Set.of("apply(Ljava/lang/Object;)Ljava/lang/Object;")))
                 .add(new Entry(FU + "NonNullSupplier", COMPAT + "NonNullSupplier",
-                        Set.of("get()Ljava/lang/Object;")));
+                        Set.of("get()Ljava/lang/Object;")))
+                // Forge capability API package moved from net.minecraftforge.common.capabilities
+                // to net.neoforged.neoforge.capabilities in NeoForge.
+                .add(FC + "Capability", "net/neoforged/neoforge/capabilities/BlockCapability")
+                .add(FC + "CapabilityManager", "net/neoforged/neoforge/capabilities/Capabilities")
+                .add(FC + "ICapabilityProvider", "net/neoforged/neoforge/capabilities/ICapabilityProvider")
+                .add(FC + "ICapabilitySerializable", "net/neoforged/neoforge/capabilities/ICapabilityProvider")
+                .add(FC + "CapabilityToken", "net/neoforged/neoforge/capabilities/CapabilityToken");
     }
 
     /** Cheap check on raw class bytes: could this class mention any mapped owner? */
