@@ -135,9 +135,28 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 ForgeOwnerMappings.Entry e = mappings.get(owner);
                 if (e == null || "<init>".equals(name) || isObjectMethod(name, desc) || e.supports(name, desc)) continue;
                 String member = owner.replace('/', '.') + (field ? "." + name : "." + name + desc);
+                failAtCall(m, insn, member, className + "." + m.name);
+                replaced++;
+                if (report != null) report.unsupportedCall(member);
+                LOGGER.debug("{} {} calls {} which has no verified equivalent; rewritten to fail at call time", TAG,
+                        className, member);
+            }
+        }
+        return replaced;
+    }
+
+    /**
+     * Replaces a field/method instruction with {@link UnsupportedForgeApi#fail} plus stack-neutral pops and a
+     * default value, so the class links and verifies and only executing this exact path throws.
+     */
+    static void failAtCall(MethodNode m, AbstractInsnNode insn, String member, String caller) {
+        boolean field = insn instanceof FieldInsnNode;
+        String desc = field ? ((FieldInsnNode) insn).desc : ((MethodInsnNode) insn).desc;
+        {
+            {
                 InsnList list = new InsnList();
                 list.add(new LdcInsnNode(member));
-                list.add(new LdcInsnNode(className + "." + m.name));
+                list.add(new LdcInsnNode(caller));
                 list.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "net/neoforged/forgestuck/compat/UnsupportedForgeApi",
                         "fail", "(Ljava/lang/String;Ljava/lang/String;)V", false));
                 int op = insn.getOpcode();
@@ -156,13 +175,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 m.instructions.insertBefore(insn, list);
                 m.instructions.remove(insn);
                 m.maxStack += 2;
-                replaced++;
-                if (report != null) report.unsupportedCall(member);
-                LOGGER.debug("{} {} calls {} which has no verified equivalent; rewritten to fail at call time", TAG,
-                        className, member);
             }
         }
-        return replaced;
     }
 
     private static InsnNode pop(Type t) {

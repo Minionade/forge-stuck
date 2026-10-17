@@ -47,7 +47,19 @@ final class ItemAbilityAndFluidMappings {
                         "slopeFindDistance(I)" + props, "levelDecreasePerBlock(I)" + props,
                         "explosionResistance(F)" + props, "tickRate(I)" + props)),
                 e("net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent",
-                        "net/neoforged/neoforge/capabilities/RegisterCapabilitiesEvent", Set.of())));
+                        "net/neoforged/neoforge/capabilities/RegisterCapabilitiesEvent", Set.of()),
+                // Overlays became layers: only the members with identical descriptors are mapped; getPartialTick
+                // (float vs DeltaTracker), getOverlay, getWindow and the constructors fail at the call.
+                e("net/minecraftforge/client/event/RenderGuiOverlayEvent",
+                        "net/neoforged/neoforge/client/event/RenderGuiLayerEvent",
+                        Set.of("getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;")),
+                e("net/minecraftforge/client/event/RenderGuiOverlayEvent$Post",
+                        "net/neoforged/neoforge/client/event/RenderGuiLayerEvent$Post",
+                        Set.of("getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;")),
+                e("net/minecraftforge/client/event/RenderGuiOverlayEvent$Pre",
+                        "net/neoforged/neoforge/client/event/RenderGuiLayerEvent$Pre",
+                        Set.of("getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;", "isCanceled()Z",
+                                "setCanceled(Z)V"))));
         return list;
     }
 

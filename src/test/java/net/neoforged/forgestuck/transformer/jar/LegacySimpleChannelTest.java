@@ -76,6 +76,15 @@ class LegacySimpleChannelTest {
     }
 
     @Test
+    void registerMessageReturnsHandlerAndHonoursDirection() throws Exception {
+        LegacySimpleChannel ch = channel();
+        var h = ch.registerMessage(3, Ping.class, (m, b) -> {}, (FriendlyByteBuf b) -> null,
+                (m, c) -> {}, Optional.of(LegacyNetworkDirection.PLAY_TO_CLIENT));
+        assertEquals(3, h.index());
+        assertTrue(ch.messageFor(Ping.class) != null);
+    }
+
+    @Test
     void unsupportedPartsFailAtTheCall() throws Exception {
         LegacySimpleChannel ch = channel();
         assertThrows(UnsupportedOperationException.class, () -> ch.registerMessage(1, Ping.class, (m, b) -> {},
