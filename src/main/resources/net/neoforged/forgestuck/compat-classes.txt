@@ -28,6 +28,7 @@ LegacyEnchantment
 LegacyEnchantmentRarity
 LegacyEnchantmentCategory
 LocalRegistryObject
+LegacyMissingMappingsEvent
 LegacyLootSerializer
 LegacyLootBridge
 LegacyLootBridge$1

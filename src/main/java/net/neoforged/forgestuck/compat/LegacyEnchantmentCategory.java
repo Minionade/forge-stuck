@@ -27,6 +27,11 @@ public final class LegacyEnchantmentCategory {
         return name;
     }
 
+    /** Forge's {@code EnchantmentCategory.create(name, canEnchant)}; the predicate is kept for the legacy mod only. */
+    public static LegacyEnchantmentCategory create(String name, java.util.function.Predicate<?> canEnchant) {
+        return new LegacyEnchantmentCategory(name);
+    }
+
     @Override
     public String toString() {
         return name;
