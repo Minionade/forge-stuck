@@ -23,7 +23,7 @@ public final class LegacyConditionCodecStep implements ClassTransformStep {
     @Override
     public byte[] apply(String className, byte[] bytes) {
         ClassNode node = new ClassNode();
-        new ClassReader(bytes).accept(node, ClassReader.SKIP_FRAMES);
+        new ClassReader(bytes).accept(node, 0);
         if ((node.access & Opcodes.ACC_INTERFACE) != 0 || node.interfaces == null
                 || !node.interfaces.contains(LEGACY_ICONDITION)) {
             return bytes;
