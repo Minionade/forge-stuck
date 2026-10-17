@@ -123,9 +123,16 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         }
     }
 
+    /** {@code java.lang.Object} members resolve identically on any replacement class. */
+    private static boolean isObjectMethod(String name, String desc) {
+        return "hashCode".equals(name) && "()I".equals(desc)
+                || "equals".equals(name) && "(Ljava/lang/Object;)Z".equals(desc)
+                || "toString".equals(name) && "()Ljava/lang/String;".equals(desc);
+    }
+
     private void checkMember(String className, String owner, String name, String desc, Set<String> blocked) {
         ForgeOwnerMappings.Entry e = mappings.get(owner);
-        if (e == null || e.supports(name, desc) || !blocked.add(owner)) return;
+        if (e == null || isObjectMethod(name, desc) || e.supports(name, desc) || !blocked.add(owner)) return;
         LOGGER.warn("{} {} uses {}.{}{} which has no verified equivalent on {}; owner left unmapped in this class",
                 TAG, className, owner, name, desc, e.newOwner());
     }

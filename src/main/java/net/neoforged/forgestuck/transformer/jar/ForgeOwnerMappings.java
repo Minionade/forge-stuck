@@ -152,7 +152,8 @@ public final class ForgeOwnerMappings {
     }
 
     private static Set<String> enqueue() {
-        return Set.of("enqueueWork(Ljava/lang/Runnable;)Ljava/util/concurrent/CompletableFuture;");
+        return Set.of("enqueueWork(Ljava/lang/Runnable;)Ljava/util/concurrent/CompletableFuture;",
+                "enqueueWork(Ljava/util/function/Supplier;)Ljava/util/concurrent/CompletableFuture;");
     }
 
     private static Set<String> forgeRegistriesFields(boolean keys) {

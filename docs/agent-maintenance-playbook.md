@@ -54,12 +54,16 @@ Class-step details:
   `name@desc`). [`LegacyNameMappings`](../src/main/java/net/neoforged/forgestuck/transformer/jar/LegacyNameMappings.java)
   also reads the explicit
   [`missing-mixin-targets.txt`](../src/main/resources/forgestuck/missing-mixin-targets.txt).
-- Metadata conversion includes a pre-existing, unaudited `thermal_foundation` →
-  `thermal` mod-id/dependency rewrite (a Thermal-specific special case, kept
-  to avoid regressing that pack; it is not a model for other mods), dependency
-  normalization, and the `kotori_scala` → `javafml` string rewrite. Metadata
-  acceptance does not establish API or language-provider compatibility; it is
-  **not** evidence Scala mods are constructed.
+- Metadata conversion keeps every declared `modId` and dependency id exactly as
+  written (no id renames), normalizes dependency fields, and applies the
+  `kotori_scala` → `javafml` string rewrite. Metadata acceptance does not
+  establish API or language-provider compatibility; it is **not** evidence Scala
+  mods are constructed. After conversion, `JarTransformer.validateEntrypoints`
+  scans the source jar for `@Mod("…")` values and logs an ERROR for any value
+  with no matching metadata `modId` (FML would report `dangling_entrypoint`).
+  Dependencies on ids no loaded mod provides (e.g. Thermal modules' `thermal`,
+  which is a nested jar-in-jar `thermal_core` that is **not** transformed) are
+  left as declared; see "Remaining blockers".
 - Unknown custom model loaders are now **preserved** with a warning
   (`REMOVE_UNKNOWN_MODEL_LOADERS=false`); stripping is opt-in only.
 - Locator logs say "discovered", not "registered": discovery is not construction.
@@ -271,6 +275,7 @@ PR description checklist (copy and fill):
 | --- | --- | --- |
 | 2026-10-17 | [#13](https://github.com/Minionade/forge-stuck/pull/13) | Establish source-backed triage, log taxonomy, narrow patch boundaries, cache-aware validation, and the agent maintenance contract; link from README. |
 | 2026-10-16 | [#14](https://github.com/Minionade/forge-stuck/pull/14) | Registration adapters, `LegacyItemStackShim`, jar-wide owner blocking, owner/descriptor-aware SRG lookup, data-pack migration, preserve-unknown-model-loaders; see "Remaining blockers" below. |
+| 2026-10-17 | follow-up PR (t11) | Root cause of `fml.modloadingissue.javafml.dangling_entrypoint [thermal_foundation; …]` from the real-jar run of #14 (t10): `JarTransformer.convertModsToml` renamed modId `thermal_foundation`→`thermal` while `cofh.thermal.foundation.ThermalFoundation` still had `@Mod("thermal_foundation")`, so no container matched and ModLoader entered a broken state (all later "Cowardly refusing" errors are downstream). Fix: no id rewriting; `@Mod`/modId validation + regression tests; `Object` methods no longer block owner mapping; `enqueueWork(Supplier)` supported; `TRANSFORMER_VERSION` 11. Only the next real `runClient` can verify pack-level behavior. |
 
 ## Remaining blockers and validation status
 
@@ -282,6 +287,7 @@ PR description checklist (copy and fill):
   (see `RegistrationLifecycleTest`).
 - **Not run:** cold/warm game launch, world create/save/reload, any real mod jar
   (Thermal, TConstruct, Mantle, BdLib, …). Pack-level compatibility is unproven.
+- **Likely next registration blockers (from the t10 real-jar log, unverified after the fix):** a single unsupported member leaves that owner unmapped jar-wide, including in the mod's entrypoint. Seen: `ForgeRegistries$Keys.FLUID_TYPES`/`GLOBAL_LOOT_MODIFIER_SERIALIZERS`, `ForgeRegistries.ENCHANTMENTS`, `IEventBus.post(Event)` (NeoForge returns the event), `IForgeRegistry.tags()`, `DeferredRegister.createOptional`, `IEventBus.addGenericListener`, and the nested Forge `thermal_core` jar-in-jar. `kotori_scala` mods (bdlib, cofh_core) are only metadata-converted.
 - **Unsupported:** Forge capability API, Forge events beyond the three lifecycle
   events (NeoForge uses `ICancellableEvent`), `DeferredRegister.createOptional`/
   `makeRegistry`/tag helpers, ENCHANTMENTS/BIOMES in compat `ForgeRegistries`,

@@ -21,6 +21,11 @@ import java.util.Map;
 import java.util.TreeSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassReader;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Opcodes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
@@ -43,11 +48,8 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "10";
+    public static final String TRANSFORMER_VERSION = "11";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
-    /** Targeted Thermal 1.20.1 -> NeoForge 1.21.1 compatibility shim: Thermal modules depend on id "thermal". */
-    public static final String THERMAL_SOURCE_ID = "thermal_foundation";
-    public static final String THERMAL_TARGET_ID = "thermal";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 
     private static final Logger LOGGER = LoggerFactory.getLogger("forgestuck");
@@ -211,6 +213,7 @@ public class JarTransformer {
             }
             String version = implementationVersion(in);
             String converted = convertModsToml(modsToml, version, source.getFileName().toString());
+            validateEntrypoints(in, converted, jarName);
             JarEntry generated = new JarEntry("META-INF/neoforge.mods.toml");
             out.putNextEntry(generated);
             out.write(converted.getBytes(StandardCharsets.UTF_8));
@@ -218,6 +221,57 @@ public class JarTransformer {
         }
     }
 
+    /** Collects the {@code @Mod} values declared by classes in the source jar. */
+    static Set<String> modAnnotationValues(JarFile in) throws IOException {
+        Set<String> ids = new TreeSet<>();
+        Enumeration<JarEntry> entries = in.entries();
+        while (entries.hasMoreElements()) {
+            JarEntry entry = entries.nextElement();
+            if (entry.isDirectory() || !entry.getName().endsWith(".class")) continue;
+            try (InputStream is = in.getInputStream(entry)) {
+                ids.addAll(modAnnotationValues(is.readAllBytes()));
+            } catch (RuntimeException e) {
+                LOGGER.warn("{} could not scan {} for @Mod: {}", TAG, entry.getName(), e.toString());
+            }
+        }
+        return ids;
+    }
+
+    static Set<String> modAnnotationValues(byte[] classBytes) {
+        Set<String> ids = new TreeSet<>();
+        new ClassReader(classBytes).accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public AnnotationVisitor visitAnnotation(String descriptor, boolean visible) {
+                if (!"Lnet/minecraftforge/fml/common/Mod;".equals(descriptor)
+                        && !"Lnet/neoforged/fml/common/Mod;".equals(descriptor)) {
+                    return null;
+                }
+                return new AnnotationVisitor(Opcodes.ASM9) {
+                    @Override
+                    public void visit(String name, Object value) {
+                        if ("value".equals(name) && value instanceof String s) ids.add(s);
+                    }
+                };
+            }
+        }, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        return ids;
+    }
+
+    /** Logs an error for every {@code @Mod} value that has no matching modId in the generated metadata. */
+    static Set<String> validateEntrypoints(JarFile in, String convertedToml, String jarName) throws IOException {
+        Set<String> declared = new TreeSet<>();
+        List<UnmodifiableConfig> mods = new TomlParser().parse(convertedToml).getOrElse("mods", List.of());
+        for (UnmodifiableConfig mod : mods) declared.add(mod.get("modId"));
+        Set<String> dangling = new TreeSet<>();
+        for (String id : modAnnotationValues(in)) {
+            if (!declared.contains(id)) {
+                dangling.add(id);
+                LOGGER.error("{} {} has @Mod(\"{}\") but generated metadata declares only {}; FML will report a "
+                        + "dangling entrypoint", TAG, jarName, id, declared);
+            }
+        }
+        return dangling;
+    }
     private void prescanClasses(JarFile in, OwnerRemapReport report) throws IOException {
         Enumeration<JarEntry> entries = in.entries();
         while (entries.hasMoreElements()) {
@@ -334,23 +388,10 @@ public class JarTransformer {
         List<Config> mods = new ArrayList<>();
         Config deps = Config.inMemory();
         List<UnmodifiableConfig> sourceMods = source.getOrElse("mods", List.<UnmodifiableConfig>of());
-        boolean hasThermalTarget = false;
-        for (UnmodifiableConfig sm : sourceMods) {
-            if (THERMAL_TARGET_ID.equals(sm.get("modId"))) hasThermalTarget = true;
-        }
         for (UnmodifiableConfig sm : sourceMods) {
             String sourceId = sm.get("modId");
             if (sourceId == null) continue;
             String modId = sourceId;
-            if (THERMAL_SOURCE_ID.equals(sourceId)) {
-                if (hasThermalTarget) {
-                    LOGGER.warn("{} {} declares both '{}' and '{}'; keeping '{}' and dropping '{}'", TAG, jarName,
-                            THERMAL_TARGET_ID, THERMAL_SOURCE_ID, THERMAL_TARGET_ID, THERMAL_SOURCE_ID);
-                    continue;
-                }
-                modId = THERMAL_TARGET_ID;
-                LOGGER.info("{} remapped mod id {} -> {} in {}", TAG, THERMAL_SOURCE_ID, THERMAL_TARGET_ID, jarName);
-            }
             Config mod = Config.inMemory();
             mod.set("modId", modId);
             String version = sm.getOrElse("version", jarVersion);
@@ -369,12 +410,6 @@ public class JarTransformer {
                 Config c = convertDependency(dep);
                 if (c == null) continue;
                 String depId = c.get("modId");
-                if (THERMAL_SOURCE_ID.equals(depId)) {
-                    c.set("modId", THERMAL_TARGET_ID);
-                    depId = THERMAL_TARGET_ID;
-                    LOGGER.info("{} remapped dependency {} -> {} for mod {} in {}", TAG, THERMAL_SOURCE_ID,
-                            THERMAL_TARGET_ID, modId, jarName);
-                }
                 if (depId.equals(modId) || !seenDeps.add(depId)) {
                     LOGGER.warn("{} dropped self/duplicate dependency {} for mod {} in {}", TAG, depId, modId, jarName);
                     continue;

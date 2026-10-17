@@ -74,6 +74,16 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void objectMethodsOnMappedOwnerDoNotBlockRemap() {
+        byte[] in = caller("com/ex/H", false, "hashCode", "()I");
+        byte[] out = new ForgeOwnerRemapStep().apply("com.ex.H", in);
+        assertNotSame(in, out);
+        MethodInsnNode call = (MethodInsnNode) parse(out).methods.get(0).instructions.toArray()[1];
+        assertEquals(NEW, call.owner);
+        assertEquals("hashCode", call.name);
+    }
+
+    @Test
     void classWithoutForgeOwnersIsUnchanged() {
         byte[] in = SrgCompatTest.callerClass("com/ex/Plain", LIVING, "m_1_");
         OwnerRemapReport report = new OwnerRemapReport();
