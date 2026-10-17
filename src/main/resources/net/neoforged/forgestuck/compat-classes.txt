@@ -28,6 +28,16 @@ LegacyEnchantment
 LegacyEnchantmentRarity
 LegacyEnchantmentCategory
 LocalRegistryObject
+LegacyCriterionInstance
+LegacyTickEvent
+LegacyTickEvent$Type
+LegacyTickEvent$Phase
+LegacyTickEvent$PlayerTickEvent
+LegacyTickEvent$ServerTickEvent
+LegacyTickEvent$ClientTickEvent
+LegacyTickEvent$LevelTickEvent
+LegacyTickBridge
+LegacyClientTickBridge
 LegacyBufferBuilders
 LegacyMissingMappingsEvent
 LegacyLootSerializer
