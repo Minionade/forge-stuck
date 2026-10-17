@@ -48,11 +48,12 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "11";
+    public static final String TRANSFORMER_VERSION = "12";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 
     private static final Logger LOGGER = LoggerFactory.getLogger("forgestuck");
+    private static final Pattern JIJ_JAR = Pattern.compile("META-INF/jarjar/[^/]+\\.jar");
     private static final String TAG = "[Forge Stuck!!]";
     private static final Pattern SIGNATURE = Pattern.compile("META-INF/[^/]+\\.(SF|RSA|DSA)", Pattern.CASE_INSENSITIVE);
 
@@ -171,6 +172,11 @@ public class JarTransformer {
                 if (name.equals("META-INF/neoforge.mods.toml")) {
                     continue;
                 }
+                if (JIJ_JAR.matcher(name).matches()) {
+                    data = transformNested(name, data);
+                    putEntry(out, entry, name, data);
+                    continue;
+                }
                 if (name.equals(JarFile.MANIFEST_NAME)) {
                     data = stripManifestDigests(data);
                 } else if (name.endsWith(".class")) {
@@ -271,6 +277,26 @@ public class JarTransformer {
             }
         }
         return dangling;
+    }
+    /**
+     * Legacy Forge jar-in-jar entries run through the same pipeline so the nested mod (and the ids it provides) is
+     * discoverable by NeoForge's JarInJar locator; nested jars with any other shape are kept byte-for-byte.
+     */
+    private byte[] transformNested(String entryName, byte[] data) throws IOException {
+        Path dir = Files.createTempDirectory("forgestuck-nested-");
+        try {
+            Path in = dir.resolve(entryName.substring(entryName.lastIndexOf('/') + 1));
+            Files.write(in, data);
+            if (!LegacyJarDetector.isLegacyCandidate(in)) return data;
+            Path out = dir.resolve("transformed.jar");
+            LOGGER.info("{} transforming nested legacy jar {}", TAG, entryName);
+            transform(in, out);
+            return Files.readAllBytes(out);
+        } finally {
+            try (var walk = Files.walk(dir)) {
+                walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> p.toFile().delete());
+            }
+        }
     }
     private void prescanClasses(JarFile in, OwnerRemapReport report) throws IOException {
         Enumeration<JarEntry> entries = in.entries();
