@@ -411,3 +411,10 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 | Date | Change |
 | --- | --- |
 | 2026-10-17 | t20: enum-extension generation for `ItemDisplayContext.create`, loot `Serializer` -> `MapCodec` bridge; conditions and `ChannelBuilder` still documented blockers. Not verified in game. |
+
+## t21 (2026-10-17): ResourceLocation subclasses and legacy conditions
+
+- ResourceId-style subclasses: ctor adaptation + AT (public-f ResourceLocation) in META-INF/accesstransformer.cfg; AT application unverified in game.
+- IConditionSerializer/CraftingHelper.register/getCondition/processConditions/serialize map to compat LegacyConditions (MapCodec bridge registered at RegisterEvent for CONDITION_CODECS). Legacy ICondition implementers get a generated codec(). Not preserved: forge:* builtin ids, And/Or array ctors, ConditionalRecipe builders, ICondition.getID() calls.
+- Not done in this PR: NetworkRegistry/SimpleChannel adapter, FluidType, language-loader error for kotori_scala. Not verified in game.
+

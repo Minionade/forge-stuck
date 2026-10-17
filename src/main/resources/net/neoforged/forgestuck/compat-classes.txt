@@ -29,3 +29,6 @@ LegacyLootBridge$1
 LegacyLootBridge$2
 LegacyLootBridge$3
 LegacyResourceLocations
+LegacyConditionSerializer
+LegacyConditions
+LegacyConditions$1

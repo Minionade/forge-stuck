@@ -48,6 +48,7 @@ class ForgeOwnerMappingTargetsTest {
     private static List<String> owners() {
         List<String> all = new ArrayList<>(OWNERS);
         for (ForgeOwnerMappings.Entry e : GeneratedOwnerTable.entries()) all.add(e.oldOwner());
+        for (ForgeOwnerMappings.Entry e : ConditionMappings.entries()) all.add(e.oldOwner());
         return all;
     }
 
