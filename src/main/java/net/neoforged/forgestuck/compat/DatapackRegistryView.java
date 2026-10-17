@@ -12,7 +12,8 @@ import net.minecraft.resources.ResourceLocation;
  * {@link IForgeRegistry} for a registry that is a datapack registry in 1.21.1 (for example enchantments): only the
  * key is known, because contents need a {@code RegistryAccess}. Every lookup throws
  * {@link UnsupportedOperationException} naming the registry, so holding the field (static init) links while the
- * call that needs contents fails. Registering through a {@code DeferredRegister} created from it also fails.
+ * call that needs contents fails. Registering through a {@code DeferredRegister} created from it yields a local,
+ * unregistered object (see {@code LocalRegistryObject}).
  */
 final class DatapackRegistryView<V> implements IForgeRegistry<V> {
     private final ResourceKey<? extends Registry<V>> key;

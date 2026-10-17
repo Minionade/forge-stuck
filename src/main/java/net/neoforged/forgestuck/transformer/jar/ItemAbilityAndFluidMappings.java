@@ -18,6 +18,21 @@ final class ItemAbilityAndFluidMappings {
     private static final String F = "net/minecraftforge/fluids/ForgeFlowingFluid";
     private static final String NF = "net/neoforged/neoforge/fluids/BaseFlowingFluid";
 
+    private static Set<String> rarityMembers() {
+        String d = "Lnet/minecraft/world/item/enchantment/Enchantment$Rarity;";
+        return Set.of("COMMON" + d, "UNCOMMON" + d, "RARE" + d, "VERY_RARE" + d, "getWeight()I");
+    }
+
+    private static Set<String> categoryMembers() {
+        String d = "Lnet/minecraft/world/item/enchantment/EnchantmentCategory;";
+        Set<String> out = new java.util.HashSet<>();
+        for (String n : List.of("ARMOR", "ARMOR_FEET", "ARMOR_LEGS", "ARMOR_CHEST", "ARMOR_HEAD", "WEAPON", "DIGGER",
+                "FISHING_ROD", "TRIDENT", "BREAKABLE", "BOW", "WEARABLE", "CROSSBOW", "VANISHABLE")) {
+            out.add(n + d);
+        }
+        return out;
+    }
+
     static List<ForgeOwnerMappings.Entry> entries() {
         String ta = "Lnet/minecraftforge/common/ToolAction;";
         String ro = "Lnet/minecraftforge/registries/RegistryObject;";
@@ -50,6 +65,10 @@ final class ItemAbilityAndFluidMappings {
                 e("net/minecraftforge/common/loot/LootModifierManager",
                         "net/neoforged/forgestuck/compat/LegacyLootModifierManager",
                         Set.of("GSON_INSTANCELcom/google/gson/Gson;")),
+                e("net/minecraft/world/item/enchantment/Enchantment$Rarity",
+                        "net/neoforged/forgestuck/compat/LegacyEnchantmentRarity", rarityMembers()),
+                e("net/minecraft/world/item/enchantment/EnchantmentCategory",
+                        "net/neoforged/forgestuck/compat/LegacyEnchantmentCategory", categoryMembers()),
                 e(F, NF, Set.of("<init>(" + props + ")V")),
                 e(F + "$Source", NF + "$Source", Set.of("<init>(" + props + ")V")),
                 e(F + "$Flowing", NF + "$Flowing", Set.of("<init>(" + props + ")V")),

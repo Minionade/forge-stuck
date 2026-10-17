@@ -24,6 +24,10 @@ VanillaRegistryView
 LegacyItemStackShim
 LegacyEnumExtensions
 LegacyLootModifierManager
+LegacyEnchantment
+LegacyEnchantmentRarity
+LegacyEnchantmentCategory
+LocalRegistryObject
 LegacyLootSerializer
 LegacyLootBridge
 LegacyLootBridge$1

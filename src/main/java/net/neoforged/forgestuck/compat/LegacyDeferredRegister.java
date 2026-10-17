@@ -45,8 +45,14 @@ public final class LegacyDeferredRegister<T> {
         return new LegacyDeferredRegister<>(DeferredRegister.create(registryName, modid));
     }
 
+    @SuppressWarnings("unchecked")
     public <I extends T> RegistryObject<I> register(String name, Supplier<? extends I> sup) {
-        if (datapack != null) throw datapack.registrationUnsupported(name);
+        if (datapack != null) {
+            ResourceLocation id = ResourceLocation.fromNamespaceAndPath(delegate.getNamespace(), name);
+            RegistryObject<I> local = new LocalRegistryObject<I>((ResourceKey<? extends Registry<I>>) delegate.getRegistryKey(), id, sup);
+            entries.put(id, local);
+            return local;
+        }
         return track(name, delegate.register(name, sup));
     }
 
