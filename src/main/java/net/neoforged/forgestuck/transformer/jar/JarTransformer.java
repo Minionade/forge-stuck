@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "6";
+    public static final String TRANSFORMER_VERSION = "7";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     /** Targeted Thermal 1.20.1 -> NeoForge 1.21.1 compatibility shim: Thermal modules depend on id "thermal". */
     public static final String THERMAL_SOURCE_ID = "thermal_foundation";
@@ -182,8 +182,10 @@ public class JarTransformer {
             }
             ownerReport.log(LOGGER, TAG, jarName);
             mixins.logSummary();
-            LOGGER.info("{} {} summary: {} owner reference(s) remapped in {} class(es), {} mixin class(es) dropped",
-                    TAG, jarName, ownerReport.total(), ownerReport.classesRewritten(), mixins.droppedMixins().size());
+            LOGGER.info("{} {} summary: {} owner reference(s) remapped in {} class(es), {} method "
+                    + "descriptor(s) adapted, {} mixin class(es) dropped",
+                    TAG, jarName, ownerReport.total(), ownerReport.classesRewritten(),
+                    ownerReport.descriptorsAdapted(), mixins.droppedMixins().size());
             rewritten.forEach((from, to) -> LOGGER.info("{} {} model loader {} -> {}", TAG, jarName, from, to));
             for (String id : removed) {
                 LOGGER.warn("{} {} removed unknown model loader '{}' from model JSON(s); models may render or "
