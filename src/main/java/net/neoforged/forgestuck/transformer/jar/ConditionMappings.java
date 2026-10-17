@@ -40,7 +40,25 @@ final class ConditionMappings {
                 e(C + "FalseCondition", NC + "FalseCondition", Set.of("INSTANCE" + "L" + C + "FalseCondition;")),
                 e(C + "NotCondition", NC + "NotCondition", Set.of()),
                 e(C + "ModLoadedCondition", NC + "ModLoadedCondition", Set.of()),
-                e(C + "ItemExistsCondition", NC + "ItemExistsCondition", Set.of()));
+                e(C + "ItemExistsCondition", NC + "ItemExistsCondition", Set.of()),
+                e("net/minecraftforge/fluids/FluidType", "net/neoforged/neoforge/fluids/FluidType", Set.of(
+                        "<init>(Lnet/minecraftforge/fluids/FluidType$Properties;)V", "getLightLevel()I", "getDensity()I",
+                        "getTemperature()I", "getViscosity()I", "getDescriptionId()Ljava/lang/String;")),
+                e("net/minecraftforge/fluids/FluidType$Properties", "net/neoforged/neoforge/fluids/FluidType$Properties", Set.of(
+                        "create()Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "descriptionId(Ljava/lang/String;)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "motionScale(D)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "canPushEntity(Z)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "canSwim(Z)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "canDrown(Z)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "fallDistanceModifier(F)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "canExtinguish(Z)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "canConvertToSource(Z)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "supportsBoating(Z)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "lightLevel(I)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "density(I)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "temperature(I)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "viscosity(I)Lnet/minecraftforge/fluids/FluidType$Properties;")));
     }
 
     private static ForgeOwnerMappings.Entry e(String oldOwner, String newOwner, Set<String> members) {
