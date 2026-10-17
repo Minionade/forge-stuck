@@ -67,6 +67,20 @@ public final class LegacyNameMappings {
         return members.get(srgName);
     }
 
+    /**
+     * Owner- and descriptor-aware lookup. Property keys, most specific first: {@code owner#name(desc)ret} /
+     * {@code owner#name@fieldDesc}, {@code name(desc)ret} / {@code name@fieldDesc}, {@code owner#name}, bare
+     * {@code name}. Bare-name entries remain valid, so existing data files keep working.
+     */
+    public String map(String owner, String name, String desc) {
+        String d = desc == null ? "" : (desc.startsWith("(") ? desc : "@" + desc);
+        String qualified = owner == null ? null : owner + "#" + name;
+        String mapped = qualified == null ? null : members.get(qualified + d);
+        if (mapped == null) mapped = members.get(name + d);
+        if (mapped == null && qualified != null) mapped = members.get(qualified);
+        return mapped != null ? mapped : members.get(name);
+    }
+
     /** True when the (dotted or internal) class name is known to be absent at runtime. */
     public boolean isMissingTarget(String className) {
         return missingTargets.contains(className.replace('.', '/'));

@@ -50,7 +50,9 @@ class LazyOptionalRemapTest {
                 report);
         ClassNode n = ForgeOwnerRemapTest.parse(out);
         assertEquals("(L" + NEW_LO + ";L" + NEW_NNC + ";)V", n.methods.get(0).desc);
-        MethodInsnNode call = (MethodInsnNode) n.methods.get(0).instructions.toArray()[3];
+        MethodInsnNode call = null;
+        for (var insn : n.methods.get(0).instructions) if (insn instanceof MethodInsnNode mi) call = mi;
+        assertNotNull(call);
         assertEquals(NEW_LO, call.owner);
         assertEquals("(L" + NEW_NNC + ";)V", call.desc);
         assertFalse(new String(out, StandardCharsets.ISO_8859_1).contains("net/minecraftforge"));
@@ -86,8 +88,29 @@ class LazyOptionalRemapTest {
     }
 
     @Test
-    void transformVersionIsAtLeastSeven() {
-        assertTrue(Integer.parseInt(JarTransformer.TRANSFORMER_VERSION) >= 7);
+    void transformVersionIsAtLeastNine() {
+        assertTrue(Integer.parseInt(JarTransformer.TRANSFORMER_VERSION) >= 9);
+    }
+
+    @Test
+    void shimExtraMembersMatchForgeSemantics() {
+        var lo = net.neoforged.forgestuck.compat.LazyOptional.of(() -> "abc");
+        assertEquals(java.util.Optional.of(3), lo.map(String::length));
+        assertEquals(java.util.Optional.empty(), lo.filter(s -> s.isEmpty()));
+        assertEquals("abc", lo.orElseGet(() -> "z"));
+        assertSame(lo, lo.cast());
+        assertEquals("abc", lo.orElseThrow(IllegalStateException::new));
+        var empty = net.neoforged.forgestuck.compat.LazyOptional.<String>empty();
+        assertEquals("z", empty.orElseGet(() -> "z"));
+        assertThrows(IllegalStateException.class, () -> empty.orElseThrow(IllegalStateException::new));
+        int[] calls = {0};
+        net.neoforged.forgestuck.compat.NonNullConsumer<net.neoforged.forgestuck.compat.LazyOptional<String>> l =
+                x -> calls[0]++;
+        var other = net.neoforged.forgestuck.compat.LazyOptional.of(() -> "q");
+        other.addListener(l);
+        other.removeListener(l);
+        other.invalidate();
+        assertEquals(0, calls[0]);
     }
 
     @Test

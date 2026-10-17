@@ -50,7 +50,6 @@ public final class ForgeOwnerMappings {
     }
 
     private static final String FU = "net/minecraftforge/common/util/";
-    private static final String FC = "net/minecraftforge/common/capabilities/";
     private static final String COMPAT = "net/neoforged/forgestuck/compat/";
 
     /**
@@ -62,11 +61,9 @@ public final class ForgeOwnerMappings {
         String nnc = "L" + FU + "NonNullConsumer;";
         String nnf = "L" + FU + "NonNullFunction;";
         String nns = "L" + FU + "NonNullSupplier;";
-        return new ForgeOwnerMappings().add(new Entry("net/minecraftforge/registries/RegistryObject",
-                "net/neoforged/neoforge/registries/DeferredHolder", Set.of(
-                        "get()Ljava/lang/Object;",
-                        "getId()Lnet/minecraft/resources/ResourceLocation;",
-                        "getKey()Lnet/minecraft/resources/ResourceKey;")))
+        String dr = "L" + R + "DeferredRegister;";
+        String ro = "L" + R + "RegistryObject;";
+        return new ForgeOwnerMappings()
                 .add(new Entry(FU + "LazyOptional", COMPAT + "LazyOptional", Set.of(
                         "of(" + nns + ")" + lo,
                         "empty()" + lo,
@@ -74,23 +71,127 @@ public final class ForgeOwnerMappings {
                         "ifPresent(" + nnc + ")V",
                         "resolve()Ljava/util/Optional;",
                         "orElse(Ljava/lang/Object;)Ljava/lang/Object;",
-                        "orElseThrow(Ljava/util/function/Supplier;)Ljava/lang/Object;",
+                        "orElseGet(" + nns + ")Ljava/lang/Object;",
+                        "orElseThrow(" + nns + ")Ljava/lang/Object;",
+                        "map(" + nnf + ")Ljava/util/Optional;",
+                        "filter(L" + FU + "NonNullPredicate;)Ljava/util/Optional;",
+                        "cast()" + lo,
                         "lazyMap(" + nnf + ")" + lo,
                         "addListener(" + nnc + ")V",
+                        "removeListener(" + nnc + ")V",
                         "invalidate()V")))
                 .add(new Entry(FU + "NonNullConsumer", COMPAT + "NonNullConsumer",
                         Set.of("accept(Ljava/lang/Object;)V")))
+                .add(new Entry(FU + "NonNullPredicate", COMPAT + "NonNullPredicate",
+                        Set.of("test(Ljava/lang/Object;)Z")))
                 .add(new Entry(FU + "NonNullFunction", COMPAT + "NonNullFunction",
                         Set.of("apply(Ljava/lang/Object;)Ljava/lang/Object;")))
                 .add(new Entry(FU + "NonNullSupplier", COMPAT + "NonNullSupplier",
                         Set.of("get()Ljava/lang/Object;")))
-                // Forge capability API package moved from net.minecraftforge.common.capabilities
-                // to net.neoforged.neoforge.capabilities in NeoForge.
-                .add(FC + "Capability", "net/neoforged/neoforge/capabilities/BlockCapability")
-                .add(FC + "CapabilityManager", "net/neoforged/neoforge/capabilities/Capabilities")
-                .add(FC + "ICapabilityProvider", "net/neoforged/neoforge/capabilities/ICapabilityProvider")
-                .add(FC + "ICapabilitySerializable", "net/neoforged/neoforge/capabilities/ICapabilityProvider")
-                .add(FC + "CapabilityToken", "net/neoforged/neoforge/capabilities/CapabilityToken");
+                // Forge's capability API (Capability, CapabilityManager, ICapabilityProvider, ...) is intentionally NOT
+                // mapped: NeoForge's BlockCapability/Capabilities/ICapabilityProvider<O,C,T> have different
+                // semantics, and CapabilityToken does not exist. Classes using them stay unmapped and are reported.
+                .add(registryObject())
+                .add(entry(R + "IForgeRegistry", COMPAT + "IForgeRegistry", registryMembers()))
+                .add(entry(R + "ForgeRegistries", COMPAT + "ForgeRegistries", forgeRegistriesFields(false)))
+                .add(entry(R + "ForgeRegistries$Keys", COMPAT + "ForgeRegistries$Keys", forgeRegistriesFields(true)))
+                .add(entry(R + "DeferredRegister", COMPAT + "LegacyDeferredRegister", Set.of(
+                        "create(Lnet/minecraftforge/registries/IForgeRegistry;Ljava/lang/String;)" + dr,
+                        "create(Lnet/minecraft/resources/ResourceKey;Ljava/lang/String;)" + dr,
+                        "create(Lnet/minecraft/resources/ResourceLocation;Ljava/lang/String;)" + dr,
+                        "register(Ljava/lang/String;Ljava/util/function/Supplier;)" + ro,
+                        "register(Lnet/minecraftforge/eventbus/api/IEventBus;)V",
+                        "getRegistryKey()Lnet/minecraft/resources/ResourceKey;",
+                        "getRegistryName()Lnet/minecraft/resources/ResourceLocation;",
+                        "getEntries()Ljava/util/Collection;")))
+                .add(entry(R + "RegisterEvent", "net/neoforged/neoforge/registries/RegisterEvent", Set.of(
+                        "register(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/resources/ResourceLocation;"
+                                + "Ljava/util/function/Supplier;)V",
+                        "register(Lnet/minecraft/resources/ResourceKey;Ljava/util/function/Consumer;)V",
+                        "getRegistryKey()Lnet/minecraft/resources/ResourceKey;")))
+                .add(entry(R + "RegisterEvent$RegisterHelper", "net/neoforged/neoforge/registries/RegisterEvent$RegisterHelper",
+                        Set.of("register(Lnet/minecraft/resources/ResourceLocation;Ljava/lang/Object;)V",
+                                "register(Lnet/minecraft/resources/ResourceKey;Ljava/lang/Object;)V")))
+                // Entry-point and event-bus plumbing: FML only scans for net.neoforged.fml.common.Mod.
+                .add("net/minecraftforge/fml/common/Mod", "net/neoforged/fml/common/Mod")
+                .add("net/minecraftforge/fml/common/Mod$EventBusSubscriber", EBS)
+                .add("net/minecraftforge/fml/common/Mod$EventBusSubscriber$Bus", EBS + "$Bus")
+                .add(entry(EB + "IEventBus", "net/neoforged/bus/api/IEventBus", Set.of(
+                        "register(Ljava/lang/Object;)V",
+                        "unregister(Ljava/lang/Object;)V",
+                        "addListener(Ljava/util/function/Consumer;)V",
+                        "addListener(L" + EB + "EventPriority;Ljava/util/function/Consumer;)V",
+                        "addListener(L" + EB + "EventPriority;ZLjava/util/function/Consumer;)V")))
+                .add(EB + "SubscribeEvent", "net/neoforged/bus/api/SubscribeEvent")
+                .add(EB + "EventPriority", "net/neoforged/bus/api/EventPriority")
+                .add(entry("net/minecraftforge/fml/javafmlmod/FMLJavaModLoadingContext", COMPAT + "FMLJavaModLoadingContext",
+                        Set.of("get()Lnet/minecraftforge/fml/javafmlmod/FMLJavaModLoadingContext;",
+                                "getModEventBus()L" + EB + "IEventBus;")))
+                .add(entry("net/minecraftforge/fml/config/IConfigSpec", "net/neoforged/fml/config/IConfigSpec", Set.of()))
+                .add("net/minecraftforge/api/distmarker/Dist", "net/neoforged/api/distmarker/Dist")
+                .add("net/minecraftforge/api/distmarker/OnlyIn", "net/neoforged/api/distmarker/OnlyIn")
+                .add(entry(FE + "FMLCommonSetupEvent", "net/neoforged/fml/event/lifecycle/FMLCommonSetupEvent", enqueue()))
+                .add(entry(FE + "FMLClientSetupEvent", "net/neoforged/fml/event/lifecycle/FMLClientSetupEvent", enqueue()))
+                .add(entry(FE + "FMLDedicatedServerSetupEvent",
+                        "net/neoforged/fml/event/lifecycle/FMLDedicatedServerSetupEvent", enqueue()));
+    }
+
+    private static final String R = "net/minecraftforge/registries/";
+    private static final String EB = "net/minecraftforge/eventbus/api/";
+    private static final String FE = "net/minecraftforge/fml/event/lifecycle/";
+    private static final String EBS = "net/neoforged/fml/common/EventBusSubscriber";
+
+    /** Registry fields present on the compat {@code ForgeRegistries}; absent fields block the owner in that class. */
+    static final java.util.List<String> FORGE_REGISTRY_FIELDS = java.util.List.of("BLOCKS", "FLUIDS", "ITEMS",
+            "MOB_EFFECTS", "POTIONS", "ATTRIBUTES", "STAT_TYPES", "SOUND_EVENTS", "PARTICLE_TYPES", "BLOCK_ENTITY_TYPES",
+            "ENTITY_TYPES", "MENU_TYPES", "RECIPE_TYPES", "RECIPE_SERIALIZERS", "VILLAGER_PROFESSIONS", "POI_TYPES",
+            "FEATURES");
+
+    private static Entry entry(String oldOwner, String newOwner, Set<String> members) {
+        return new Entry(oldOwner, newOwner, members);
+    }
+
+    private static Set<String> enqueue() {
+        return Set.of("enqueueWork(Ljava/lang/Runnable;)Ljava/util/concurrent/CompletableFuture;");
+    }
+
+    private static Set<String> forgeRegistriesFields(boolean keys) {
+        String desc = keys ? "Lnet/minecraft/resources/ResourceKey;" : "L" + R + "IForgeRegistry;";
+        Set<String> out = new java.util.TreeSet<>();
+        for (String f : FORGE_REGISTRY_FIELDS) out.add(f + desc);
+        return out;
+    }
+
+    private static Set<String> registryMembers() {
+        return Set.of("getRegistryKey()Lnet/minecraft/resources/ResourceKey;",
+                "getRegistryName()Lnet/minecraft/resources/ResourceLocation;",
+                "containsKey(Lnet/minecraft/resources/ResourceLocation;)Z",
+                "containsValue(Ljava/lang/Object;)Z",
+                "getValue(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/Object;",
+                "getKey(Ljava/lang/Object;)Lnet/minecraft/resources/ResourceLocation;",
+                "getResourceKey(Ljava/lang/Object;)Ljava/util/Optional;",
+                "getKeys()Ljava/util/Set;",
+                "getValues()Ljava/util/Collection;",
+                "getEntries()Ljava/util/Set;");
+    }
+
+    private static Entry registryObject() {
+        String ro = "L" + R + "RegistryObject;";
+        return entry(R + "RegistryObject", COMPAT + "RegistryObject", Set.of(
+                "get()Ljava/lang/Object;",
+                "getId()Lnet/minecraft/resources/ResourceLocation;",
+                "getKey()Lnet/minecraft/resources/ResourceKey;",
+                "isPresent()Z",
+                "ifPresent(Ljava/util/function/Consumer;)V",
+                "stream()Ljava/util/stream/Stream;",
+                "filter(Ljava/util/function/Predicate;)" + ro,
+                "orElse(Ljava/lang/Object;)Ljava/lang/Object;",
+                "orElseGet(Ljava/util/function/Supplier;)Ljava/lang/Object;",
+                "orElseThrow(Ljava/util/function/Supplier;)Ljava/lang/Object;",
+                "getHolder()Ljava/util/Optional;",
+                "create(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraft/resources/ResourceKey;Ljava/lang/String;)" + ro,
+                "create(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraft/resources/ResourceLocation;Ljava/lang/String;)" + ro,
+                "create(Lnet/minecraft/resources/ResourceLocation;L" + R + "IForgeRegistry;)" + ro));
     }
 
     /** Cheap check on raw class bytes: could this class mention any mapped owner? */

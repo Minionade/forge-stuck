@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "8";
+    public static final String TRANSFORMER_VERSION = "10";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     /** Targeted Thermal 1.20.1 -> NeoForge 1.21.1 compatibility shim: Thermal modules depend on id "thermal". */
     public static final String THERMAL_SOURCE_ID = "thermal_foundation";
@@ -55,11 +55,10 @@ public class JarTransformer {
     private static final Pattern SIGNATURE = Pattern.compile("META-INF/[^/]+\\.(SF|RSA|DSA)", Pattern.CASE_INSENSITIVE);
 
     /**
-     * Default for {@link #removeUnknownLoaders}. When enabled, model JSONs naming a custom (non-vanilla,
-     * non-NeoForge) loader that has no known mapping get their {@code loader} property removed so they parse as
-     * plain vanilla models. This avoids startup failures but loses the custom model's fidelity/functionality.
+     * Default for {@link #removeUnknownLoaders}. Unknown custom loaders are preserved (and reported) by default so no
+     * model content is degraded; the opt-in {@code true} mode strips the loader property, which loses fidelity.
      */
-    public static final boolean REMOVE_UNKNOWN_MODEL_LOADERS = true;
+    public static final boolean REMOVE_UNKNOWN_MODEL_LOADERS = false;
 
     /** Direct Forge 1.20.1 -> NeoForge 1.21.1 model loader id mappings. */
     public static final Map<String, String> MODEL_LOADER_MAPPINGS = Map.of(
@@ -141,6 +140,11 @@ public class JarTransformer {
             TreeSet<String> removed = new TreeSet<>();
             MixinResourceRewriter mixins = new MixinResourceRewriter(mappings, jarName);
             OwnerRemapReport ownerReport = new OwnerRemapReport();
+            prescanClasses(in, ownerReport);
+            ResourceRewriteReport resourceReport = new ResourceRewriteReport();
+            java.util.Set<String> allNames = new java.util.HashSet<>();
+            in.stream().forEach(je -> allNames.add(je.getName()));
+            ResourceDataRewriteStep resources = new ResourceDataRewriteStep(allNames, resourceReport);
             Map<String, JarEntry> pendingMixinEntries = new LinkedHashMap<>();
             Map<String, byte[]> pendingMixinData = new LinkedHashMap<>();
             Enumeration<JarEntry> entries = in.entries();
@@ -176,8 +180,10 @@ public class JarTransformer {
                     continue;
                 } else if (MODEL_JSON.matcher(name).matches()) {
                     data = rewriteModelLoader(name, data, rewritten, removed);
+                } else if (name.startsWith("data/") && name.endsWith(".json")) {
+                    data = resources.content(name, data);
                 }
-                putEntry(out, entry, name, data);
+                putEntry(out, entry, resources.entryName(name), data);
             }
             if (modsToml == null) {
                 throw new IOException("No META-INF/mods.toml in " + source.getFileName());
@@ -187,6 +193,7 @@ public class JarTransformer {
                 putEntry(out, pending.getValue(), name, mixins.rewrite(name, pendingMixinData.get(name)));
             }
             ownerReport.log(LOGGER, TAG, jarName);
+            resourceReport.log(LOGGER, TAG, jarName);
             mixins.logSummary();
             LOGGER.info("{} {} summary: {} owner reference(s) remapped in {} class(es), {} method "
                     + "descriptor(s) adapted, {} mixin class(es) dropped",
@@ -194,8 +201,13 @@ public class JarTransformer {
                     ownerReport.descriptorsAdapted(), mixins.droppedMixins().size());
             rewritten.forEach((from, to) -> LOGGER.info("{} {} model loader {} -> {}", TAG, jarName, from, to));
             for (String id : removed) {
-                LOGGER.warn("{} {} removed unknown model loader '{}' from model JSON(s); models may render or "
-                        + "behave incorrectly", TAG, source, id);
+                if (removeUnknownLoaders) {
+                    LOGGER.warn("{} {} removed unknown model loader '{}' from model JSON(s); models may render or "
+                            + "behave incorrectly", TAG, source, id);
+                } else {
+                    LOGGER.warn("{} {} preserved unknown model loader '{}' in model JSON(s); it works only if the "
+                            + "loader is registered on this runtime", TAG, source, id);
+                }
             }
             String version = implementationVersion(in);
             String converted = convertModsToml(modsToml, version, source.getFileName().toString());
@@ -203,6 +215,28 @@ public class JarTransformer {
             out.putNextEntry(generated);
             out.write(converted.getBytes(StandardCharsets.UTF_8));
             out.closeEntry();
+        }
+    }
+
+    private void prescanClasses(JarFile in, OwnerRemapReport report) throws IOException {
+        Enumeration<JarEntry> entries = in.entries();
+        while (entries.hasMoreElements()) {
+            JarEntry entry = entries.nextElement();
+            String name = entry.getName();
+            if (entry.isDirectory() || !name.endsWith(".class")) continue;
+            byte[] data;
+            try (InputStream is = in.getInputStream(entry)) {
+                data = is.readAllBytes();
+            }
+            String className = name.substring(0, name.length() - ".class".length()).replace('/', '.');
+            for (ClassTransformStep step : steps) {
+                try {
+                    step.scan(className, data, report);
+                } catch (Exception | LinkageError e) {
+                    LOGGER.warn("{} class pre-scan {} failed on {}: {}", TAG, step.getClass().getSimpleName(),
+                            className, e.toString());
+                }
+            }
         }
     }
 
@@ -245,9 +279,10 @@ public class JarTransformer {
             if (mapped != null) {
                 obj.addProperty("loader", mapped);
                 rewritten.merge(loader, mapped, (a, b) -> a);
-            } else if (removeUnknownLoaders && !loader.startsWith("minecraft:") && !loader.startsWith("neoforge:")) {
-                obj.remove("loader");
+            } else if (!loader.startsWith("minecraft:") && !loader.startsWith("neoforge:")) {
                 removed.add(loader);
+                if (!removeUnknownLoaders) return data;
+                obj.remove("loader");
             } else {
                 return data;
             }
@@ -390,8 +425,9 @@ public class JarTransformer {
      */
     protected void onUnsupportedModLoader(String modLoader, String jarName) {
         if ("kotori_scala".equals(modLoader)) {
-            LOGGER.warn("{} {} uses modLoader=\"kotori_scala\"; compatibility fallback: rewriting it to \"javafml\", "
-                    + "which may not preserve full scala-language semantics", TAG, jarName);
+            LOGGER.warn("{} {} uses modLoader=\"kotori_scala\"; only the mods.toml loader string is rewritten to "
+                    + "\"javafml\". This is metadata conversion, NOT evidence that the Scala mod is constructed or "
+                    + "works", TAG, jarName);
             return;
         }
         LOGGER.warn("{} {} uses modLoader=\"{}\" whose language provider is unavailable on this runtime; "

@@ -54,22 +54,13 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         new ClassReader(bytes).accept(node, 0);
 
         Set<String> blocked = new HashSet<>();
+        if (report != null) blocked.addAll(report.jarBlocked());
         int[] adapted = {0};
-        for (MethodNode m : node.methods) {
-            for (AbstractInsnNode insn : m.instructions.toArray()) {
-                if (insn instanceof MethodInsnNode call) {
-                    checkMember(className, call.owner, call.name, call.desc, blocked);
-                    if (!blocked.contains(call.owner) && changesDescriptor(call.desc, blocked)) adapted[0]++;
-                } else if (insn instanceof FieldInsnNode field) {
-                    checkMember(className, field.owner, field.name, field.desc, blocked);
-                } else if (insn instanceof InvokeDynamicInsnNode indy) {
-                    checkHandle(className, indy.bsm, blocked);
-                    for (Object arg : indy.bsmArgs) if (arg instanceof Handle h) checkHandle(className, h, blocked);
-                }
-            }
-        }
+        collectBlocked(className, node, blocked, adapted);
 
         TreeMap<String, Integer> counts = new TreeMap<>();
+        translateEventBusEnum(node.visibleAnnotations);
+        translateEventBusEnum(node.invisibleAnnotations);
         if (isMixin(node)) {
             for (MethodNode m : node.methods) {
                 remapAnnotationStrings(m.invisibleAnnotations, blocked, counts);
@@ -87,6 +78,37 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         if (report != null) report.record(counts, mappings, adapted[0]);
         LOGGER.debug("{} remapped Forge owners in {}: {}", TAG, className, counts);
         return writer.toByteArray();
+    }
+
+    /**
+     * Jar-wide pre-pass: an owner used unsupportedly by any class stays unmapped in every class of the jar, so field
+     * declarations, descriptors and accesses cannot diverge between classes of one jar.
+     */
+    @Override
+    public void scan(String className, byte[] bytes, OwnerRemapReport report) {
+        if (report == null || bytes == null || className.startsWith("net.neoforged.forgestuck")
+                || !mappings.mayReference(bytes)) {
+            return;
+        }
+        ClassNode node = new ClassNode();
+        new ClassReader(bytes).accept(node, 0);
+        collectBlocked(className, node, report.jarBlocked(), new int[1]);
+    }
+
+    private void collectBlocked(String className, ClassNode node, Set<String> blocked, int[] adapted) {
+        for (MethodNode m : node.methods) {
+            for (AbstractInsnNode insn : m.instructions.toArray()) {
+                if (insn instanceof MethodInsnNode call) {
+                    checkMember(className, call.owner, call.name, call.desc, blocked);
+                    if (!blocked.contains(call.owner) && changesDescriptor(call.desc, blocked)) adapted[0]++;
+                } else if (insn instanceof FieldInsnNode field) {
+                    checkMember(className, field.owner, field.name, field.desc, blocked);
+                } else if (insn instanceof InvokeDynamicInsnNode indy) {
+                    checkHandle(className, indy.bsm, blocked);
+                    for (Object arg : indy.bsmArgs) if (arg instanceof Handle h) checkHandle(className, h, blocked);
+                }
+            }
+        }
     }
 
     /** True when the method descriptor mentions a mapped owner, i.e. it is adapted by the remap. */
@@ -133,6 +155,27 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 }
             } else if (eligible && v instanceof String s) {
                 node.values.set(i + 1, mappings.remapDescriptorTokens(s, blocked, counts));
+            }
+        }
+    }
+
+    private static final String FORGE_EBS = "Lnet/minecraftforge/fml/common/Mod$EventBusSubscriber;";
+    private static final String FORGE_BUS = "Lnet/minecraftforge/fml/common/Mod$EventBusSubscriber$Bus;";
+
+    /**
+     * Forge's {@code Bus.FORGE} became {@code Bus.GAME}. ClassRemapper only rewrites the enum descriptor, so the
+     * constant name is translated here (before the remap, while the old descriptor is still present).
+     */
+    @SuppressWarnings("unchecked")
+    private static void translateEventBusEnum(List<AnnotationNode> annotations) {
+        if (annotations == null) return;
+        for (AnnotationNode a : annotations) {
+            if (!FORGE_EBS.equals(a.desc) || a.values == null) continue;
+            for (int i = 0; i + 1 < a.values.size(); i += 2) {
+                if ("bus".equals(a.values.get(i)) && a.values.get(i + 1) instanceof String[] e
+                        && e.length == 2 && FORGE_BUS.equals(e[0]) && "FORGE".equals(e[1])) {
+                    a.values.set(i + 1, new String[] {e[0], "GAME"});
+                }
             }
         }
     }

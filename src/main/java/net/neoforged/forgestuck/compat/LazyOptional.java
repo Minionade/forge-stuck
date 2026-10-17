@@ -3,7 +3,6 @@ package net.neoforged.forgestuck.compat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 /**
  * Runtime stand-in for Forge's {@code net.minecraftforge.common.util.LazyOptional}, which NeoForge 1.21.1 no longer
@@ -58,7 +57,30 @@ public final class LazyOptional<T> {
         return value != null ? value : other;
     }
 
-    public <X extends Throwable> T orElseThrow(Supplier<? extends X> exception) throws X {
+    public T orElseGet(NonNullSupplier<? extends T> other) {
+        T value = getValue();
+        return value != null ? value : other.get();
+    }
+
+    public <U> Optional<U> map(NonNullFunction<? super T, ? extends U> mapper) {
+        return resolve().map(mapper::apply);
+    }
+
+    public Optional<T> filter(NonNullPredicate<? super T> predicate) {
+        return resolve().filter(predicate::test);
+    }
+
+    /** Unchecked re-typing, identical to Forge: the same instance is returned. */
+    @SuppressWarnings("unchecked")
+    public <X> LazyOptional<X> cast() {
+        return (LazyOptional<X>) this;
+    }
+
+    public void removeListener(NonNullConsumer<LazyOptional<T>> listener) {
+        if (listeners != null) listeners.remove(listener);
+    }
+
+    public <X extends Throwable> T orElseThrow(NonNullSupplier<? extends X> exception) throws X {
         T value = getValue();
         if (value == null) throw exception.get();
         return value;

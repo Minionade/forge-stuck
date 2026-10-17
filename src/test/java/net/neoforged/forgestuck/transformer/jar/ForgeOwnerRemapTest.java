@@ -19,7 +19,7 @@ import org.objectweb.asm.tree.MethodInsnNode;
 
 class ForgeOwnerRemapTest {
     static final String OLD = "net/minecraftforge/registries/RegistryObject";
-    static final String NEW = "net/neoforged/neoforge/registries/DeferredHolder";
+    static final String NEW = "net/neoforged/forgestuck/compat/RegistryObject";
     static final String LIVING = "net/minecraft/world/entity/LivingEntity";
 
     /** Class (optionally a Mixin) with a method invoking {@code OLD.<method><desc>} and a field of type OLD. */
@@ -83,7 +83,7 @@ class ForgeOwnerRemapTest {
 
     @Test
     void incompatibleMemberLeavesOwnerUnmappedAndMixinIsDropped() {
-        byte[] in = caller("com/ex/Bad", true, "isPresent", "()Z");
+        byte[] in = caller("com/ex/Bad", true, "noSuchMember", "()Z");
         byte[] out = new ForgeOwnerRemapStep().apply("com.ex.Bad", in);
         assertSame(in, out);
         MixinResourceRewriter rewriter = new MixinResourceRewriter(LegacyNameMappings.defaults(), "x.jar");
@@ -139,14 +139,31 @@ class ForgeOwnerRemapTest {
     void jarTransformerRemapsMixinClassInJar(@TempDir Path dir) throws Exception {
         var files = new java.util.LinkedHashMap<String, byte[]>();
         files.put("com/ex/Ok.class", caller("com/ex/Ok", true, "get", "()Ljava/lang/Object;"));
-        files.put("com/ex/Bad.class", caller("com/ex/Bad", true, "isPresent", "()Z"));
+        files.put("com/ex/Bad.class", caller("com/ex/Bad", true, "noSuchMember", "()Z"));
         files.put("ex.mixins.json", "{\"package\":\"com.ex\",\"mixins\":[\"Ok\",\"Bad\"]}".getBytes(StandardCharsets.UTF_8));
         Path out = dir.resolve("out.jar");
         JarTransformer.withDefaultSteps().transform(SrgCompatTest.jar(dir, "in.jar", files), out);
-        assertEquals(NEW, ((MethodInsnNode) parse(SrgCompatTest.read(out, "com/ex/Ok.class")).methods.get(0)
+        // jar-wide consistency: Bad uses an unsupported member, so the owner stays unmapped in Ok as well
+        assertEquals(OLD, ((MethodInsnNode) parse(SrgCompatTest.read(out, "com/ex/Ok.class")).methods.get(0)
                 .instructions.toArray()[1]).owner);
         String cfg = new String(SrgCompatTest.read(out, "ex.mixins.json"), StandardCharsets.UTF_8);
-        assertTrue(cfg.contains("Ok"));
         assertFalse(cfg.contains("Bad"));
+    }
+
+    @Test
+    void ownerBlockedInOneClassStaysUnmappedInWholeJarButNotInOtherJars(@TempDir Path dir) throws Exception {
+        var a = new java.util.LinkedHashMap<String, byte[]>();
+        a.put("com/ex/Ok.class", caller("com/ex/Ok", false, "get", "()Ljava/lang/Object;"));
+        a.put("com/ex/Bad.class", caller("com/ex/Bad", false, "noSuchMember", "()Z"));
+        var b = new java.util.LinkedHashMap<String, byte[]>();
+        b.put("com/ex/Ok.class", caller("com/ex/Ok", false, "get", "()Ljava/lang/Object;"));
+        Path outA = dir.resolve("a-out.jar");
+        Path outB = dir.resolve("b-out.jar");
+        JarTransformer.withDefaultSteps().transform(SrgCompatTest.jar(dir, "a.jar", a), outA);
+        JarTransformer.withDefaultSteps().transform(SrgCompatTest.jar(dir, "b.jar", b), outB);
+        assertEquals(OLD, ((MethodInsnNode) parse(SrgCompatTest.read(outA, "com/ex/Ok.class")).methods.get(0)
+                .instructions.toArray()[1]).owner);
+        assertEquals(NEW, ((MethodInsnNode) parse(SrgCompatTest.read(outB, "com/ex/Ok.class")).methods.get(0)
+                .instructions.toArray()[1]).owner);
     }
 }

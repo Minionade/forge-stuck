@@ -79,7 +79,8 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
                     if (modFile.isPresent()) {
                         context.addLocated(jar);
                         IModFile file = modFile.get();
-                        LOGGER.info("{} registered UNTRANSFORMED mod id(s) {} from {}", TAG,
+                        LOGGER.info("{} discovered UNTRANSFORMED provider/platform mod id(s) {} from {} (discovery only; "
+                                + "construction is decided later by FML)", TAG,
                                 file.getModInfos().stream().map(i -> i.getModId()).toList(), name);
                     } else {
                         LOGGER.warn("{} could not register untransformed provider/platform jar {} (leaving for other locators)", TAG, name);
@@ -100,7 +101,8 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
                 if (modFile.isPresent()) {
                     context.addLocated(jar);
                     IModFile file = modFile.get();
-                    LOGGER.info("{} registered mod id(s) {} from {}", TAG,
+                    LOGGER.info("{} discovered transformed mod id(s) {} from {} (discovery only; not evidence the mod is "
+                            + "constructed or registers content)", TAG,
                             file.getModInfos().stream().map(i -> i.getModId()).toList(), name);
                 } else {
                     LOGGER.info("{} skipped {}: loader did not accept {}", TAG, name, result.output());
