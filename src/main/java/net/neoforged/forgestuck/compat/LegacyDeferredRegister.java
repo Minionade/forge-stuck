@@ -21,12 +21,20 @@ public final class LegacyDeferredRegister<T> {
     private final DeferredRegister<T> delegate;
     private final Map<ResourceLocation, RegistryObject<? extends T>> entries = new LinkedHashMap<>();
 
+    private final DatapackRegistryView<?> datapack;
+
     private LegacyDeferredRegister(DeferredRegister<T> delegate) {
+        this(delegate, null);
+    }
+
+    private LegacyDeferredRegister(DeferredRegister<T> delegate, DatapackRegistryView<?> datapack) {
         this.delegate = delegate;
+        this.datapack = datapack;
     }
 
     public static <B> LegacyDeferredRegister<B> create(IForgeRegistry<B> registry, String modid) {
-        return new LegacyDeferredRegister<>(DeferredRegister.create(registry.getRegistryKey(), modid));
+        return new LegacyDeferredRegister<>(DeferredRegister.create(registry.getRegistryKey(), modid),
+                registry instanceof DatapackRegistryView<?> view ? view : null);
     }
 
     public static <B> LegacyDeferredRegister<B> create(ResourceKey<? extends Registry<B>> key, String modid) {
@@ -38,6 +46,7 @@ public final class LegacyDeferredRegister<T> {
     }
 
     public <I extends T> RegistryObject<I> register(String name, Supplier<? extends I> sup) {
+        if (datapack != null) throw datapack.registrationUnsupported(name);
         return track(name, delegate.register(name, sup));
     }
 

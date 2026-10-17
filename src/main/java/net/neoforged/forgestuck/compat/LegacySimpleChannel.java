@@ -82,12 +82,12 @@ public final class LegacySimpleChannel {
         }
     }
 
-    public <M> int registerMessage(int index, Class<M> type, BiConsumer<M, FriendlyByteBuf> encoder,
+    public <M> LegacyMessageHandler registerMessage(int index, Class<M> type, BiConsumer<M, FriendlyByteBuf> encoder,
             Function<FriendlyByteBuf, M> decoder, BiConsumer<M, Supplier<LegacyNetworkContext>> consumer) {
         return registerMessage(index, type, encoder, decoder, consumer, Optional.empty());
     }
 
-    public synchronized <M> int registerMessage(int index, Class<M> type, BiConsumer<M, FriendlyByteBuf> encoder,
+    public synchronized <M> LegacyMessageHandler registerMessage(int index, Class<M> type, BiConsumer<M, FriendlyByteBuf> encoder,
             Function<FriendlyByteBuf, M> decoder, BiConsumer<M, Supplier<LegacyNetworkContext>> consumer,
             Optional<LegacyNetworkDirection> direction) {
         if (registrationClosed) {
@@ -105,7 +105,7 @@ public final class LegacySimpleChannel {
                     + " on channel " + name);
         }
         messages.add(message);
-        return index;
+        return new LegacyMessageHandler(index);
     }
 
     private synchronized void register(RegisterPayloadHandlersEvent event) {

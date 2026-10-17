@@ -16,6 +16,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.alchemy.Potion;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.levelgen.feature.Feature;
@@ -26,8 +27,9 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 /**
  * Stand-in for Forge 1.20.1's {@code ForgeRegistries}, limited to fields whose registry is a static (non-datapack)
- * registry in 1.21.1. Legacy fields without a 1.21.1 static registry (e.g. {@code ENCHANTMENTS}, {@code BIOMES}) are
- * intentionally absent so that a class using them is reported rather than silently mis-wired.
+ * registry in 1.21.1, plus {@code ENCHANTMENTS} as a {@link DatapackRegistryView} that links but fails per call.
+ * Other legacy fields without a 1.21.1 static registry (e.g. {@code BIOMES}) are intentionally absent so that a
+ * class using them is reported rather than silently mis-wired.
  */
 public final class ForgeRegistries {
     private ForgeRegistries() {}
@@ -49,6 +51,8 @@ public final class ForgeRegistries {
     public static final IForgeRegistry<VillagerProfession> VILLAGER_PROFESSIONS = of(Registries.VILLAGER_PROFESSION);
     public static final IForgeRegistry<PoiType> POI_TYPES = of(Registries.POINT_OF_INTEREST_TYPE);
     public static final IForgeRegistry<Feature<?>> FEATURES = of(Registries.FEATURE);
+    /** Datapack registry in 1.21.1: only the key is available; lookups and registration fail at the call. */
+    public static final IForgeRegistry<Enchantment> ENCHANTMENTS = new DatapackRegistryView<>(Registries.ENCHANTMENT);
 
     public static final IForgeRegistry<EntityDataSerializer<?>> ENTITY_DATA_SERIALIZERS =
             of(NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS);
@@ -78,6 +82,7 @@ public final class ForgeRegistries {
         public static final ResourceKey<Registry<VillagerProfession>> VILLAGER_PROFESSIONS = Registries.VILLAGER_PROFESSION;
         public static final ResourceKey<Registry<PoiType>> POI_TYPES = Registries.POINT_OF_INTEREST_TYPE;
         public static final ResourceKey<Registry<Feature<?>>> FEATURES = Registries.FEATURE;
+        public static final ResourceKey<Registry<Enchantment>> ENCHANTMENTS = Registries.ENCHANTMENT;
         public static final ResourceKey<Registry<EntityDataSerializer<?>>> ENTITY_DATA_SERIALIZERS =
                 NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS;
         public static final ResourceKey<? extends Registry<?>> GLOBAL_LOOT_MODIFIER_SERIALIZERS =

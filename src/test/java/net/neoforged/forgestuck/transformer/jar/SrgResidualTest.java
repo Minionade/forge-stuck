@@ -79,8 +79,44 @@ class SrgResidualTest {
         assertTrue(text.contains("CREATIVE_MODE_TAB") && text.contains("getMainHandItem"));
     }
 
-    /** Opt-in: set FORGESTUCK_SCAN_DIR to a directory of transformed jars (e.g. mods/.forgestuck). */
     @Test
+    void unmappedSrgMemberOnGameOwnerLinksAndFailsOnlyWhenExecuted(@TempDir Path dir) throws Exception {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+        cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/Gone", null, "java/lang/Object", null);
+        var ok = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "ok", "()I", null, null);
+        ok.visitCode();
+        ok.visitInsn(Opcodes.ICONST_5);
+        ok.visitInsn(Opcodes.IRETURN);
+        ok.visitMaxs(0, 0);
+        ok.visitEnd();
+        var m = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "go", "()Ljava/lang/Object;", null, null);
+        m.visitCode();
+        m.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/core/registries/BuiltInRegistries", "f_256876_",
+                "Lnet/minecraft/core/Registry;");
+        m.visitInsn(Opcodes.ARETURN);
+        m.visitMaxs(0, 0);
+        m.visitEnd();
+        cw.visitEnd();
+        var files = new LinkedHashMap<String, byte[]>();
+        files.put("com/ex/Gone.class", cw.toByteArray());
+        Path out = dir.resolve("out.jar");
+        JarTransformer.withDefaultSteps().transform(SrgCompatTest.jar(dir, "in.jar", files), out);
+        byte[] b = SrgCompatTest.read(out, "com/ex/Gone.class");
+        assertEquals(List.of(), residualSrgRefs(b));
+        ClassLoader loader = new ClassLoader(getClass().getClassLoader()) {
+            Class<?> define() {
+                return defineClass("com.ex.Gone", b, 0, b.length);
+            }
+        };
+        Class<?> c = (Class<?>) loader.getClass().getDeclaredMethod("define").invoke(loader);
+        assertEquals(5, c.getMethod("ok").invoke(null));
+        var ex = org.junit.jupiter.api.Assertions.assertThrows(java.lang.reflect.InvocationTargetException.class,
+                () -> c.getMethod("go").invoke(null));
+        assertTrue(ex.getCause() instanceof UnsupportedOperationException
+                && ex.getCause().getMessage().contains("f_256876_"), String.valueOf(ex.getCause()));
+    }
+
+    /** Opt-in: set FORGESTUCK_SCAN_DIR to a directory of transformed jars (e.g. mods/.forgestuck). */    @Test
     void transformedJarsLeaveNoSrgReferencesToGameOwners() throws Exception {
         String dir = System.getenv("FORGESTUCK_SCAN_DIR");
         assumeTrue(dir != null, "FORGESTUCK_SCAN_DIR not set");

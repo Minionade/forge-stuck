@@ -50,3 +50,5 @@ LegacyNetworkEvent$ServerCustomPayloadEvent
 LegacyCustomPacket
 LegacyEventChannel
 LegacyEventChannel$Raw
+DatapackRegistryView
+LegacyMessageHandler

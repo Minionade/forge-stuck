@@ -53,7 +53,7 @@ class UnsupportedMemberLinkingTest {
 
         m = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "badField", "()Ljava/lang/Object;", null, null);
         m.visitCode();
-        m.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraftforge/registries/ForgeRegistries", "ENCHANTMENTS",
+        m.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraftforge/registries/ForgeRegistries", "BIOMES",
                 "Lnet/minecraftforge/registries/IForgeRegistry;");
         m.visitInsn(Opcodes.ARETURN);
         m.visitMaxs(0, 0);

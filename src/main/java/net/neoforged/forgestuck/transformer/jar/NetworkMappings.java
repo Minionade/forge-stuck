@@ -28,6 +28,7 @@ final class NetworkMappings {
         String pred = "Ljava/util/function/Predicate;";
         String key = "Lnet/minecraft/resources/ResourceKey;";
         String o = "Ljava/lang/Object;";
+        String mh = "L" + N + "simple/IndexedMessageCodec$MessageHandler;";
         String reg = "ILjava/lang/Class;Ljava/util/function/BiConsumer;Ljava/util/function/Function;"
                 + "Ljava/util/function/BiConsumer;";
         Set<String> dirs = Set.of("PLAY_TO_SERVER" + dir, "PLAY_TO_CLIENT" + dir, "LOGIN_TO_SERVER" + dir,
@@ -37,11 +38,12 @@ final class NetworkMappings {
                 "buildPacket(Lorg/apache/commons/lang3/tuple/Pair;" + rl + ")L" + N + "ICustomPacket;");
         return List.of(
                 e(N + "simple/SimpleChannel", COMPAT + "LegacySimpleChannel", Set.of(
-                        "registerMessage(" + reg + ")I",
-                        "registerMessage(" + reg + "Ljava/util/Optional;)I",
+                        "registerMessage(" + reg + ")" + mh,
+                        "registerMessage(" + reg + "Ljava/util/Optional;)" + mh,
                         "send(" + target + o + ")V", "sendToServer(" + o + ")V",
                         "sendTo(" + o + "Lnet/minecraft/network/Connection;" + dir + ")V",
                         "reply(" + o + ctx + ")V")),
+                e(N + "simple/IndexedMessageCodec$MessageHandler", COMPAT + "LegacyMessageHandler", Set.of()),
                 e(N + "NetworkRegistry", COMPAT + "LegacyNetworkRegistry", Set.of(
                         "newSimpleChannel(" + rl + sup + pred + pred + ")" + sc)),
                 e(N + "NetworkRegistry$ChannelBuilder", COMPAT + "LegacyNetworkRegistry$LegacyChannelBuilder", Set.of(

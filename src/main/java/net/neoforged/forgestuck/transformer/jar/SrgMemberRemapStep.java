@@ -59,6 +59,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         Set<String> remapped = new TreeSet<>();
         boolean modified = false;
         Set<String> ownRenamed = new HashSet<>();
+        Set<String> unresolved = new TreeSet<>();
 
         if (isMixin) {
             for (MethodNode m : node.methods) {
@@ -94,10 +95,16 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         }
 
         for (MethodNode m : node.methods) {
+            java.util.Map<AbstractInsnNode, String> unmapped = new java.util.LinkedHashMap<>();
             for (AbstractInsnNode insn : m.instructions.toArray()) {
                 if (insn instanceof MethodInsnNode call && LegacyNameMappings.looksLikeSrg(call.name)) {
                     String mapped = mappings.map(call.owner, call.name, call.desc);
-                    if (mapped == null) continue;
+                    if (mapped == null) {
+                        if (!isMixin && ownerIsGame(call.owner) && !call.owner.equals(node.name)) {
+                            unmapped.put(call, call.owner.replace('/', '.') + "." + call.name + call.desc);
+                        }
+                        continue;
+                    }
                     boolean own = call.owner.equals(node.name)
                             && ownRenamed.contains("M" + call.name + call.desc + "=" + mapped);
                     if (own || ownerIsGame(call.owner)) {
@@ -107,7 +114,12 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     }
                 } else if (insn instanceof FieldInsnNode field && LegacyNameMappings.looksLikeSrg(field.name)) {
                     String mapped = mappings.map(field.owner, field.name, field.desc);
-                    if (mapped == null) continue;
+                    if (mapped == null) {
+                        if (!isMixin && ownerIsGame(field.owner) && !field.owner.equals(node.name)) {
+                            unmapped.put(field, field.owner.replace('/', '.') + "." + field.name);
+                        }
+                        continue;
+                    }
                     boolean own = field.owner.equals(node.name) && ownRenamed.contains("F" + field.name + "=" + mapped);
                     if (own || ownerIsGame(field.owner)) {
                         remapped.add(field.name + "->" + mapped);
@@ -116,10 +128,21 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     }
                 }
             }
+            for (var e : unmapped.entrySet()) {
+                ForgeOwnerRemapStep.failAtCall(m, e.getKey(), e.getValue() + " (legacy SRG name without a 1.21.1 mapping)", node.name + "." + m.name);
+                unresolved.add(e.getValue());
+                modified = true;
+            }
         }
 
         if (!modified) return bytes;
-        LOGGER.info("{} remapped {} legacy member name(s) in {}: {}", TAG, remapped.size(), className, remapped);
+        if (!remapped.isEmpty()) {
+            LOGGER.info("{} remapped {} legacy member name(s) in {}: {}", TAG, remapped.size(), className, remapped);
+        }
+        if (!unresolved.isEmpty()) {
+            LOGGER.warn("{} {} references legacy SRG member(s) with no 1.21.1 mapping; they link but throw "
+                    + "UnsupportedOperationException if executed: {}", TAG, className, unresolved);
+        }
         ClassWriter writer = new ClassWriter(0);
         node.accept(writer);
         return writer.toByteArray();
