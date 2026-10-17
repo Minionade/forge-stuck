@@ -101,6 +101,8 @@ public class SrgMemberRemapStep implements ClassTransformStep {
             }
         }
 
+        if (!isMixin) modified |= addOverrideBridges(node, remapped);
+
         for (MethodNode m : node.methods) {
             java.util.Map<AbstractInsnNode, String> unmapped = new java.util.LinkedHashMap<>();
             for (AbstractInsnNode insn : m.instructions.toArray()) {
@@ -173,6 +175,49 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         ClassWriter writer = new ClassWriter(0);
         node.accept(writer);
         return writer.toByteArray();
+    }
+
+    /**
+     * A legacy class implementing a game interface/superclass method under its SRG name never satisfies the 1.21.1
+     * (named) method; add a named bridge that delegates to the SRG-named implementation.
+     */
+    private boolean addOverrideBridges(ClassNode node, Set<String> remapped) {
+        List<String> supers = new java.util.ArrayList<>(node.interfaces);
+        if (node.superName != null) supers.add(node.superName);
+        List<MethodNode> bridges = new java.util.ArrayList<>();
+        for (MethodNode m : node.methods) {
+            if (!LegacyNameMappings.looksLikeSrg(m.name) || m.name.equals("<init>") || m.name.equals("<clinit>")) continue;
+            if ((m.access & (org.objectweb.asm.Opcodes.ACC_STATIC | org.objectweb.asm.Opcodes.ACC_ABSTRACT
+                    | org.objectweb.asm.Opcodes.ACC_PRIVATE)) != 0) continue;
+            for (String sup : supers) {
+                if (!ownerIsGame(sup)) continue;
+                String mapped = mappings.map(sup, m.name, m.desc);
+                if (mapped == null || mapped.equals(m.name)) continue;
+                boolean exists = node.methods.stream().anyMatch(o -> o.name.equals(mapped) && o.desc.equals(m.desc))
+                        || bridges.stream().anyMatch(o -> o.name.equals(mapped) && o.desc.equals(m.desc));
+                if (exists) break;
+                MethodNode b = new MethodNode(org.objectweb.asm.Opcodes.ACC_PUBLIC | org.objectweb.asm.Opcodes.ACC_SYNTHETIC,
+                        mapped, m.desc, null, null);
+                org.objectweb.asm.Type[] args = org.objectweb.asm.Type.getArgumentTypes(m.desc);
+                org.objectweb.asm.Type ret = org.objectweb.asm.Type.getReturnType(m.desc);
+                b.visitCode();
+                b.visitVarInsn(org.objectweb.asm.Opcodes.ALOAD, 0);
+                int slot = 1;
+                for (org.objectweb.asm.Type a : args) {
+                    b.visitVarInsn(a.getOpcode(org.objectweb.asm.Opcodes.ILOAD), slot);
+                    slot += a.getSize();
+                }
+                b.visitMethodInsn(org.objectweb.asm.Opcodes.INVOKEVIRTUAL, node.name, m.name, m.desc, false);
+                b.visitInsn(ret.getOpcode(org.objectweb.asm.Opcodes.IRETURN));
+                b.visitMaxs(Math.max(slot, ret.getSize()), slot);
+                b.visitEnd();
+                bridges.add(b);
+                remapped.add(m.name + "->" + mapped + " (bridge)");
+                break;
+            }
+        }
+        node.methods.addAll(bridges);
+        return !bridges.isEmpty();
     }
 
     private boolean remapAnnotations(List<AnnotationNode> annotations, Set<String> remapped) {
