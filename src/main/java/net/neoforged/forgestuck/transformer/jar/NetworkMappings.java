@@ -6,7 +6,7 @@ import java.util.Set;
 /**
  * Forge 1.20.1 SimpleChannel networking mapped onto {@code compat.LegacySimpleChannel} and friends, which sit on
  * NeoForge's payload registration. Members outside the whitelist (messageBuilder, isRemotePresent,
- * eventNetworkChannel, login-phase APIs) fail at the call that uses them. Reflection-checked in
+ * login-phase APIs) fail at the call that uses them. Reflection-checked in
  * {@code ForgeOwnerMappingTargetsTest}.
  */
 final class NetworkMappings {
@@ -33,7 +33,8 @@ final class NetworkMappings {
         Set<String> dirs = Set.of("PLAY_TO_SERVER" + dir, "PLAY_TO_CLIENT" + dir, "LOGIN_TO_SERVER" + dir,
                 "LOGIN_TO_CLIENT" + dir, "getOriginationSide()Lnet/minecraftforge/fml/LogicalSide;",
                 "getReceptionSide()Lnet/minecraftforge/fml/LogicalSide;", "values()[" + dir,
-                "valueOf(Ljava/lang/String;)" + dir);
+                "valueOf(Ljava/lang/String;)" + dir,
+                "buildPacket(Lorg/apache/commons/lang3/tuple/Pair;" + rl + ")L" + N + "ICustomPacket;");
         return List.of(
                 e(N + "simple/SimpleChannel", COMPAT + "LegacySimpleChannel", Set.of(
                         "registerMessage(" + reg + ")I",
@@ -46,7 +47,15 @@ final class NetworkMappings {
                 e(N + "NetworkRegistry$ChannelBuilder", COMPAT + "LegacyNetworkRegistry$LegacyChannelBuilder", Set.of(
                         "named(" + rl + ")" + cb, "networkProtocolVersion(" + sup + ")" + cb,
                         "clientAcceptedVersions(" + pred + ")" + cb, "serverAcceptedVersions(" + pred + ")" + cb,
-                        "simpleChannel()" + sc)),
+                        "simpleChannel()" + sc, "eventNetworkChannel()L" + N + "event/EventNetworkChannel;")),
+                e(N + "event/EventNetworkChannel", COMPAT + "LegacyEventChannel", Set.of("registerObject(" + o + ")V")),
+                e(N + "NetworkEvent", COMPAT + "LegacyNetworkEvent", Set.of(
+                        "getPayload()Lnet/minecraft/network/FriendlyByteBuf;", "getSource()" + sup)),
+                e(N + "NetworkEvent$ClientCustomPayloadEvent", COMPAT + "LegacyNetworkEvent$ClientCustomPayloadEvent", Set.of(
+                        "getPayload()Lnet/minecraft/network/FriendlyByteBuf;", "getSource()" + sup)),
+                e(N + "NetworkEvent$ServerCustomPayloadEvent", COMPAT + "LegacyNetworkEvent$ServerCustomPayloadEvent", Set.of(
+                        "getPayload()Lnet/minecraft/network/FriendlyByteBuf;", "getSource()" + sup)),
+                e(N + "ICustomPacket", COMPAT + "LegacyCustomPacket", Set.of("getThis()Lnet/minecraft/network/protocol/Packet;")),
                 e(N + "NetworkEvent$Context", COMPAT + "LegacyNetworkContext", Set.of(
                         "getDirection()" + dir, "getSender()Lnet/minecraft/server/level/ServerPlayer;",
                         "getNetworkManager()Lnet/minecraft/network/Connection;",

@@ -90,6 +90,11 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         return writer.toByteArray();
     }
 
+    /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */
+    private static final java.util.Map<String, String> REDIRECTS = java.util.Map.of(
+            "net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V",
+            "net/neoforged/forgestuck/compat/LegacyCapabilities");
+
     /**
      * Unsupported members no longer leave their owner unmapped (which guaranteed NoClassDefFoundError for every
      * other use of that owner). The call site is instead replaced by a call to {@link UnsupportedForgeApi#fail}
@@ -113,6 +118,18 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     desc = f.desc;
                     field = true;
                 } else {
+                    continue;
+                }
+                String helper = field ? null : REDIRECTS.get(owner + "." + name + desc);
+                if (helper != null) {
+                    Type[] ra = Type.getArgumentTypes(desc);
+                    Type[] sa = new Type[ra.length + 1];
+                    sa[0] = Type.getObjectType(owner);
+                    System.arraycopy(ra, 0, sa, 1, ra.length);
+                    m.instructions.insertBefore(insn, new MethodInsnNode(Opcodes.INVOKESTATIC, helper, name,
+                            Type.getMethodDescriptor(Type.getReturnType(desc), sa), false));
+                    m.instructions.remove(insn);
+                    replaced++;
                     continue;
                 }
                 ForgeOwnerMappings.Entry e = mappings.get(owner);

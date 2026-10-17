@@ -25,6 +25,15 @@ public enum LegacyNetworkDirection {
         return reception;
     }
 
+    public LegacyCustomPacket buildPacket(org.apache.commons.lang3.tuple.Pair<net.minecraft.network.FriendlyByteBuf, Integer> data,
+            net.minecraft.resources.ResourceLocation channel) {
+        if (isLogin()) {
+            throw new UnsupportedOperationException("NetworkDirection." + this + ".buildPacket: LOGIN-phase packets have no NeoForge payload equivalent");
+        }
+        LegacyEventChannel.Raw raw = LegacyEventChannel.raw(channel, data.getLeft());
+        return new LegacyCustomPacket(this == PLAY_TO_CLIENT ? raw.toVanillaClientbound() : raw.toVanillaServerbound());
+    }
+
     boolean isLogin() {
         return this == LOGIN_TO_SERVER || this == LOGIN_TO_CLIENT;
     }

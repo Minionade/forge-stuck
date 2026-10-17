@@ -143,6 +143,7 @@ public final class ForgeOwnerMappings {
                 .add("net/minecraftforge/api/distmarker/OnlyIn", "net/neoforged/api/distmarker/OnlyIn")
                 .addAll(configAndEnvironment())
                 .addAll(ConditionMappings.entries())
+                .addAll(ItemAbilityAndFluidMappings.entries())
                 .addAll(NetworkMappings.entries())
                 .addAll(GeneratedOwnerTable.entries())
                 .add(entry(FE + "FMLCommonSetupEvent", "net/neoforged/fml/event/lifecycle/FMLCommonSetupEvent", enqueue()))

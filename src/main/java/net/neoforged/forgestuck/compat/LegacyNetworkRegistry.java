@@ -46,6 +46,11 @@ public final class LegacyNetworkRegistry {
             return this;
         }
 
+        public LegacyEventChannel eventNetworkChannel() {
+            if (version == null) throw new IllegalStateException("networkProtocolVersion not set for channel " + name);
+            return new LegacyEventChannel(name, version.get(), FMLJavaModLoadingContext.get().getModEventBus());
+        }
+
         public LegacySimpleChannel simpleChannel() {
             if (version == null) throw new IllegalStateException("networkProtocolVersion not set for channel " + name);
             return newSimpleChannel(name, version, client, server);

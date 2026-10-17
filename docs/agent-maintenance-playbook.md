@@ -423,3 +423,13 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 | 2026-10-17 | t21: ResourceLocation subclasses, conditions, network adapter, FluidType, language-loader check | PR #25 |
 
 
+
+## t22 (2026-10-17): EventNetworkChannel, ItemAbility, BaseFlowingFluid, RegisterCapabilitiesEvent
+
+- `NetworkRegistry.ChannelBuilder.eventNetworkChannel()` -> `compat/LegacyEventChannel` (cofh_core `PacketHandler`: `registerObject` with `@SubscribeEvent` handlers taking `NetworkEvent$ClientCustomPayloadEvent`/`ServerCustomPayloadEvent`, `getPayload()`, `getSource().get()` context, and `NetworkDirection.buildPacket(Pair, ResourceLocation).getThis()` for sending). One NeoForge payload type named after the channel carries the raw remaining bytes both ways; events map to `compat/LegacyNetworkEvent`, `ICustomPacket` to `LegacyCustomPacket`. Not preserved: `ChannelRegistryEvent`, `addListener(Consumer)` (fails per call: Forge inferred the event type from generics), accepted-version predicates, LOGIN packets. Tested with raw codec round trip + dispatch by direction (`LegacyEventChannelTest`).
+- `ToolAction`/`ToolActions` -> `ItemAbility`/`ItemAbilities` (reflection-checked constants and `get`/`name`/`getActions`); `canPerformAction(ItemStack, ToolAction)` overrides get their descriptors rewritten by the owner remap. `ForgeFlowingFluid` (+`$Source`/`$Flowing`/`$Properties`) -> `BaseFlowingFluid` (same erased ctor/builder signatures; `canMultiply` etc. fail per call).
+- `RegisterCapabilitiesEvent` is mapped to NeoForge's event so Mantle/bdlib link; `register(Class)` is redirected by `ForgeOwnerRemapStep.REDIRECTS` to `LegacyCapabilities.register`, which only records the declared legacy capability class. NOT done: `Capability`/`CapabilityManager`/`ICapabilityProvider`/`getCapability` routing onto Block/Item/EntityCapability; those still fail or stay unmapped (574 refs, top remaining blocker).
+- bdlib `BdLib$.<clinit>` failure was a nested `NoClassDefFoundError RegisterCapabilitiesEvent`; expected resolved by the mapping, unverified.
+- Validation: `.\gradlew.bat test build` passes. Not verified in game.
+
+| 2026-10-17 | t22: EventNetworkChannel, ItemAbility, BaseFlowingFluid, RegisterCapabilitiesEvent link | PR (see GitHub) |
