@@ -89,7 +89,7 @@ public final class CompatRelocation {
 
         Manifest mf = new Manifest();
         mf.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
-        mf.getMainAttributes().putValue("FMLModType", "LIBRARY");
+        mf.getMainAttributes().putValue("FMLModType", "GAMELIBRARY");
         mf.getMainAttributes().putValue("Automatic-Module-Name", MODULE_NAME);
         Path tmp = Files.createTempFile(dir, "forgestuck-", ".tmp");
         try {

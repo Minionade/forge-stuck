@@ -239,7 +239,7 @@ class JarTransformerTest {
         JarTransformer.Result first = t.transformCached(src, cache);
         assertFalse(first.cacheHit());
         assertTrue(Files.isRegularFile(first.output()));
-        assertTrue(first.output().getFileName().toString().contains("-t" + JarTransformer.TRANSFORMER_VERSION));
+        assertTrue(first.output().getFileName().toString().contains("-t" + JarTransformer.TRANSFORMER_VERSION + "-"));
 
         JarTransformer.Result second = t.transformCached(src, cache);
         assertTrue(second.cacheHit());
@@ -301,8 +301,17 @@ class JarTransformerTest {
     void cacheFileNameContainsTransformerVersion(@TempDir Path dir) throws Exception {
         Path jar = buildJar(dir, "a.jar", MODS_TOML, "1.0");
         Path out = new JarTransformer(List.of()).transformCached(jar, dir.resolve("cache")).output();
-        assertTrue(out.getFileName().toString().endsWith("-t" + JarTransformer.TRANSFORMER_VERSION + ".jar"));
-        assertNotEquals("1", JarTransformer.TRANSFORMER_VERSION);
+        assertTrue(out.getFileName().toString().contains("-t" + JarTransformer.TRANSFORMER_VERSION + "-"));
+        assertTrue(out.getFileName().toString().matches("[0-9a-f]{64}-t0-[0-9a-f]{12}\\.jar"));
+    }
+
+    @Test
+    void cacheKeyDependsOnTransformerStepsAndCode(@TempDir Path dir) throws Exception {
+        String sha = "a".repeat(64);
+        String none = new JarTransformer(List.of()).cacheFileName(sha);
+        assertEquals(none, new JarTransformer(List.of()).cacheFileName(sha));
+        assertNotEquals(none, JarTransformer.forRuntime().cacheFileName(sha));
+        assertNotEquals(JarTransformer.withDefaultSteps().cacheFileName(sha), JarTransformer.forRuntime().cacheFileName(sha));
     }
 
     @Test

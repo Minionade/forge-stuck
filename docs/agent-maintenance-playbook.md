@@ -134,7 +134,7 @@ keep original bytes, malformed/unsupported data is reported
 
 ### Cache behavior
 
-- Outputs live at `<gameDir>/mods/.forgestuck/<source-sha256>-t<TRANSFORMER_VERSION>.jar`.
+- Outputs live at `<gameDir>/mods/.forgestuck/<source-sha256>-t<TRANSFORMER_VERSION>-<code-fingerprint>.jar`.
   A nonempty existing file is a hit; content is not revalidated on a hit.
 - A miss transforms into a temporary file, then moves it into place (atomically
   where supported). Original mods remain untouched.
@@ -342,3 +342,9 @@ Moving failure from link/class-init time to the exact unsupported call is not sw
 - Next steps: obtain real jars and reproduce with the transformed cache output;
   extend `ForgeOwnerMappings` only with members verified by
   `ForgeOwnerMappingTargetsTest`.
+| 2026-10-17 | follow-up PR (t16, module reads + cache key) | t0/PR #19 real run: forestry constructs, but IllegalAccessError: class ...gamecompat.ForgeRegistries (in module forgestuck_gamecompat) cannot access ...Registries (in module minecraft) because module forgestuck_gamecompat does not read module minecraft; the stack shows LAYER PLUGIN/forgestuck_gamecompat. Root cause: the relocated compat jar was FMLModType: LIBRARY, which FML (loader 4.0.42, IModFile.Type = MOD/LIBRARY/GAMELIBRARY) puts in the PLUGIN layer, which is built before and without Minecraft. Fix: manifest is now GAMELIBRARY, so the jar is an automatic module in the GAME layer with minecraft (automatic modules read every module of their configuration). CompatRelocationTest resolves a real ModuleLayer with a fake explicit minecraft module and asserts canRead (the isolated-layer variant cannot). Cache key is now <sha>-t<VERSION>-<fp>.jar where p hashes Forge Stuck's own jar (or class/resource tree in dev) plus the transformer step list (JarTransformer.cacheFileName), so code changes invalidate caches while TRANSFORMER_VERSION stays  . Not verified in game. |
+
+## Status of the remaining t0 blockers (t16)
+- ItemDisplayContext.create: NeoForge extends enums only through META-INF/enumextensions.json (+ IExtensibleEnum.getExtensionInfo); generating it would need the constant args, ordinal/id semantics and a rewrite of every static-field initializer to `valueOf`. Not implemented; not verifiable without the format spec and a real run. It already fails per call (NoSuchMethodError), but tconstruct calls it from a static initializer.
+- NetworkRegistry/SimpleChannel (cofh_core): the owner is unmapped, so linking fails with NoClassDefFoundError. A stub mapping with per-call failure would only move the failure, since cofh_core builds its channel during construction; no faithful payload adapter exists. Blocker.
+- IConditionSerializer (mantle JEI plugin) and Scala mods (bdlib, advgenerators: language provider kotori_scala finds no public constructor): unchanged blockers.
