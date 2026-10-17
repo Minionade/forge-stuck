@@ -52,3 +52,7 @@ LegacyEventChannel
 LegacyEventChannel$Raw
 DatapackRegistryView
 LegacyMessageHandler
+LegacyEnchantmentRegistry
+LegacyEnchantmentRegistry$ClientAccess
+LegacyForgeMod
+LegacyForgeMod$1

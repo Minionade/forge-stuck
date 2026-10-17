@@ -443,4 +443,12 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 - `SimpleChannel.registerMessage` call sites use return type `IndexedMessageCodec$MessageHandler`; the whitelist had `I`, so the Optional overload (bdlib `NetChannel`, Mantle) was never matched. Whitelist and adapter now return `compat/LegacyMessageHandler` (holds only the index; builder-style members fail per call); both overloads incl. `Optional<NetworkDirection>` are supported (`LegacySimpleChannelTest`).
 - Validation: `.\gradlew.bat test build` passes. Not verified in game.
 
+## t24: enchantment registry view, ForgeMod, instance subscribers, TextureStitchEvent
+
+- `BuiltInRegistries.f_256876_` (ENCHANTMENT) no longer exists in 1.21.1 (datapack registry). `SrgMemberRemapStep.REPLACEMENTS` redirects it to `compat/LegacyEnchantmentRegistry.ENCHANTMENT`, a `Registry` proxy forwarding to the live `RegistryAccess` (server via `ServerLifecycleHooks`, else client level). Static init (Mantle `Loadables`) links; lookups with no server/level fail per call with a message naming `RegistryAccess`. No entries are added. Unverified: whether datapack-load-time lookups occur after the server is set.
+- `ForgeMod` -> `compat/LegacyForgeMod`: `LAVA_TYPE`, `WATER_TYPE`, `SWIM_SPEED`, `NAMETAG_DISTANCE`, `enableMilkFluid()` (backed by `NeoForgeMod`). Reach/gravity/step-height attributes have no NeoForge field (vanilla attributes in 1.21) and fail per call.
+- `LegacyInstanceSubscriberStep`: on `@Mod.EventBusSubscriber`/`@EventBusSubscriber` classes, `@SubscribeEvent` is removed from instance methods. Forge 1.20.1 `register(Class)` only registered static methods and ignored instance ones; NeoForge 1.21.1 throws. Static bridges were rejected: Scala companions already emit static forwarders, so bridges would double-register.
+- `TextureStitchEvent$Post` -> `TextureAtlasStitchedEvent` (`getAtlas()` only). `$Pre` and other members fail per call.
+- Validation: `.\gradlew.bat test build` passes. Not verified in game.
 | 2026-10-17 | t23: leftover SRG -> call-time failure, ENCHANTMENTS view, RenderGuiLayerEvent, registerMessage return type | PR (see GitHub) |
+| 2026-10-17 | t24: enchantment registry view, ForgeMod, instance subscribers, TextureStitchEvent | PR (see GitHub) |

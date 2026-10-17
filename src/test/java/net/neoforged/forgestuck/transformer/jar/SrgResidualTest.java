@@ -91,7 +91,7 @@ class SrgResidualTest {
         ok.visitEnd();
         var m = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "go", "()Ljava/lang/Object;", null, null);
         m.visitCode();
-        m.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/core/registries/BuiltInRegistries", "f_256876_",
+        m.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/core/registries/BuiltInRegistries", "f_999999_",
                 "Lnet/minecraft/core/Registry;");
         m.visitInsn(Opcodes.ARETURN);
         m.visitMaxs(0, 0);
@@ -113,7 +113,7 @@ class SrgResidualTest {
         var ex = org.junit.jupiter.api.Assertions.assertThrows(java.lang.reflect.InvocationTargetException.class,
                 () -> c.getMethod("go").invoke(null));
         assertTrue(ex.getCause() instanceof UnsupportedOperationException
-                && ex.getCause().getMessage().contains("f_256876_"), String.valueOf(ex.getCause()));
+                && ex.getCause().getMessage().contains("f_999999_"), String.valueOf(ex.getCause()));
     }
 
     /** Opt-in: set FORGESTUCK_SCAN_DIR to a directory of transformed jars (e.g. mods/.forgestuck). */    @Test

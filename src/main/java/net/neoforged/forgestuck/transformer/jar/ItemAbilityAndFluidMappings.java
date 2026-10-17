@@ -20,6 +20,7 @@ final class ItemAbilityAndFluidMappings {
 
     static List<ForgeOwnerMappings.Entry> entries() {
         String ta = "Lnet/minecraftforge/common/ToolAction;";
+        String ro = "Lnet/minecraftforge/registries/RegistryObject;";
         Set<String> actions = new java.util.HashSet<>();
         for (String n : List.of("AXE_DIG", "PICKAXE_DIG", "SHOVEL_DIG", "HOE_DIG", "SWORD_DIG", "SHEARS_DIG",
                 "AXE_STRIP", "AXE_SCRAPE", "AXE_WAX_OFF", "SHOVEL_FLATTEN", "SWORD_SWEEP", "SHEARS_HARVEST",
@@ -50,6 +51,17 @@ final class ItemAbilityAndFluidMappings {
                         "net/neoforged/neoforge/capabilities/RegisterCapabilitiesEvent", Set.of()),
                 // Overlays became layers: only the members with identical descriptors are mapped; getPartialTick
                 // (float vs DeltaTracker), getOverlay, getWindow and the constructors fail at the call.
+                e("net/minecraftforge/common/ForgeMod", "net/neoforged/forgestuck/compat/LegacyForgeMod", Set.of(
+                        "LAVA_TYPE" + ro, "WATER_TYPE" + ro, "SWIM_SPEED" + ro, "NAMETAG_DISTANCE" + ro,
+                        "enableMilkFluid()V")),
+                // Atlas stitching: only the Post event has a counterpart (TextureAtlasStitchedEvent, mod bus);
+                // Pre is unmapped.
+                e("net/minecraftforge/client/event/TextureStitchEvent",
+                        "net/neoforged/neoforge/client/event/TextureAtlasStitchedEvent",
+                        Set.of("getAtlas()Lnet/minecraft/client/renderer/texture/TextureAtlas;")),
+                e("net/minecraftforge/client/event/TextureStitchEvent$Post",
+                        "net/neoforged/neoforge/client/event/TextureAtlasStitchedEvent",
+                        Set.of("getAtlas()Lnet/minecraft/client/renderer/texture/TextureAtlas;")),
                 e("net/minecraftforge/client/event/RenderGuiOverlayEvent",
                         "net/neoforged/neoforge/client/event/RenderGuiLayerEvent",
                         Set.of("getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;")),
