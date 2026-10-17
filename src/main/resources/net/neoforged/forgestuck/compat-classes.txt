@@ -43,3 +43,10 @@ LegacySimpleChannel$Payload
 LegacySimpleChannel$Message
 LegacyNetworkRegistry
 LegacyNetworkRegistry$LegacyChannelBuilder
+LegacyCapabilities
+LegacyNetworkEvent
+LegacyNetworkEvent$ClientCustomPayloadEvent
+LegacyNetworkEvent$ServerCustomPayloadEvent
+LegacyCustomPacket
+LegacyEventChannel
+LegacyEventChannel$Raw

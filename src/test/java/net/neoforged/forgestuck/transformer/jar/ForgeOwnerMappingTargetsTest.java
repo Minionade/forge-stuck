@@ -50,6 +50,7 @@ class ForgeOwnerMappingTargetsTest {
         for (ForgeOwnerMappings.Entry e : GeneratedOwnerTable.entries()) all.add(e.oldOwner());
         for (ForgeOwnerMappings.Entry e : ConditionMappings.entries()) all.add(e.oldOwner());
         for (ForgeOwnerMappings.Entry e : NetworkMappings.entries()) all.add(e.oldOwner());
+        for (ForgeOwnerMappings.Entry e : ItemAbilityAndFluidMappings.entries()) all.add(e.oldOwner());
         return all;
     }
 

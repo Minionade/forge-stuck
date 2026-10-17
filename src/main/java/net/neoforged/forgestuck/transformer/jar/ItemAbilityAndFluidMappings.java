@@ -1,0 +1,57 @@
+package net.neoforged.forgestuck.transformer.jar;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Forge 1.20.1 {@code ToolAction}/{@code ToolActions} (NeoForge: {@code ItemAbility}/{@code ItemAbilities}, same
+ * string-id model and member names), {@code ForgeFlowingFluid} (NeoForge: {@code BaseFlowingFluid}, identical
+ * erased constructor and builder signatures) and the {@code RegisterCapabilitiesEvent} owner. Constants and
+ * members are reflection-checked in {@code ForgeOwnerMappingTargetsTest}; anything NeoForge lacks (for example
+ * {@code ForgeFlowingFluid.Properties.canMultiply}) fails at the call. {@code RegisterCapabilitiesEvent.register(Class)}
+ * is redirected to {@code compat.LegacyCapabilities} by {@code ForgeOwnerRemapStep}.
+ */
+final class ItemAbilityAndFluidMappings {
+    private ItemAbilityAndFluidMappings() {}
+
+    private static final String F = "net/minecraftforge/fluids/ForgeFlowingFluid";
+    private static final String NF = "net/neoforged/neoforge/fluids/BaseFlowingFluid";
+
+    static List<ForgeOwnerMappings.Entry> entries() {
+        String ta = "Lnet/minecraftforge/common/ToolAction;";
+        Set<String> actions = new java.util.HashSet<>();
+        for (String n : List.of("AXE_DIG", "PICKAXE_DIG", "SHOVEL_DIG", "HOE_DIG", "SWORD_DIG", "SHEARS_DIG",
+                "AXE_STRIP", "AXE_SCRAPE", "AXE_WAX_OFF", "SHOVEL_FLATTEN", "SWORD_SWEEP", "SHEARS_HARVEST",
+                "SHEARS_CARVE", "SHEARS_DISARM", "HOE_TILL", "SHIELD_BLOCK", "FISHING_ROD_CAST", "BRUSH_BRUSH")) {
+            actions.add(n + ta);
+        }
+        for (String n : List.of("DEFAULT_AXE_ACTIONS", "DEFAULT_HOE_ACTIONS", "DEFAULT_SHOVEL_ACTIONS",
+                "DEFAULT_PICKAXE_ACTIONS", "DEFAULT_SWORD_ACTIONS", "DEFAULT_SHEARS_ACTIONS",
+                "DEFAULT_SHIELD_ACTIONS", "DEFAULT_FISHING_ROD_ACTIONS", "DEFAULT_BRUSH_ACTIONS")) {
+            actions.add(n + "Ljava/util/Set;");
+        }
+        String props = "L" + F + "$Properties;";
+        String sup = "Ljava/util/function/Supplier;";
+        List<ForgeOwnerMappings.Entry> list = new ArrayList<>(List.of(
+                e("net/minecraftforge/common/ToolAction", "net/neoforged/neoforge/common/ItemAbility", Set.of(
+                        "get(Ljava/lang/String;)" + ta, "name()Ljava/lang/String;",
+                        "getActions()Ljava/util/Collection;")),
+                e("net/minecraftforge/common/ToolActions", "net/neoforged/neoforge/common/ItemAbilities", actions),
+                e(F, NF, Set.of("<init>(" + props + ")V")),
+                e(F + "$Source", NF + "$Source", Set.of("<init>(" + props + ")V")),
+                e(F + "$Flowing", NF + "$Flowing", Set.of("<init>(" + props + ")V")),
+                e(F + "$Properties", NF + "$Properties", Set.of(
+                        "<init>(" + sup + sup + sup + ")V",
+                        "bucket(" + sup + ")" + props, "block(" + sup + ")" + props,
+                        "slopeFindDistance(I)" + props, "levelDecreasePerBlock(I)" + props,
+                        "explosionResistance(F)" + props, "tickRate(I)" + props)),
+                e("net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent",
+                        "net/neoforged/neoforge/capabilities/RegisterCapabilitiesEvent", Set.of())));
+        return list;
+    }
+
+    private static ForgeOwnerMappings.Entry e(String oldOwner, String newOwner, Set<String> members) {
+        return new ForgeOwnerMappings.Entry(oldOwner, newOwner, members);
+    }
+}
