@@ -85,6 +85,9 @@ public final class ForgeOwnerMappings {
                         "addListener(" + nnc + ")V",
                         "removeListener(" + nnc + ")V",
                         "invalidate()V")))
+                .add(new Entry("net/minecraft/world/level/storage/loot/Serializer", COMPAT + "LegacyLootSerializer", Set.of(
+                        "serialize(Lcom/google/gson/JsonObject;Ljava/lang/Object;Lcom/google/gson/JsonSerializationContext;)V",
+                        "deserialize(Lcom/google/gson/JsonObject;Lcom/google/gson/JsonDeserializationContext;)Ljava/lang/Object;")))
                 .add(new Entry(FU + "NonNullConsumer", COMPAT + "NonNullConsumer",
                         Set.of("accept(Ljava/lang/Object;)V")))
                 .add(new Entry(FU + "NonNullPredicate", COMPAT + "NonNullPredicate",

@@ -372,3 +372,42 @@ Moving failure from link/class-init time to the exact unsupported call is not sw
 - **Blocker, not mapped:** `net/minecraft/world/level/storage/loot/Serializer` (removed in 1.21; used by TConstruct `*ConditionSerializer` classes). Loot conditions/functions are codec-based now; no faithful adapter exists.
 - Still-unmapped owner ranking on the converted pack (counts of class-file references): fluids (FluidStack 2366, IFluidHandler($FluidAction) ~1180, FluidType 200, ForgeFlowingFluid), capabilities (Capability 574, IItemHandler 284, IEnergyStorage 95, ForgeCapabilities), ExistingFileHelper 378, ICondition 366, client model geometry (IGeometryBakingContext 264, ModelData 211), NetworkEvent$Context 178, ToolAction 156. These are API redesigns in 1.21 and need dedicated, individually verified adapters; none is a cheap rename.
 - Unchanged blockers: IConditionSerializer, NetworkRegistry$ChannelBuilder, ItemDisplayContext.create, MobEffectEvent$Remove, ModelEvent$RegisterAdditional. Not verified in game.
+
+## t19 (2026-10-17): Scala mod event bus, loot `Serializer` analysis
+
+Log: t0-cd293aa1fed8 (PR #22 code).
+
+### Root cause fixed: "The active mod container has no event bus" (second uncaught parallel error)
+`advgenerators` `Generators$.<clinit>` -> `bdlib` `RegistryManager.init` -> `FMLJavaModLoadingContext.getModEventBus()` threw, during `ScalaModContainer.constructMod` (javap of the kotori_scala container). That container sets the active `ModLoadingContext` container to `null` before reading `MODULE$`; `ModLoadingContext.getActiveContainer()` then falls back to the `minecraft` container, whose `getEventBus()` is `null`. (Not a pre-existing bdlib bug: Forge's context was always the mod being constructed.)
+Fix (`compat/FMLJavaModLoadingContext`): when the active container has no bus, resolve the caller's named module via `StackWalker`, match it to `IModInfo.getOwningFile().moduleName()` in `ModList`, and use that mod container's bus. Same behaviour as before whenever the active container has a bus. Not verified in game.
+
+### Analysis, not implemented (documented blockers)
+- `net/minecraft/world/level/storage/loot/Serializer` (bdlib `BdLib$.<clinit>`, TConstruct/Mantle/CoFH condition serializers): in bdlib it is not a bare class reference. `LootFunctionTypes$` does `new LootItemFunctionType(Serializer)` with a `KeepDataLootFunctionSerializer`. In 1.21.1 `LootItemFunctionType` is a record over `MapCodec<T>`, so a compat `Serializer` interface alone would only move the failure to `NoSuchMethodError` on the constructor. A faithful fix needs a `new/dup/invokespecial` rewrite to a factory that wraps a JSON `Serializer` as a `MapCodec` (JsonOps bridge, plus `LootItemConditionType` and `LootNbtProviderType` equivalents). Not done: not verifiable without running the codecs; no stub registrations were added.
+- `ItemDisplayContext.create(String, ResourceLocation, ItemDisplayContext)`: 1.21.1 uses `IExtensibleEnum` + `META-INF/enumextensions.json`. Feasible design: statically detect constant args in `TinkerItemDisplays.create`, emit the JSON entry (ctor descriptor from the 1.21.1 enum) into the transformed jar, and rewrite the call to `ItemDisplayContext.valueOf(name)`. Not implemented (needs bytecode constant tracing and the real enum constructor signature check).
+- `IConditionSerializer` and `NetworkRegistry$ChannelBuilder`: unchanged. Conditions are now `MapCodec`-based, and SimpleChannel has no 1:1 payload-registration equivalent (needs per-message codecs from reflection on legacy encoder/decoder lambdas). No verified adapter.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-17 | t19: mod-event-bus fallback for providers that clear the active container (Scala); loot `Serializer`, `ItemDisplayContext.create`, conditions, `ChannelBuilder` analysed and left documented. |
+## t20 (2026-10-17): `ItemDisplayContext.create` enum extensions, legacy loot `Serializer` bridge
+
+Supersedes the "not implemented" bullets for these two items in t16/t19 above.
+
+### `ItemDisplayContext.create` -> `META-INF/enumextensions.json`
+- Schema verified against FML loader 4.0.42 `EnumPrototype.load` / `RuntimeEnumExtender`: entry `{enum, name, constructor, parameters}`; `name` must be a Java identifier starting (case-insensitively) with the owning mod id; the `@NamedEnum` parameter must be `modid:path`; the `@IndexedEnum` parameter is `-1`. The 1.21.1 constructor is `ItemDisplayContext(int, String, String fallbackName)`; the `(int,String)` one is `@ReservedConstructor`. The file is referenced by `enumExtensions` in the mod's `[[mods]]` entry (read by `LoadingModList.addEnumExtenders`).
+- `transformer/jar/LegacyEnumExtensionPlanner` is a small concrete bytecode interpreter run on the **original** classes (before `ResourceLocation` rewriting). Roots: `<clinit>` and static no-arg methods of classes mentioning `ItemDisplayContext`. It follows same-jar static calls with real arguments, `getstatic` of `ItemDisplayContext` constants, `Locale.ROOT`, `String.toUpperCase/toLowerCase/concat`, `makeConcatWithConstants`, `ResourceLocation` constructors/factories, and branches on known values. Any unknown value on a branch aborts that root; create sites that are never resolved are logged as WARN.
+- `EnumExtensionJson` writes `META-INF/forgestuck/enumextensions-<modId>.json` per mod id, containing only entries whose id namespace is that mod id (FML validates the prefix per mod). Constant names are `MODID_KEY`-style and unique.
+- `LegacyEnumCreateRewriteStep` redirects every `ItemDisplayContext.create(String,ResourceLocation,ItemDisplayContext)` to `compat/LegacyEnumExtensions.itemDisplayContext`, which looks up the generated constant by serialized id at run time. If no constant exists (non-constant args, wrong namespace) it throws `UnsupportedOperationException` naming the id, only when that call runs.
+- Limits: roots are static initializers/static no-arg methods only; instance-state or event-driven creation is not resolved. Ordinals differ from Forge (constants are appended by NeoForge). Verified by unit tests (planner, schema, end-to-end jar, rewritten call); the real `RuntimeEnumExtender` was not run on the generated file and nothing was run in game.
+
+### Legacy loot `Serializer` -> `MapCodec`
+- 1.21.1 `LootItemFunctionType`, `LootItemConditionType`, `LootNbtProviderType`, `LootPoolEntryType`, `LootNumberProviderType`, `LootScoreProviderType` are records over `MapCodec` (javap-verified). 1.20's `Serializer<T>` is mapped to `compat/LegacyLootSerializer` (same erased `serialize(JsonObject,Object,JsonSerializationContext)V` / `deserialize(JsonObject,JsonDeserializationContext)Object`).
+- `LegacyLootTypeRewriteStep` (runs before owner remapping) turns `new XType(Serializer)` into `LegacyLootBridge.xType(serializer)`, which builds a `MapCodec` over the legacy JSON methods: decode converts the `MapLike` to a `JsonObject` (JsonOps), calls `deserialize`, errors become `DataResult` errors; encode calls `serialize` and converts the result back. A runtime test round-trips a JSON object through rewritten fixture classes in a real classloader.
+- Limits: the serialization/deserialization contexts are plain Gson, so nested loot elements requested through the context fail with an error naming the type. Subclasses of Forge/vanilla 1.20 serializer base classes (e.g. `LootItemConditionalFunction.Serializer`) and `getSerializer()` callers are not covered and still fail per call or at link time.
+
+### `IConditionSerializer` (Mantle): evaluated, not implemented
+Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own `DataLoadedConditionContext` implements it), `CraftingHelper` registration/JSON lookup, `TrueCondition`/`FalseCondition`/`NotCondition`. NeoForge 1.21.1 conditions are `MapCodec`-based, `ICondition.IContext` differs, and `CraftingHelper` has no equivalent, so a linking-only interface would move the failure to the first `CraftingHelper` call without preserving registration or JSON semantics. Not done; `NetworkRegistry$ChannelBuilder` unchanged.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-17 | t20: enum-extension generation for `ItemDisplayContext.create`, loot `Serializer` -> `MapCodec` bridge; conditions and `ChannelBuilder` still documented blockers. Not verified in game. |

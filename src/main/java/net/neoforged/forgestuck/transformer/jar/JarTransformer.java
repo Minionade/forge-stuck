@@ -98,7 +98,7 @@ public class JarTransformer {
 
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
-        return new JarTransformer(List.of(new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
+        return new JarTransformer(List.of(new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
                 new ResourceLocationClassTransformStep(), new SrgMemberRemapStep(), new LegacyGameTestGuardStep()));
     }
 
@@ -216,7 +216,7 @@ public class JarTransformer {
             TreeSet<String> removed = new TreeSet<>();
             MixinResourceRewriter mixins = new MixinResourceRewriter(mappings, jarName);
             OwnerRemapReport ownerReport = new OwnerRemapReport();
-            prescanClasses(in, ownerReport);
+            List<String> enumCandidates = prescanClasses(in, ownerReport);
             ResourceRewriteReport resourceReport = new ResourceRewriteReport();
             java.util.Set<String> allNames = new java.util.HashSet<>();
             in.stream().forEach(je -> allNames.add(je.getName()));
@@ -291,7 +291,8 @@ public class JarTransformer {
                 }
             }
             String version = implementationVersion(in);
-            String converted = convertModsToml(modsToml, version, source.getFileName().toString());
+            Map<String, String> enumFiles = writeEnumExtensions(in, enumCandidates, modsToml, jarName, out);
+            String converted = convertModsToml(modsToml, version, source.getFileName().toString(), enumFiles);
             validateEntrypoints(in, converted, jarName);
             JarEntry generated = new JarEntry("META-INF/neoforge.mods.toml");
             out.putNextEntry(generated);
@@ -372,7 +373,8 @@ public class JarTransformer {
             }
         }
     }
-    private void prescanClasses(JarFile in, OwnerRemapReport report) throws IOException {
+    private List<String> prescanClasses(JarFile in, OwnerRemapReport report) throws IOException {
+        List<String> enumCandidates = new ArrayList<>();
         Enumeration<JarEntry> entries = in.entries();
         while (entries.hasMoreElements()) {
             JarEntry entry = entries.nextElement();
@@ -383,6 +385,9 @@ public class JarTransformer {
                 data = is.readAllBytes();
             }
             String className = name.substring(0, name.length() - ".class".length()).replace('/', '.');
+            if (LegacyEnumPrescan.mentionsItemDisplayContext(data)) {
+                enumCandidates.add(name.substring(0, name.length() - ".class".length()));
+            }
             for (ClassTransformStep step : steps) {
                 try {
                     step.scan(className, data, report);
@@ -392,6 +397,56 @@ public class JarTransformer {
                 }
             }
         }
+        return enumCandidates;
+    }
+
+    /**
+     * Generates NeoForge enum-extension JSON (one file per mod) for statically evaluable legacy
+     * {@code ItemDisplayContext.create} calls and returns the metadata path to register for each mod id.
+     */
+    private Map<String, String> writeEnumExtensions(JarFile in, List<String> candidates, String modsToml,
+            String jarName, JarOutputStream out) throws IOException {
+        if (candidates.isEmpty()) return Map.of();
+        LegacyEnumExtensionPlanner.Plan plan = LegacyEnumExtensionPlanner.plan(candidates, name -> {
+            JarEntry entry = in.getJarEntry(name + ".class");
+            if (entry == null) return null;
+            try (InputStream is = in.getInputStream(entry)) {
+                return is.readAllBytes();
+            } catch (IOException e) {
+                return null;
+            }
+        });
+        if (plan.entries().isEmpty() && plan.unresolvedSites().isEmpty()) return Map.of();
+        Set<String> modIds = new TreeSet<>();
+        List<UnmodifiableConfig> sourceMods = new TomlParser().parse(modsToml).getOrElse("mods", List.of());
+        for (UnmodifiableConfig mod : sourceMods) {
+            String id = mod.get("modId");
+            if (id != null) modIds.add(id);
+        }
+        Map<String, String> files = new LinkedHashMap<>();
+        for (String modId : modIds) {
+            String json = EnumExtensionJson.render(modId, plan.entries());
+            if (json == null) continue;
+            String path = EnumExtensionJson.path(modId);
+            out.putNextEntry(new JarEntry(path));
+            out.write(json.getBytes(StandardCharsets.UTF_8));
+            out.closeEntry();
+            files.put(modId, path);
+        }
+        for (LegacyEnumExtensionPlanner.Entry entry : plan.entries()) {
+            if (!modIds.contains(entry.namespace())) {
+                LOGGER.warn("{} {} ItemDisplayContext.create id {} has a namespace that is not a mod id of this jar; "
+                        + "NeoForge requires the id to be prefixed with the owning mod id, so no enum constant is "
+                        + "generated and that call fails when executed", TAG, jarName, entry.id());
+            }
+        }
+        LOGGER.info("{} {} generated {} ItemDisplayContext enum extension(s) for mod(s) {}", TAG, jarName,
+                plan.entries().size(), files.keySet());
+        for (String site : plan.unresolvedSites()) {
+            LOGGER.warn("{} {} ItemDisplayContext.create in {} has arguments that cannot be evaluated statically; "
+                    + "that call fails precisely when executed (no enum extension generated)", TAG, jarName, site);
+        }
+        return files;
     }
 
     private static boolean bypassNative(Path source) throws IOException {
@@ -473,6 +528,11 @@ public class JarTransformer {
 
     /** Converts Forge {@code mods.toml} text into a valid {@code neoforge.mods.toml} text. */
     public String convertModsToml(String forgeToml, String jarVersion, String jarName) {
+        return convertModsToml(forgeToml, jarVersion, jarName, Map.of());
+    }
+
+    /** @param enumExtensions metadata path of the generated enum-extension JSON per mod id */
+    String convertModsToml(String forgeToml, String jarVersion, String jarName, Map<String, String> enumExtensions) {
         Config source = new TomlParser().parse(forgeToml);
         String loader = source.getOrElse("modLoader", "javafml");
         if (!"javafml".equals(loader)) {
@@ -504,6 +564,7 @@ public class JarTransformer {
             String authors = sm.get("authors");
             if (authors == null) authors = source.get("authors");
             if (authors != null) mod.set("authors", authors);
+            if (enumExtensions.containsKey(modId)) mod.set("enumExtensions", enumExtensions.get(modId));
             mods.add(mod);
 
             List<UnmodifiableConfig> sourceDeps = dependenciesOf(source, sourceId);
