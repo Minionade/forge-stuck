@@ -166,6 +166,9 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     if (mapped == null && isFluidStateDefinitionMethod(call)) {
                         mapped = mappings.map(FLUID, call.name, call.desc);
                     }
+                    if (mapped == null && isBlockStateDefinitionMethod(call)) {
+                        mapped = mappings.map("net/minecraft/world/level/block/Block", call.name, call.desc);
+                    }
                     if (mapped == null) {
                         if (!isMixin && ownerIsGame(call.owner) && !call.owner.equals(node.name)) {
                             unmapped.put(call, call.owner.replace('/', '.') + "." + call.name + call.desc);
@@ -178,7 +181,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                             && node.methods.stream().noneMatch(declared -> declared.name.equals(call.name)
                                     && declared.desc.equals(call.desc));
                     if (own || ownerIsGame(call.owner) || inherited || isInheritedResourceLocationMethod(call)
-                            || isFluidStateDefinitionMethod(call)) {
+                            || isFluidStateDefinitionMethod(call) || isBlockStateDefinitionMethod(call)) {
                         remapped.add(call.name + "->" + mapped);
                         call.name = mapped;
                         modified = true;
@@ -189,6 +192,11 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                             indy.bsmArgs[i] = legacyItemStackGetTagHandle();
                             modified = true;
                             remapped.add("ItemStack.getTag handle -> LegacyItemStackShim.getTag");
+                        } else if (indy.bsmArgs[i] instanceof org.objectweb.asm.Handle h
+                                && isLegacyDamageSourceCreativePlayer(h)) {
+                            indy.bsmArgs[i] = legacyDamageSourceCreativePlayerHandle();
+                            modified = true;
+                            remapped.add("DamageSource.m_269014_ handle -> LegacyDamageSource.isCreativePlayer");
                         } else if (indy.bsmArgs[i] instanceof org.objectweb.asm.Handle h && ownerIsGame(h.getOwner())
                                 && LegacyNameMappings.looksLikeSrg(h.getName())) {
                             String mapped = mappings.map(h.getOwner(), h.getName(), h.getDesc());
@@ -204,6 +212,12 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     ldc.cst = legacyItemStackGetTagHandle();
                     modified = true;
                     remapped.add("ItemStack.getTag handle -> LegacyItemStackShim.getTag");
+                } else if (insn instanceof org.objectweb.asm.tree.LdcInsnNode ldc
+                        && ldc.cst instanceof org.objectweb.asm.Handle h
+                        && isLegacyDamageSourceCreativePlayer(h)) {
+                    ldc.cst = legacyDamageSourceCreativePlayerHandle();
+                    modified = true;
+                    remapped.add("DamageSource.m_269014_ handle -> LegacyDamageSource.isCreativePlayer");
                 } else if (insn instanceof FieldInsnNode field && LegacyNameMappings.looksLikeSrg(field.name)) {
                     if (isLegacyEmptyBlockDropsAssignment(field, node.name)) {
                         AbstractInsnNode value = previousMeaningful(field);
@@ -294,9 +308,27 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                 && call.desc.equals("()Z");
     }
 
+    private static boolean isLegacyDamageSourceCreativePlayer(org.objectweb.asm.Handle handle) {
+        return handle.getTag() == org.objectweb.asm.Opcodes.H_INVOKEVIRTUAL
+                && handle.getOwner().equals(DAMAGE_SOURCE)
+                && handle.getName().equals("m_269014_")
+                && handle.getDesc().equals("()Z");
+    }
+
+    private static org.objectweb.asm.Handle legacyDamageSourceCreativePlayerHandle() {
+        return new org.objectweb.asm.Handle(org.objectweb.asm.Opcodes.H_INVOKESTATIC,
+                "net/neoforged/forgestuck/compat/LegacyDamageSource", "isCreativePlayer",
+                "(L" + DAMAGE_SOURCE + ";)Z", false);
+    }
+
     private static boolean isFluidStateDefinitionMethod(MethodInsnNode call) {
         return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKESPECIAL
                 && call.name.equals("m_7180_") && call.desc.equals(FLUID_STATE_DEFINITION_DESC);
+    }
+
+    private static boolean isBlockStateDefinitionMethod(MethodInsnNode call) {
+        return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKESPECIAL
+                && call.name.equals("m_7926_") && call.desc.equals(BLOCK_STATE_DEFINITION_DESC);
     }
 
     private static boolean isLegacyEmptyBlockDropsAssignment(FieldInsnNode field, String className) {

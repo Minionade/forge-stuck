@@ -81,6 +81,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         int replaced = mixin ? 0 : rewriteLegacyFluidStackConstructors(className, node);
         if (!mixin) {
             replaced += rewriteLegacyConditionListConstructors(node);
+            replaced += rewriteLegacyMobEffectRemoveConstructors(node);
             replaced += rewriteEmptyFluidHandlerConstructors(node);
             replaced += rewriteLegacyItemHandlerHelperCalls(node);
             replaced += rewriteLegacyBurnTimeCalls(node);
@@ -512,6 +513,28 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             }
         }
         return replaced;
+    }
+
+    private static int rewriteLegacyMobEffectRemoveConstructors(ClassNode node) {
+        String owner = "net/minecraftforge/event/entity/living/MobEffectEvent$Remove";
+        String constructor = "(Lnet/minecraft/world/entity/LivingEntity;"
+                + "Lnet/minecraft/world/effect/MobEffectInstance;)V";
+        String targetConstructor = constructor.substring(0, constructor.length() - 2)
+                + "Lnet/neoforged/neoforge/common/EffectCure;)V";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || call.getOpcode() != Opcodes.INVOKESPECIAL
+                        || !owner.equals(call.owner)
+                        || !"<init>".equals(call.name)
+                        || !constructor.equals(call.desc)) continue;
+                method.instructions.insertBefore(call, new InsnNode(Opcodes.ACONST_NULL));
+                call.desc = targetConstructor;
+                rewritten++;
+            }
+        }
+        return rewritten;
     }
 
     private static int rewriteLegacyItemHandlerHelperCalls(ClassNode node) {

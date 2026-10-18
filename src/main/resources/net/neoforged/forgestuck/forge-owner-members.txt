@@ -223,6 +223,7 @@ net/minecraftforge/event/entity/living/MobEffectEvent$Expired -> net/neoforged/n
   getEntity()Lnet/minecraft/world/entity/LivingEntity;
   isCanceled()Z
 net/minecraftforge/event/entity/living/MobEffectEvent$Remove -> net/neoforged/neoforge/event/entity/living/MobEffectEvent$Remove
+  <init>(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/effect/MobEffectInstance;Lnet/neoforged/neoforge/common/EffectCure;)V
   getEffectInstance()Lnet/minecraft/world/effect/MobEffectInstance;
   getEntity()Lnet/minecraft/world/entity/LivingEntity;
   isCanceled()Z

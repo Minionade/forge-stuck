@@ -167,6 +167,31 @@ class SrgMemberRemapStepTest {
     }
 
     @Test
+    void remapsLegacyBlockStateDefinitionSuperCallsOnModClasses() {
+        String desc = "(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V";
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyGlassPane", null,
+                "sample/LegacyPaneBase", null);
+        var method = writer.visitMethod(Opcodes.ACC_PROTECTED, "createBlockStateDefinition", desc, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, "sample/LegacyPaneBase", "m_7926_", desc, false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(2, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyGlassPane", writer.toByteArray()))
+                .accept(node, 0);
+        MethodInsnNode call = java.util.Arrays.stream(node.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESPECIAL, call.getOpcode());
+        assertEquals("createBlockStateDefinition", call.name);
+    }
+
+    @Test
     void adaptsLegacyDamageSourceCreativePlayerCall() {
         ClassWriter writer = new ClassWriter(0);
         writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyDamageCheck", null, "java/lang/Object", null);
@@ -190,6 +215,71 @@ class SrgMemberRemapStepTest {
         assertEquals("net/neoforged/forgestuck/compat/LegacyDamageSource", call.owner);
         assertEquals("isCreativePlayer", call.name);
         assertEquals("(Lnet/minecraft/world/damagesource/DamageSource;)Z", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyDamageSourceCreativePlayerMethodHandle() {
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/DamagePredicateHandle", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "predicate",
+                "()Ljava/util/function/Predicate;", null, null);
+        method.visitCode();
+        method.visitLdcInsn(new org.objectweb.asm.Handle(Opcodes.H_INVOKEVIRTUAL,
+                "net/minecraft/world/damagesource/DamageSource", "m_269014_", "()Z", false));
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.DamagePredicateHandle", writer.toByteArray()))
+                .accept(node, 0);
+        org.objectweb.asm.tree.LdcInsnNode constant = java.util.Arrays.stream(node.methods.get(0).instructions.toArray())
+                .filter(org.objectweb.asm.tree.LdcInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.LdcInsnNode.class::cast).findFirst().orElseThrow();
+        org.objectweb.asm.Handle handle = (org.objectweb.asm.Handle) constant.cst;
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyDamageSource", handle.getOwner());
+        assertEquals("isCreativePlayer", handle.getName());
+        assertEquals("(Lnet/minecraft/world/damagesource/DamageSource;)Z", handle.getDesc());
+    }
+
+    @Test
+    void adaptsLegacyDamageSourceCreativePlayerLambdaHandle() {
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/DamagePredicateLambda", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "predicate",
+                "()Ljava/util/function/Predicate;", null, null);
+        method.visitCode();
+        org.objectweb.asm.Handle bootstrap = new org.objectweb.asm.Handle(Opcodes.H_INVOKESTATIC,
+                "java/lang/invoke/LambdaMetafactory", "metafactory",
+                "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;"
+                        + "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;"
+                        + "Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;", false);
+        org.objectweb.asm.Handle legacy = new org.objectweb.asm.Handle(Opcodes.H_INVOKEVIRTUAL,
+                "net/minecraft/world/damagesource/DamageSource", "m_269014_", "()Z", false);
+        method.visitInvokeDynamicInsn("test", "()Ljava/util/function/Predicate;", bootstrap,
+                org.objectweb.asm.Type.getMethodType("(Ljava/lang/Object;)Z"), legacy,
+                org.objectweb.asm.Type.getMethodType("(Lnet/minecraft/world/damagesource/DamageSource;)Z"));
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.DamagePredicateLambda", writer.toByteArray()))
+                .accept(node, 0);
+        org.objectweb.asm.tree.InvokeDynamicInsnNode indy = java.util.Arrays.stream(
+                        node.methods.get(0).instructions.toArray())
+                .filter(org.objectweb.asm.tree.InvokeDynamicInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.InvokeDynamicInsnNode.class::cast).findFirst().orElseThrow();
+        org.objectweb.asm.Handle handle = (org.objectweb.asm.Handle) indy.bsmArgs[1];
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyDamageSource", handle.getOwner());
+        assertEquals("isCreativePlayer", handle.getName());
+        assertEquals("(Lnet/minecraft/world/damagesource/DamageSource;)Z", handle.getDesc());
     }
 
     @Test

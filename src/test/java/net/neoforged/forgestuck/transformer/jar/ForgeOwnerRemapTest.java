@@ -264,6 +264,45 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void legacyMobEffectRemoveConstructorAddsDefaultCure() {
+        String oldOwner = "net/minecraftforge/event/entity/living/MobEffectEvent$Remove";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/MobEffectRemoveCompat", null, "java/lang/Object",
+                null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "create",
+                "(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/effect/MobEffectInstance;)V",
+                null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW, oldOwner);
+        method.visitInsn(Opcodes.DUP);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, oldOwner, "<init>",
+                "(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/effect/MobEffectInstance;)V", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        byte[] transformedBytes = new ForgeOwnerRemapStep().apply("com.ex.MobEffectRemoveCompat",
+                writer.toByteArray());
+        ClassNode transformed = parse(transformedBytes);
+        List<org.objectweb.asm.tree.AbstractInsnNode> instructions =
+                java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                        .filter(insn -> insn.getType() != org.objectweb.asm.tree.AbstractInsnNode.LABEL
+                                && insn.getType() != org.objectweb.asm.tree.AbstractInsnNode.LINE
+                                && insn.getType() != org.objectweb.asm.tree.AbstractInsnNode.FRAME).toList();
+        MethodInsnNode call = instructions.stream().filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals("net/neoforged/neoforge/event/entity/living/MobEffectEvent$Remove", call.owner);
+        assertEquals("(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/effect/MobEffectInstance;"
+                + "Lnet/neoforged/neoforge/common/EffectCure;)V", call.desc);
+        assertEquals(Opcodes.ACONST_NULL, instructions.get(instructions.indexOf(call) - 1).getOpcode());
+        assertTrue(ForgeOwnerMappings.defaults().remainingOwners(transformedBytes).isEmpty());
+    }
+
+    @Test
     void legacySrgMobEffectModifierCallUsesHolderAndResourceLocationAdapter() {
         String owner = "net/minecraft/world/effect/MobEffect";
         String callOwner = "cofh/core/common/effect/ChilledMobEffect";

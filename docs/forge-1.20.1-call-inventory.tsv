@@ -659,7 +659,7 @@ KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.ent
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Added.isCanceled()Z
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Applicable.isCanceled()Z
 KNOWN_GAP	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Applicable.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Remove.<init>(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/effect/MobEffectInstance;)V
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Remove.<init>(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/effect/MobEffectInstance;)V
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.living.MobSpawnEvent$FinalizeSpawn.getSpawnTag()Lnet/minecraft/nbt/CompoundTag;
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.PotionColorCalculationEvent.getEffects()Ljava/util/Collection;
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.PotionColorCalculationEvent.setColor(I)V
