@@ -18,6 +18,7 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/eventbus/api/GenericEvent",
             "net/minecraftforge/event/entity/living/LivingDamageEvent",
             "net/minecraftforge/common/SoundAction", "net/minecraftforge/common/SoundActions",
+            "net/minecraftforge/common/loot/LootModifier",
             "net/minecraftforge/event/AttachCapabilitiesEvent",
             "net/minecraftforge/common/capabilities/ICapabilityProvider",
             "net/minecraft/world/level/pathfinder/BlockPathTypes",

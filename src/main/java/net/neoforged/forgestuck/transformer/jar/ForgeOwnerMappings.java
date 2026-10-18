@@ -96,6 +96,17 @@ public final class ForgeOwnerMappings {
                                 "BUCKET_FILLLnet/minecraftforge/common/SoundAction;",
                                 "BUCKET_EMPTYLnet/minecraftforge/common/SoundAction;",
                                 "FLUID_VAPORIZELnet/minecraftforge/common/SoundAction;")))
+                .add(new Entry("net/minecraftforge/common/loot/LootModifier",
+                        "net/neoforged/neoforge/common/loot/LootModifier", Set.of(
+                                "<init>([Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition;)V",
+                                "codecStart(Lcom/mojang/serialization/codecs/RecordCodecBuilder$Instance;)"
+                                        + "Lcom/mojang/datafixers/Products$P1;",
+                                "apply(Lit/unimi/dsi/fastutil/objects/ObjectArrayList;"
+                                        + "Lnet/minecraft/world/level/storage/loot/LootContext;)"
+                                        + "Lit/unimi/dsi/fastutil/objects/ObjectArrayList;",
+                                "doApply(Lit/unimi/dsi/fastutil/objects/ObjectArrayList;"
+                                        + "Lnet/minecraft/world/level/storage/loot/LootContext;)"
+                                        + "Lit/unimi/dsi/fastutil/objects/ObjectArrayList;")))
                 .add(new Entry("net/minecraftforge/common/capabilities/ICapabilityProvider",
                         COMPAT + "LegacyICapabilityProvider", Set.of()))
                 .add(blockPathTypes())
