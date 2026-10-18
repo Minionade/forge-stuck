@@ -10,8 +10,16 @@ public class LegacyRegistryBuilder<T> {
     private ResourceLocation name;
     private int maxId = Integer.MAX_VALUE - 1;
     private ResourceLocation defaultKey;
+    private boolean sync = true;
 
     public LegacyRegistryBuilder() {}
+
+    /** Applies the recorded settings to the NeoForge builder; the registry key is owned by the DeferredRegister. */
+    void configure(net.neoforged.neoforge.registries.RegistryBuilder<T> target) {
+        if (maxId != Integer.MAX_VALUE - 1) target.maxId(maxId);
+        if (defaultKey != null) target.defaultKey(defaultKey);
+        target.sync(sync);
+    }
 
     public LegacyRegistryBuilder<T> setName(ResourceLocation name) {
         this.name = name;
@@ -33,6 +41,7 @@ public class LegacyRegistryBuilder<T> {
     }
 
     public LegacyRegistryBuilder<T> disableSync() {
+        sync = false;
         return this;
     }
 

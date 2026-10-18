@@ -72,6 +72,12 @@ public final class LegacyNameMappings {
         // Removed StemGrownBlock abstract methods, now declared by compat.LegacyStemGrownBlock.
         members.put("m_7161_", "getStem");
         members.put("m_7810_", "getAttachedStem");
+        // FoodProperties.Builder methods renamed in 1.21 (saturationMod, alwaysEat); meat() has no equivalent.
+        members.put("m_38758_", "saturationModifier");
+        members.put("m_38765_", "alwaysEdible");
+        // FriendlyByteBuf.Writer/Reader#optional, now on compat.LegacyByteBufWriter/LegacyByteBufReader.
+        members.put("m_236883_", "optional");
+        members.put("m_236879_", "optional");
         return new LegacyNameMappings(members, missing);
     }
 

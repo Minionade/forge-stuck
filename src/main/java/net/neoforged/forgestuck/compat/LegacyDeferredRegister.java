@@ -11,6 +11,8 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.registries.NewRegistryEvent;
+import net.neoforged.neoforge.registries.RegistryBuilder;
 
 /**
  * Stand-in for Forge 1.20.1's {@code DeferredRegister}. Registration itself is delegated to NeoForge's
@@ -22,6 +24,7 @@ public final class LegacyDeferredRegister<T> {
     private final Map<ResourceLocation, RegistryObject<? extends T>> entries = new LinkedHashMap<>();
 
     private final DatapackRegistryView<?> datapack;
+    private Supplier<LegacyRegistryBuilder<T>> registryFactory;
 
     private LegacyDeferredRegister(DeferredRegister<T> delegate) {
         this(delegate, null);
@@ -66,6 +69,25 @@ public final class LegacyDeferredRegister<T> {
 
     public void register(IEventBus bus) {
         delegate.register(bus);
+        if (registryFactory != null) bus.addListener(this::createRegistry);
+    }
+
+    /** Forge's {@code makeRegistry}: the registry is created from the legacy builder when NeoForge asks for new registries. */
+    @SuppressWarnings("unchecked")
+    public Supplier<IForgeRegistry<T>> makeRegistry(Supplier<LegacyRegistryBuilder<T>> factory) {
+        if (registryFactory != null) {
+            throw new IllegalStateException("makeRegistry called twice for " + delegate.getRegistryName());
+        }
+        registryFactory = factory;
+        IForgeRegistry<T> view = new VanillaRegistryView<>((ResourceKey<? extends Registry<T>>) delegate.getRegistryKey());
+        return () -> view;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void createRegistry(NewRegistryEvent event) {
+        var builder = new RegistryBuilder<T>((ResourceKey<? extends Registry<T>>) delegate.getRegistryKey());
+        registryFactory.get().configure(builder);
+        event.create(builder);
     }
 
     public Collection<RegistryObject<? extends T>> getEntries() {

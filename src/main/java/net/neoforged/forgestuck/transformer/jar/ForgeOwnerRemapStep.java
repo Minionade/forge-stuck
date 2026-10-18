@@ -71,6 +71,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         Set<String> uses = new HashSet<>();
         boolean mixin = isMixin(node);
         int replaced = mixin ? 0 : rewriteLegacyFluidStackConstructors(className, node);
+        if (!mixin) replaced += rewriteByteBufCodecCalls(node);
         if (!mixin) replaced += replaceUnsupported(className, node, report);
         if (!mixin) replaced += replaceUnsupportedHandles(className, node, report);
         collectBlocked(className, node, blocked, adapted, uses);
@@ -129,7 +130,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.isCancelable()Z", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
             java.util.Map.entry("net/minecraftforge/event/entity/living/LivingAttackEvent.getAmount()F", "net/neoforged/forgestuck/compat/LegacyLivingAttack"),
             java.util.Map.entry("net/minecraftforge/event/entity/living/LivingAttackEvent.isCancelable()Z", "net/neoforged/forgestuck/compat/LegacyLivingAttack"),
-            java.util.Map.entry("net/minecraftforge/event/entity/living/LivingAttackEvent.hasResult()Z", "net/neoforged/forgestuck/compat/            LegacyLivingAttack"),
+            java.util.Map.entry("net/minecraftforge/event/entity/living/LivingAttackEvent.hasResult()Z",             "net/neoforged/forgestuck/compat/LegacyLivingAttack"),
                         java.util.Map.entry(PICKUP + ".getEntity()Lnet/minecraft/world/entity/player/Player;", LEGACY_PICKUP),
                         java.util.Map.entry(PICKUP + ".getItem()Lnet/minecraft/world/entity/item/ItemEntity;", LEGACY_PICKUP),
                         java.util.Map.entry(PICKUP + ".setCanceled(Z)V", LEGACY_PICKUP),
@@ -183,6 +184,31 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 if (report != null) report.unsupportedCall(member);
                 LOGGER.debug("{} {} calls {} which has no verified equivalent; rewritten to fail at call time", TAG,
                         className, member);
+            }
+        }
+        return replaced;
+    }
+
+    private static final String BUF_WRITER = "Lnet/minecraft/network/FriendlyByteBuf$Writer;";
+    private static final String BUF_READER = "Lnet/minecraft/network/FriendlyByteBuf$Reader;";
+    private static final String BUF_ENCODER = "Lnet/minecraft/network/codec/StreamEncoder;";
+    private static final String BUF_DECODER = "Lnet/minecraft/network/codec/StreamDecoder;";
+
+    /**
+     * 1.21's FriendlyByteBuf helpers take StreamEncoder/StreamDecoder where 1.20.1 took Writer/Reader. The compat
+     * Writer/Reader types extend those, so only the called descriptors need to name the new parameter types.
+     */
+    private static int rewriteByteBufCodecCalls(ClassNode node) {
+        int replaced = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (insn instanceof MethodInsnNode call
+                        && ("net/minecraft/network/FriendlyByteBuf".equals(call.owner)
+                                || "net/minecraft/network/RegistryFriendlyByteBuf".equals(call.owner))
+                        && (call.desc.contains(BUF_WRITER) || call.desc.contains(BUF_READER))) {
+                    call.desc = call.desc.replace(BUF_WRITER, BUF_ENCODER).replace(BUF_READER, BUF_DECODER);
+                    replaced++;
+                }
             }
         }
         return replaced;

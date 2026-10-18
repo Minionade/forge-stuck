@@ -69,6 +69,15 @@ public final class LegacyAttackAndTreeStep implements ClassTransformStep {
                 } else if (name.equals("m_213817_") && descriptor.equals(
                         "(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/util/RandomSource;)Z")) {
                     mapped = "growTree";
+                } else if (name.equals("m_213566_") && descriptor.equals(
+                        "(Lnet/minecraft/util/RandomSource;)Lnet/minecraft/resources/ResourceKey;")) {
+                    mapped = "getConfiguredMegaFeature";
+                } else if (name.equals("m_222896_") && descriptor.equals(
+                        "(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/util/RandomSource;II)Z")) {
+                    mapped = "placeMega";
+                } else if (name.equals("m_59998_") && descriptor.equals(
+                        "(Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;II)Z")) {
+                    mapped = "isTwoByTwoSapling";
                 }
                 if (mapped != null) { renamed[0] = true; return mapped; }
                 return name;

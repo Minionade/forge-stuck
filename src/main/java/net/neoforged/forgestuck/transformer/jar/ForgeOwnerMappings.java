@@ -69,6 +69,19 @@ public final class ForgeOwnerMappings {
         String dr = "L" + R + "DeferredRegister;";
         String ro = "L" + R + "RegistryObject;";
         return new ForgeOwnerMappings()
+                .add(new Entry("net/minecraft/network/FriendlyByteBuf$Writer",
+                        COMPAT + "LegacyByteBufWriter", Set.of(
+                                "accept(Ljava/lang/Object;Ljava/lang/Object;)V",
+                                "andThen(Ljava/util/function/BiConsumer;)Ljava/util/function/BiConsumer;",
+                                "m_236883_()Lnet/minecraft/network/FriendlyByteBuf$Writer;",
+                                "optional()Lnet/minecraft/network/FriendlyByteBuf$Writer;")))
+                .add(new Entry("net/minecraft/network/FriendlyByteBuf$Reader",
+                        COMPAT + "LegacyByteBufReader", Set.of(
+                                "apply(Ljava/lang/Object;)Ljava/lang/Object;",
+                                "andThen(Ljava/util/function/Function;)Ljava/util/function/Function;",
+                                "compose(Ljava/util/function/Function;)Ljava/util/function/Function;",
+                                "m_236879_()Lnet/minecraft/network/FriendlyByteBuf$Reader;",
+                                "optional()Lnet/minecraft/network/FriendlyByteBuf$Reader;")))
                 .add(new Entry("net/minecraftforge/registries/RegistryBuilder",
                         COMPAT + "LegacyRegistryBuilder", Set.of(
                                 "<init>()V",
@@ -295,6 +308,7 @@ public final class ForgeOwnerMappings {
                         "create(Lnet/minecraft/resources/ResourceLocation;Ljava/lang/String;)" + dr,
                         "register(Ljava/lang/String;Ljava/util/function/Supplier;)" + ro,
                         "register(Lnet/minecraftforge/eventbus/api/IEventBus;)V",
+                        "makeRegistry(Ljava/util/function/Supplier;)Ljava/util/function/Supplier;",
                         "getRegistryKey()Lnet/minecraft/resources/ResourceKey;",
                         "getRegistryName()Lnet/minecraft/resources/ResourceLocation;",
                         "getEntries()Ljava/util/Collection;")))

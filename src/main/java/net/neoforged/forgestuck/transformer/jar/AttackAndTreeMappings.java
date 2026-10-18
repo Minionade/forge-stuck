@@ -18,6 +18,15 @@ final class AttackAndTreeMappings {
                         "<init>(Lnet/minecraft/world/entity/LivingEntity;Lnet/neoforged/neoforge/common/damagesource/DamageContainer;)V")),
                 new ForgeOwnerMappings.Entry("net/minecraft/world/level/block/grower/AbstractTreeGrower",
                         "net/neoforged/forgestuck/compat/LegacyAbstractTreeGrower", Set.of(
-                        "<init>()V", "getConfiguredFeature" + select, "growTree" + grow)));
+                        "<init>()V", "getConfiguredFeature" + select, "growTree" + grow)),
+                new ForgeOwnerMappings.Entry("net/minecraft/world/level/block/grower/AbstractMegaTreeGrower",
+                        "net/neoforged/forgestuck/compat/LegacyAbstractMegaTreeGrower", Set.of(
+                        "<init>()V", "getConfiguredFeature" + select, "growTree" + grow,
+                        "getConfiguredMegaFeature(Lnet/minecraft/util/RandomSource;)Lnet/minecraft/resources/ResourceKey;",
+                        "placeMega(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;"
+                                + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;"
+                                + "Lnet/minecraft/util/RandomSource;II)Z",
+                        "isTwoByTwoSapling(Lnet/minecraft/world/level/block/state/BlockState;"
+                                + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;II)Z")));
     }
 }

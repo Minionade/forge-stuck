@@ -26,6 +26,9 @@ LegacyEnumExtensions
 LegacyDyeableLeatherItem
 LegacyArmorMaterial
 LegacyItemPickup
+LegacyByteBufWriter
+LegacyByteBufReader
+LegacyAbstractMegaTreeGrower
 LegacyRegistryBuilder
 LegacyStemGrownBlock
 LegacySandBlock
