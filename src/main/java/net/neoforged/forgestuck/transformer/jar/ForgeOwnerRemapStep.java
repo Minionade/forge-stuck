@@ -163,7 +163,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 + "Lnet/minecraft/world/entity/ai/attributes/AttributeModifier$Operation;)L" + owner + ";";
         for (MethodNode method : node.methods) {
             for (AbstractInsnNode insn : method.instructions.toArray()) {
-                if (!(insn instanceof MethodInsnNode call) || !call.owner.equals(owner)
+                if (!(insn instanceof MethodInsnNode call)
                         || !(call.name.equals("addAttributeModifier") || call.name.equals("m_19472_"))
                         || !call.desc.equals(desc)) continue;
                 Type[] args = Type.getArgumentTypes(desc);

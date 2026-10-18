@@ -26,6 +26,7 @@ VanillaRegistryView
 LegacyItemStackShim
 LegacyCriteriaTriggers
 LegacyMobEffectInstance
+LegacyDamageSource
 LegacyEnumExtensions
 LegacyDyeableLeatherItem
 LegacyArmorMaterial

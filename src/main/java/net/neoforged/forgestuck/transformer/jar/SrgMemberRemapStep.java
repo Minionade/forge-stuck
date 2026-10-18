@@ -41,6 +41,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
             "net/neoforged/forgestuck/compat/LegacyItemStackShim";
     private static final String LEGACY_CRITERIA_HELPER =
             "net/neoforged/forgestuck/compat/LegacyCriteriaTriggers";
+    private static final String DAMAGE_SOURCE = "net/minecraft/world/damagesource/DamageSource";
 
     private final LegacyNameMappings mappings;
 
@@ -130,6 +131,14 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     call.itf = false;
                     modified = true;
                     remapped.add("CriteriaTriggers.register -> LegacyCriteriaTriggers.register");
+                } else if (insn instanceof MethodInsnNode call && isLegacyDamageSourceBypassesEffects(call)) {
+                    call.setOpcode(org.objectweb.asm.Opcodes.INVOKESTATIC);
+                    call.owner = "net/neoforged/forgestuck/compat/LegacyDamageSource";
+                    call.name = "bypassesEffects";
+                    call.desc = "(L" + DAMAGE_SOURCE + ";)Z";
+                    call.itf = false;
+                    modified = true;
+                    remapped.add("DamageSource.m_269014_ -> LegacyDamageSource.bypassesEffects");
                 } else if (insn instanceof MethodInsnNode call && isLegacyItemStackGetTag(call)) {
                     call.setOpcode(org.objectweb.asm.Opcodes.INVOKESTATIC);
                     call.owner = LEGACY_ITEMSTACK_SHIM;
@@ -276,8 +285,16 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                 && call.desc.equals("(Lnet/minecraft/advancements/CriterionTrigger;)Lnet/minecraft/advancements/CriterionTrigger;");
     }
 
+    private static boolean isLegacyDamageSourceBypassesEffects(MethodInsnNode call) {
+        return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKEVIRTUAL
+                && call.owner.equals(DAMAGE_SOURCE)
+                && call.name.equals("m_269014_")
+                && call.desc.equals("()Z");
+    }
+
     private static boolean isFluidStateDefinitionMethod(MethodInsnNode call) {
-        return call.name.equals("m_7180_") && call.desc.equals(FLUID_STATE_DEFINITION_DESC);
+        return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKESPECIAL
+                && call.name.equals("m_7180_") && call.desc.equals(FLUID_STATE_DEFINITION_DESC);
     }
 
     private static boolean isLegacyEmptyBlockDropsAssignment(FieldInsnNode field, String className) {

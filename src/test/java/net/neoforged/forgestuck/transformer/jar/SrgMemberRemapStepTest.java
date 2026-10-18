@@ -14,6 +14,7 @@ import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
+import org.objectweb.asm.tree.MethodNode;
 
 class SrgMemberRemapStepTest {
     @Test
@@ -119,12 +120,48 @@ class SrgMemberRemapStepTest {
         ClassNode node = new ClassNode();
         new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyFlowingFluid", writer.toByteArray()))
                 .accept(node, 0);
+        MethodNode bridge = node.methods.stream()
+                .filter(candidate -> candidate.name.equals("createFluidStateDefinition"))
+                .findFirst().orElseThrow();
+        MethodInsnNode bridgeCall = java.util.Arrays.stream(bridge.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKEVIRTUAL, bridgeCall.getOpcode());
+        assertEquals("sample/LegacyFlowingFluid", bridgeCall.owner);
+        assertEquals("m_7180_", bridgeCall.name);
+
         MethodInsnNode call = java.util.Arrays.stream(node.methods.stream()
-                        .filter(candidate -> candidate.name.equals("createFluidStateDefinition"))
+                        .filter(candidate -> candidate.name.equals("m_7180_"))
                         .findFirst().orElseThrow().instructions.toArray())
                 .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
                 .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESPECIAL, call.getOpcode());
         assertEquals("createFluidStateDefinition", call.name);
+    }
+
+    @Test
+    void adaptsLegacyDamageSourceBypassesEffectsCall() {
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyDamageCheck", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m_1234_check",
+                "(Lnet/minecraft/world/damagesource/DamageSource;)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraft/world/damagesource/DamageSource",
+                "m_269014_", "()Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyDamageCheck", writer.toByteArray()))
+                .accept(node, 0);
+        MethodInsnNode call = java.util.Arrays.stream(node.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyDamageSource", call.owner);
+        assertEquals("bypassesEffects", call.name);
+        assertEquals("(Lnet/minecraft/world/damagesource/DamageSource;)Z", call.desc);
     }
 
     @Test
