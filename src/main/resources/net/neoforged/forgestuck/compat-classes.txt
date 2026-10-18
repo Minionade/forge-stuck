@@ -25,6 +25,7 @@ UnsupportedForgeApi
 VanillaRegistryView
 LegacyItemStackShim
 LegacyCriteriaTriggers
+LegacyMobEffectInstance
 LegacyEnumExtensions
 LegacyDyeableLeatherItem
 LegacyArmorMaterial

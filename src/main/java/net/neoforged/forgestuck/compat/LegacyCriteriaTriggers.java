@@ -1,7 +1,7 @@
 package net.neoforged.forgestuck.compat;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import net.minecraft.advancements.CriteriaTriggers;
 import net.minecraft.advancements.CriterionTrigger;
 import net.minecraft.resources.ResourceLocation;
@@ -15,21 +15,31 @@ public final class LegacyCriteriaTriggers {
     }
 
     private static ResourceLocation legacyId(CriterionTrigger<?> trigger) {
-        for (String name : new String[] {"getId", "m_7295_"}) {
+        Field id = null;
+        for (Class<?> type = trigger.getClass(); type != null && id == null; type = type.getSuperclass()) {
             try {
-                Method method = trigger.getClass().getMethod(name);
-                Object id = method.invoke(trigger);
-                if (id instanceof ResourceLocation resourceLocation) return resourceLocation;
-                throw new IllegalStateException("Legacy criterion trigger " + trigger.getClass().getName()
-                        + " returned a non-ResourceLocation id from " + name);
-            } catch (NoSuchMethodException ignored) {
-                // Try the alternate source-level or SRG method name.
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                throw new IllegalStateException("Could not read legacy criterion trigger id from "
-                        + trigger.getClass().getName() + "." + name, e);
+                Field candidate = type.getDeclaredField("ID");
+                if (Modifier.isStatic(candidate.getModifiers())) id = candidate;
+            } catch (NoSuchFieldException ignored) {
+                // The trigger may inherit its ID from a base class.
             }
         }
-        throw new IllegalStateException("Legacy criterion trigger " + trigger.getClass().getName()
-                + " has neither getId() nor m_7295_()");
+        if (id == null) {
+            throw new IllegalStateException("Legacy criterion trigger " + trigger.getClass().getName()
+                    + " has no static ID field");
+        }
+        try {
+            if (!id.trySetAccessible()) {
+                throw new IllegalStateException("Legacy criterion trigger ID field is inaccessible: "
+                        + trigger.getClass().getName());
+            }
+            Object value = id.get(null);
+            if (value instanceof ResourceLocation resourceLocation) return resourceLocation;
+            throw new IllegalStateException("Legacy criterion trigger " + trigger.getClass().getName()
+                    + " has a non-ResourceLocation ID field");
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("Could not read legacy criterion trigger ID field from "
+                    + trigger.getClass().getName(), e);
+        }
     }
 }

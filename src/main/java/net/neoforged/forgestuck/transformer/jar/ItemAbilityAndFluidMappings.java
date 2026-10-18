@@ -176,6 +176,7 @@ final class ItemAbilityAndFluidMappings {
                 // (float vs DeltaTracker), getOverlay, getWindow and the constructors fail at the call.
                 e("net/minecraftforge/common/ForgeMod", "net/neoforged/forgestuck/compat/LegacyForgeMod", Set.of(
                         "LAVA_TYPE" + ro, "WATER_TYPE" + ro, "SWIM_SPEED" + ro, "NAMETAG_DISTANCE" + ro,
+                        "ENTITY_GRAVITY" + ro,
                         "enableMilkFluid()V")),
                 // NeoForge 1.21.1 removed PlantType; the compat class is a name-interned token holder with the 1.20.1
                 // constants. Engine hooks (IPlantable.getPlantType, canSustainPlant) are not mapped.

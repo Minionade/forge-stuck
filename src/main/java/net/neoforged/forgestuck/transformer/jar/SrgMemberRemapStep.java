@@ -14,6 +14,7 @@ import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,7 +68,8 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         if (bytes == null || className.startsWith("net.neoforged.forgestuck")) return bytes;
         // Quick reject: SRG names always contain "_" followed by digits; avoid parsing unrelated classes.
         String raw = new String(bytes, StandardCharsets.ISO_8859_1);
-        if (!raw.contains("m_") && !raw.contains("f_") && !raw.contains("c_")) return bytes;
+        if (!raw.contains("m_") && !raw.contains("f_") && !raw.contains("c_")
+                && !raw.contains("MobEffectInstance")) return bytes;
 
         ClassNode node = new ClassNode();
         new ClassReader(bytes).accept(node, 0);
@@ -116,6 +118,10 @@ public class SrgMemberRemapStep implements ClassTransformStep {
 
         for (MethodNode m : node.methods) {
             java.util.Map<AbstractInsnNode, String> unmapped = new java.util.LinkedHashMap<>();
+            if (rewriteLegacyMobEffectInstanceConstructor(m)) {
+                modified = true;
+                remapped.add("MobEffectInstance(MobEffect, int, int) -> LegacyMobEffectInstance.create");
+            }
             for (AbstractInsnNode insn : m.instructions.toArray()) {
                 if (insn instanceof MethodInsnNode call && isLegacyCriteriaTriggerRegister(call)) {
                     call.setOpcode(org.objectweb.asm.Opcodes.INVOKESTATIC);
@@ -146,6 +152,9 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                             + " -> LegacyIngredientBridge");
                 } else if (insn instanceof MethodInsnNode call && LegacyNameMappings.looksLikeSrg(call.name)) {
                     String mapped = mappings.map(call.owner, call.name, call.desc);
+                    if (mapped == null && isFluidStateDefinitionMethod(call)) {
+                        mapped = mappings.map(FLUID, call.name, call.desc);
+                    }
                     if (mapped == null) {
                         if (!isMixin && ownerIsGame(call.owner) && !call.owner.equals(node.name)) {
                             unmapped.put(call, call.owner.replace('/', '.') + "." + call.name + call.desc);
@@ -157,7 +166,8 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     boolean inherited = call.owner.equals(node.name)
                             && node.methods.stream().noneMatch(declared -> declared.name.equals(call.name)
                                     && declared.desc.equals(call.desc));
-                    if (own || ownerIsGame(call.owner) || inherited || isInheritedResourceLocationMethod(call)) {
+                    if (own || ownerIsGame(call.owner) || inherited || isInheritedResourceLocationMethod(call)
+                            || isFluidStateDefinitionMethod(call)) {
                         remapped.add(call.name + "->" + mapped);
                         call.name = mapped;
                         modified = true;
@@ -184,7 +194,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     modified = true;
                     remapped.add("ItemStack.getTag handle -> LegacyItemStackShim.getTag");
                 } else if (insn instanceof FieldInsnNode field && LegacyNameMappings.looksLikeSrg(field.name)) {
-                    if (isLegacyEmptyBlockDropsAssignment(field)) {
+                    if (isLegacyEmptyBlockDropsAssignment(field, node.name)) {
                         AbstractInsnNode value = previousMeaningful(field);
                         AbstractInsnNode receiver = previousMeaningful(value);
                         m.instructions.remove(receiver);
@@ -266,9 +276,13 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                 && call.desc.equals("(Lnet/minecraft/advancements/CriterionTrigger;)Lnet/minecraft/advancements/CriterionTrigger;");
     }
 
-    private static boolean isLegacyEmptyBlockDropsAssignment(FieldInsnNode field) {
+    private static boolean isFluidStateDefinitionMethod(MethodInsnNode call) {
+        return call.name.equals("m_7180_") && call.desc.equals(FLUID_STATE_DEFINITION_DESC);
+    }
+
+    private static boolean isLegacyEmptyBlockDropsAssignment(FieldInsnNode field, String className) {
         if (field.getOpcode() != org.objectweb.asm.Opcodes.PUTFIELD
-                || !field.owner.equals("net/minecraft/world/level/block/Block")
+                || !(field.owner.equals("net/minecraft/world/level/block/Block") || field.owner.equals(className))
                 || !(field.name.equals("f_60440_") || field.name.equals("drops"))
                 || !field.desc.equals("Lnet/minecraft/resources/ResourceLocation;")) return false;
         AbstractInsnNode value = previousMeaningful(field);
@@ -279,6 +293,33 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         AbstractInsnNode receiver = previousMeaningful(value);
         return receiver instanceof org.objectweb.asm.tree.VarInsnNode load
                 && load.getOpcode() == org.objectweb.asm.Opcodes.ALOAD && load.var == 0;
+    }
+
+    private static boolean rewriteLegacyMobEffectInstanceConstructor(MethodNode method) {
+        String owner = "net/minecraft/world/effect/MobEffectInstance";
+        String compatOwner = "net/neoforged/forgestuck/compat/LegacyMobEffectInstance";
+        String descriptor = "(Lnet/minecraft/world/effect/MobEffect;II)V";
+        boolean rewritten = false;
+        for (AbstractInsnNode instruction : method.instructions.toArray()) {
+            if (!(instruction instanceof MethodInsnNode call) || call.getOpcode() != org.objectweb.asm.Opcodes.INVOKESPECIAL
+                    || !call.owner.equals(owner) || !call.name.equals("<init>") || !call.desc.equals(descriptor)) continue;
+            TypeInsnNode allocation = null;
+            for (AbstractInsnNode previous = call.getPrevious(); previous != null; previous = previous.getPrevious()) {
+                if (previous instanceof TypeInsnNode type && type.getOpcode() == org.objectweb.asm.Opcodes.NEW
+                        && type.desc.equals(owner)) {
+                    allocation = type;
+                    break;
+                }
+            }
+            if (allocation == null) continue;
+            AbstractInsnNode duplicate = allocation.getNext();
+            while (duplicate != null && duplicate.getOpcode() < 0) duplicate = duplicate.getNext();
+            if (duplicate == null || duplicate.getOpcode() != org.objectweb.asm.Opcodes.DUP) continue;
+            allocation.desc = compatOwner;
+            call.owner = compatOwner;
+            rewritten = true;
+        }
+        return rewritten;
     }
 
     private static AbstractInsnNode previousMeaningful(AbstractInsnNode instruction) {

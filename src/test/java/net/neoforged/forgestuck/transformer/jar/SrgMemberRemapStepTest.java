@@ -101,6 +101,70 @@ class SrgMemberRemapStepTest {
     }
 
     @Test
+    void remapsLegacyFluidStateDefinitionSuperCallsOnModClasses() {
+        String desc = "(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V";
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyFlowingFluid", null,
+                "sample/LegacyFluid", null);
+        var method = writer.visitMethod(Opcodes.ACC_PROTECTED, "m_7180_", desc, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, "sample/LegacyFluid", "m_7180_", desc, false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(2, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyFlowingFluid", writer.toByteArray()))
+                .accept(node, 0);
+        MethodInsnNode call = java.util.Arrays.stream(node.methods.stream()
+                        .filter(candidate -> candidate.name.equals("createFluidStateDefinition"))
+                        .findFirst().orElseThrow().instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("createFluidStateDefinition", call.name);
+    }
+
+    @Test
+    void redirectsLegacyMobEffectInstanceConstructorToHolderAdapter() {
+        String effect = "net/minecraft/world/effect/MobEffect";
+        String instance = "net/minecraft/world/effect/MobEffectInstance";
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyEffectUser", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m_1234_create",
+                "(L" + effect + ";)L" + instance + ";", null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW, instance);
+        method.visitInsn(Opcodes.DUP);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitInsn(Opcodes.ICONST_1);
+        method.visitInsn(Opcodes.ICONST_0);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, instance, "<init>",
+                "(L" + effect + ";II)V", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(4, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyEffectUser", writer.toByteArray()))
+                .accept(node, 0);
+        var instructions = node.methods.get(0).instructions.toArray();
+        assertTrue(java.util.Arrays.stream(instructions)
+                .anyMatch(instruction -> instruction instanceof org.objectweb.asm.tree.TypeInsnNode type
+                        && type.getOpcode() == Opcodes.NEW
+                        && type.desc.equals("net/neoforged/forgestuck/compat/LegacyMobEffectInstance")));
+        MethodInsnNode call = java.util.Arrays.stream(instructions).filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESPECIAL, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyMobEffectInstance", call.owner);
+        assertEquals("<init>", call.name);
+        assertEquals("(L" + effect + ";II)V", call.desc);
+    }
+
+    @Test
     void adaptsLegacyCriterionTriggerRegistrationToTheKeyedApi() {
         String owner = "net/minecraft/advancements/CriteriaTriggers";
         String desc = "(Lnet/minecraft/advancements/CriterionTrigger;)Lnet/minecraft/advancements/CriterionTrigger;";
@@ -141,7 +205,7 @@ class SrgMemberRemapStepTest {
         init.visitVarInsn(Opcodes.ALOAD, 0);
         init.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/world/level/storage/loot/BuiltInLootTables",
                 "f_78712_", "Lnet/minecraft/resources/ResourceLocation;");
-        init.visitFieldInsn(Opcodes.PUTFIELD, "net/minecraft/world/level/block/Block", "f_60440_",
+        init.visitFieldInsn(Opcodes.PUTFIELD, "sample/LegacyBlock", "f_60440_",
                 "Lnet/minecraft/resources/ResourceLocation;");
         init.visitInsn(Opcodes.RETURN);
         init.visitMaxs(2, 2);
