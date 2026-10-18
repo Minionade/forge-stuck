@@ -384,6 +384,7 @@ public final class ForgeOwnerMappings {
                 .addAll(configAndEnvironment())
                 .addAll(ConditionMappings.entries())
                 .addAll(ItemAbilityAndFluidMappings.entries())
+                .addAll(KeyConflictMappings.entries())
                 .addAll(NetworkMappings.entries())
                 .addAll(TickMappings.entries())
                 .addAll(GeneratedOwnerTable.entries())
