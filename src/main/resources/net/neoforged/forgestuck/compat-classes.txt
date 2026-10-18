@@ -13,6 +13,7 @@ IForgeRegistry
 LazyOptional
 LegacyDeferredRegister
 LegacyGameTestSupport
+LegacyConfigSpec
 ModLoadingContext
 NonNullConsumer
 NonNullFunction

@@ -99,6 +99,18 @@ class ConfigEnvironmentCompatTest {
         m.visitMaxs(0, 0);
         m.visitEnd();
 
+        // void setConfig(ModConfigSpec, CommentedConfig): Forge assigns the config directly to the spec.
+        m = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "setConfig",
+                "(L" + FC + ";Lcom/electronwill/nightconfig/core/CommentedConfig;)V", null, null);
+        m.visitCode();
+        m.visitVarInsn(Opcodes.ALOAD, 0);
+        m.visitVarInsn(Opcodes.ALOAD, 1);
+        m.visitMethodInsn(Opcodes.INVOKEVIRTUAL, FC, "setConfig",
+                "(Lcom/electronwill/nightconfig/core/CommentedConfig;)V", false);
+        m.visitInsn(Opcodes.RETURN);
+        m.visitMaxs(0, 0);
+        m.visitEnd();
+
         // Object bus(): MinecraftForge.EVENT_BUS
         m = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "bus", "()Ljava/lang/Object;", null, null);
         m.visitCode();
@@ -192,6 +204,23 @@ class ConfigEnvironmentCompatTest {
                 () -> call(c, "read", new Class<?>[] {net.neoforged.neoforge.common.ModConfigSpec.BooleanValue.class}, r[1]));
         assertTrue(e.getMessage().contains("before config is loaded") || e.getMessage().toLowerCase().contains("config"),
                 e.getMessage());
+    }
+
+    @Test
+    void forgeSetConfigAcceptsAndLoadsCommentedConfig() throws Exception {
+        Class<?> c = transformed();
+        Object[] r = (Object[]) call(c, "spec", new Class<?>[0]);
+        com.electronwill.nightconfig.core.CommentedConfig config =
+                com.electronwill.nightconfig.core.CommentedConfig.inMemory();
+        config.set(List.of("sec", "flag"), false);
+
+        call(c, "setConfig", new Class<?>[] {
+                net.neoforged.neoforge.common.ModConfigSpec.class,
+                com.electronwill.nightconfig.core.CommentedConfig.class}, r[0], config);
+
+        assertTrue(((net.neoforged.neoforge.common.ModConfigSpec) r[0]).isLoaded());
+        assertEquals(false, call(c, "read",
+                new Class<?>[] {net.neoforged.neoforge.common.ModConfigSpec.BooleanValue.class}, r[1]));
     }
 
     @Test
