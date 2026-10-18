@@ -111,6 +111,8 @@ final class ConfigEnvironmentMappings {
                         "getModContainerById(" + S + ")Ljava/util/Optional;")),
                 e("net/minecraftforge/fml/loading/FMLEnvironment", "net/neoforged/fml/loading/FMLEnvironment",
                         Set.of("dist" + DIST, "production" + "Z")),
+                e("net/minecraftforge/fml/loading/FMLLoader", COMPAT + "LegacyFMLLoader",
+                        Set.of("isProduction()Z")),
                 e("net/minecraftforge/fml/loading/FMLPaths", "net/neoforged/fml/loading/FMLPaths", Set.of(
                         "GAMEDIR" + "Lnet/minecraftforge/fml/loading/FMLPaths;",
                         "MODSDIR" + "Lnet/minecraftforge/fml/loading/FMLPaths;",

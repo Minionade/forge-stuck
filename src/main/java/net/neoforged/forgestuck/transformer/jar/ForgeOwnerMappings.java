@@ -135,6 +135,16 @@ public final class ForgeOwnerMappings {
                                         + "Lit/unimi/dsi/fastutil/objects/ObjectArrayList;")))
                 .add(new Entry("net/minecraftforge/common/capabilities/ICapabilityProvider",
                         COMPAT + "LegacyICapabilityProvider", Set.of()))
+                .add(new Entry("net/minecraftforge/common/util/TablePrinter",
+                        COMPAT + "LegacyTablePrinter", Set.of(
+                                "<init>()V",
+                                "add(Ljava/lang/Object;)Lnet/minecraftforge/common/util/TablePrinter;",
+                                "add(Ljava/util/Collection;)Lnet/minecraftforge/common/util/TablePrinter;",
+                                "build(Ljava/lang/StringBuilder;)V",
+                                "header(Ljava/lang/String;Ljava/util/function/Function;)"
+                                        + "Lnet/minecraftforge/common/util/TablePrinter;",
+                                "header(Ljava/lang/String;Ljava/util/function/Function;"
+                                        + "Z)Lnet/minecraftforge/common/util/TablePrinter;")))
                 .add(blockPathTypes())
                 .add(new Entry("net/minecraft/network/FriendlyByteBuf$Writer",
                         COMPAT + "LegacyByteBufWriter", Set.of(
@@ -522,6 +532,7 @@ public final class ForgeOwnerMappings {
                 "getKeys()Ljava/util/Set;",
                 "getValues()Ljava/util/Collection;",
                 "getEntries()Ljava/util/Set;",
+                "iterator()Ljava/util/Iterator;",
                 "register(Lnet/minecraft/resources/ResourceLocation;Ljava/lang/Object;)V");
     }
 

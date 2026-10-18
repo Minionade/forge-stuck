@@ -38,6 +38,11 @@ final class DataMappings {
                         "net/neoforged/neoforge/common/data/ExistingFileHelper$ResourceType",
                         Set.of("<init>(" + packType + "Ljava/lang/String;Ljava/lang/String;)V",
                                 "getPackType()" + packType, "getSuffix()Ljava/lang/String;",
-                                "getPrefix()Ljava/lang/String;")));
+                                "getPrefix()Ljava/lang/String;")),
+                new ForgeOwnerMappings.Entry("net/minecraftforge/common/data/BlockTagsProvider",
+                        "net/neoforged/neoforge/common/data/BlockTagsProvider",
+                        Set.of("<init>(Lnet/minecraft/data/PackOutput;"
+                                + "Ljava/util/concurrent/CompletableFuture;Ljava/lang/String;"
+                                + "Lnet/minecraftforge/common/data/ExistingFileHelper;)V")));
     }
 }

@@ -109,6 +109,14 @@ LegacyFluidStack
 LegacyEventBusRegistration
 LegacyGenericListenerRegistration
 LegacyItemHandlerHelper
+LegacyEmptyItemHandler
+LegacyTablePrinter
+LegacyTablePrinter$Header
+LegacyCriticalHitEvent
+LegacyCriticalHitEvent$1
+LegacyCropGrowth
+LegacyIngredientHooks
+LegacyFMLLoader
 DatapackRegistryView
 LegacyMessageHandler
 LegacyEnchantmentRegistry

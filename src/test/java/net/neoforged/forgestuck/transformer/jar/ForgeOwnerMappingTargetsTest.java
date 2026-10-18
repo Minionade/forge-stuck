@@ -10,6 +10,9 @@ import java.util.HashSet;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.Type;
+import net.neoforged.forgestuck.compat.LegacyCriticalHitEvent;
+import net.neoforged.forgestuck.compat.LegacyEventResult;
+import net.neoforged.neoforge.event.entity.player.CriticalHitEvent;
 
 /** Guards that every default owner mapping points at a real class and every whitelisted member really exists. */
 class ForgeOwnerMappingTargetsTest {
@@ -46,7 +49,7 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/fml/event/lifecycle/FMLDedicatedServerSetupEvent",
             "net/minecraftforge/common/util/LazyOptional", "net/minecraftforge/common/util/NonNullConsumer",
             "net/minecraftforge/common/util/NonNullFunction", "net/minecraftforge/common/util/NonNullSupplier",
-            "net/minecraftforge/common/util/NonNullPredicate",
+            "net/minecraftforge/common/util/NonNullPredicate", "net/minecraftforge/common/util/TablePrinter",
             "net/minecraftforge/common/extensions/IForgeItem", "net/minecraft/world/item/DyeableLeatherItem",
             "net/minecraft/world/item/ArmorMaterial",
             "net/minecraftforge/client/model/data/ModelData",
@@ -108,6 +111,17 @@ class ForgeOwnerMappingTargetsTest {
             assertNotNull(mappings.get(owner), "no mapping for " + owner);
             assertDoesNotThrow(() -> load(mappings.get(owner).newOwner()), "missing target for " + owner);
         }
+    }
+
+    @Test
+    void criticalHitResultPreservesExplicitAllowAndDeny() {
+        CriticalHitEvent vanillaCritical = new CriticalHitEvent(null, null, 1.5F, true);
+        LegacyCriticalHitEvent.setResult(vanillaCritical, LegacyEventResult.ALLOW);
+        assertEquals(LegacyEventResult.ALLOW, LegacyCriticalHitEvent.getResult(vanillaCritical));
+
+        CriticalHitEvent nonCritical = new CriticalHitEvent(null, null, 1.0F, false);
+        LegacyCriticalHitEvent.setResult(nonCritical, LegacyEventResult.DENY);
+        assertEquals(LegacyEventResult.DENY, LegacyCriticalHitEvent.getResult(nonCritical));
     }
 
     @Test
@@ -246,6 +260,16 @@ class ForgeOwnerMappingTargetsTest {
             Class<?> target = load(entry.newOwner());
             for (String member : entry.supportedMembers()) {
                 int paren = member.indexOf('(');
+                if (paren < 0) {
+                    var matcher = FIELD.matcher(member);
+                    assertTrue(matcher.matches(), "invalid field mapping " + member);
+                    String descriptor = mappings.remapDescriptorTokens(matcher.group(2), new HashSet<>(),
+                            new HashMap<>());
+                    if (!hasField(target, matcher.group(1), descriptor)) {
+                        missing.add(entry.newOwner() + "." + member);
+                    }
+                    continue;
+                }
                 String name = member.substring(0, paren);
                 String descriptor = mappings.remapDescriptorTokens(member.substring(paren), new HashSet<>(),
                         new HashMap<>());
@@ -327,6 +351,35 @@ class ForgeOwnerMappingTargetsTest {
         for (String n : List.of("Capability", "CapabilityManager", "ICapabilitySerializable", "CapabilityToken")) {
             assertNull(mappings.get("net/minecraftforge/common/capabilities/" + n), n);
         }
+    }
+
+    @Test
+    void legacyEmptyItemHandlerPreservesEmptyBehavior() {
+        net.neoforged.forgestuck.testsupport.TestBootstrap.init();
+        var handler = net.neoforged.forgestuck.compat.LegacyEmptyItemHandler.INSTANCE;
+        var stack = net.minecraft.world.item.ItemStack.EMPTY;
+        assertEquals(0, handler.getSlots());
+        assertTrue(handler.getStackInSlot(0).isEmpty());
+        assertSame(stack, handler.insertItem(0, stack, false));
+        assertTrue(handler.extractItem(0, 1, false).isEmpty());
+        assertEquals(0, handler.getSlotLimit(0));
+        assertFalse(handler.isItemValid(0, stack));
+    }
+
+    @Test
+    void legacyTablePrinterFormatsHeadersAndRows() {
+        var printer = new net.neoforged.forgestuck.compat.LegacyTablePrinter<String>()
+                .header("Name", value -> value)
+                .header("Count", ignored -> "2", true)
+                .add("ore");
+        StringBuilder output = new StringBuilder("prefix\n");
+        printer.build(output);
+        assertTrue(output.toString().startsWith("prefix\n|"));
+        assertTrue(output.toString().contains("|  Name  |  Count  |"));
+        assertTrue(output.toString().contains("ore"));
+        assertTrue(output.toString().contains("2"));
+        printer.clearRows();
+        assertFalse(printer.toString().contains("ore"));
     }
 
     @Test

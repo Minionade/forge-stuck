@@ -179,6 +179,39 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     "net/neoforged/forgestuck/compat/LegacyFluidStack"),
             java.util.Map.entry(FLUID_STACK + ".setTag(Lnet/minecraft/nbt/CompoundTag;)V",
                     "net/neoforged/forgestuck/compat/LegacyFluidStack"),
+            java.util.Map.entry(FLUID_STACK
+                    + ".loadFluidStackFromNBT(Lnet/minecraft/nbt/CompoundTag;)L" + FLUID_STACK + ";",
+                    "net/neoforged/forgestuck/compat/LegacyFluidStack"),
+            java.util.Map.entry(FLUID_STACK
+                    + ".writeToNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;",
+                    "net/neoforged/forgestuck/compat/LegacyFluidStack"),
+            java.util.Map.entry("net/minecraftforge/common/ForgeHooks.getCriticalHit("
+                    + "Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/entity/Entity;ZF)"
+                    + "Lnet/minecraftforge/event/entity/player/CriticalHitEvent;",
+                    "net/neoforged/forgestuck/compat/LegacyCriticalHitEvent"),
+            java.util.Map.entry("net/minecraftforge/common/ForgeHooks.onCropsGrowPre("
+                    + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                    + "Lnet/minecraft/world/level/block/state/BlockState;Z)Z",
+                    "net/neoforged/forgestuck/compat/LegacyCropGrowth"),
+            java.util.Map.entry("net/minecraftforge/common/ForgeHooks.onCropsGrowPost("
+                    + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                    + "Lnet/minecraft/world/level/block/state/BlockState;)V",
+                    "net/neoforged/forgestuck/compat/LegacyCropGrowth"),
+            java.util.Map.entry("net/minecraftforge/common/ForgeHooks.hasNoElements("
+                    + "Lnet/minecraft/world/item/crafting/Ingredient;)Z",
+                    "net/neoforged/forgestuck/compat/LegacyIngredientHooks"),
+            java.util.Map.entry("net/minecraftforge/fml/loading/FMLLoader.isProduction()Z",
+                    "net/neoforged/forgestuck/compat/LegacyFMLLoader"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/CriticalHitEvent.getDamageModifier()F",
+                    "net/neoforged/forgestuck/compat/LegacyCriticalHitEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/CriticalHitEvent.setDamageModifier(F)V",
+                    "net/neoforged/forgestuck/compat/LegacyCriticalHitEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/CriticalHitEvent.getResult()"
+                    + "Lnet/minecraftforge/eventbus/api/Event$Result;",
+                    "net/neoforged/forgestuck/compat/LegacyCriticalHitEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/CriticalHitEvent.setResult("
+                    + "Lnet/minecraftforge/eventbus/api/Event$Result;)V",
+                    "net/neoforged/forgestuck/compat/LegacyCriticalHitEvent"),
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V", "net/neoforged/forgestuck/compat/LegacyEventBusRegistration"),
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.post(Lnet/minecraftforge/eventbus/api/Event;)Z",
                     "net/neoforged/forgestuck/compat/LegacyEventBusPost"),
@@ -252,6 +285,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 }
                 String helper = field ? null : REDIRECTS.get(owner + "." + name + desc);
                 if (helper != null) {
+                    if (insn instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKESTATIC) {
+                        call.owner = helper;
+                        call.itf = false;
+                        replaced++;
+                        continue;
+                    }
                     Type[] ra = Type.getArgumentTypes(desc);
                     Type[] sa = new Type[ra.length + 1];
                     sa[0] = Type.getObjectType(owner);
@@ -581,6 +620,9 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                         BURN_TIME_EXTENSION_DESC, true);
             }
             String redirect = REDIRECTS.get(handle.getOwner() + "." + handle.getName() + handle.getDesc());
+            if (redirect != null && handle.getTag() == Opcodes.H_INVOKESTATIC) {
+                return new Handle(Opcodes.H_INVOKESTATIC, redirect, handle.getName(), handle.getDesc(), false);
+            }
             if (redirect != null && (handle.getTag() == Opcodes.H_INVOKEVIRTUAL
                     || handle.getTag() == Opcodes.H_INVOKEINTERFACE)) {
                 Type[] arguments = Type.getArgumentTypes(handle.getDesc());

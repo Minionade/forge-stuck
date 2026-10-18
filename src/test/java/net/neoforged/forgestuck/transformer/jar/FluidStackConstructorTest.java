@@ -86,6 +86,35 @@ class FluidStackConstructorTest {
     }
 
     @Test
+    void legacyNbtSerializationCallsAndHandlesUseCompatShim() throws Throwable {
+        Class<?> transformed = load(serializationUser());
+        FluidStack stack = new FluidStack(Fluids.WATER, 500);
+        CompoundTag fluidTag = new CompoundTag();
+        fluidTag.putString("marker", "preserved");
+        net.neoforged.forgestuck.compat.LegacyFluidStack.setTag(stack, fluidTag);
+
+        CompoundTag nbt = new CompoundTag();
+        assertSame(nbt, transformed.getMethod("write", FluidStack.class, CompoundTag.class)
+                .invoke(null, stack, nbt));
+        assertEquals("minecraft:water", nbt.getString("FluidName"));
+        assertEquals(500, nbt.getInt("Amount"));
+        assertEquals("preserved", nbt.getCompound("Tag").getString("marker"));
+
+        FluidStack loaded = (FluidStack) transformed.getMethod("load", CompoundTag.class).invoke(null, nbt);
+        assertSame(Fluids.WATER, loaded.getFluid());
+        assertEquals(500, loaded.getAmount());
+        assertEquals("preserved", net.neoforged.forgestuck.compat.LegacyFluidStack.getTag(loaded).getString("marker"));
+
+        MethodHandle loader = (MethodHandle) transformed.getMethod("loadHandle").invoke(null);
+        MethodHandle writer = (MethodHandle) transformed.getMethod("writeHandle").invoke(null);
+        assertSame(Fluids.WATER, ((FluidStack) loader.invokeWithArguments(nbt)).getFluid());
+        assertEquals("minecraft:water", ((CompoundTag) writer.invokeWithArguments(stack, new CompoundTag()))
+                .getString("FluidName"));
+        assertSame(FluidStack.EMPTY,
+                transformed.getMethod("load", CompoundTag.class).invoke(null, new CompoundTag()));
+    }
+
+    @Test
     void nestedBasicAllocationIsNotMistakenForOuterCopyConstructor() throws Exception {
         Class<?> transformed = load(copyUser());
         FluidStack copy = (FluidStack) transformed.getMethod("nested", Fluid.class, int.class)
@@ -123,6 +152,53 @@ class FluidStackConstructorTest {
         set.visitInsn(Opcodes.RETURN);
         set.visitMaxs(0, 0);
         set.visitEnd();
+        writer.visitEnd();
+        return writer.toByteArray();
+    }
+
+    private static byte[] serializationUser() {
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/FluidCopy", null, "java/lang/Object", null);
+
+        var load = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "load",
+                "(Lnet/minecraft/nbt/CompoundTag;)L" + OLD + ";", null, null);
+        load.visitCode();
+        load.visitVarInsn(Opcodes.ALOAD, 0);
+        load.visitMethodInsn(Opcodes.INVOKESTATIC, OLD, "loadFluidStackFromNBT",
+                "(Lnet/minecraft/nbt/CompoundTag;)L" + OLD + ";", false);
+        load.visitInsn(Opcodes.ARETURN);
+        load.visitMaxs(0, 0);
+        load.visitEnd();
+
+        var write = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "write",
+                "(L" + OLD + ";Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;", null, null);
+        write.visitCode();
+        write.visitVarInsn(Opcodes.ALOAD, 0);
+        write.visitVarInsn(Opcodes.ALOAD, 1);
+        write.visitMethodInsn(Opcodes.INVOKEVIRTUAL, OLD, "writeToNBT",
+                "(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;", false);
+        write.visitInsn(Opcodes.ARETURN);
+        write.visitMaxs(0, 0);
+        write.visitEnd();
+
+        var loadHandle = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "loadHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        loadHandle.visitCode();
+        loadHandle.visitLdcInsn(new org.objectweb.asm.Handle(Opcodes.H_INVOKESTATIC, OLD, "loadFluidStackFromNBT",
+                "(Lnet/minecraft/nbt/CompoundTag;)L" + OLD + ";", false));
+        loadHandle.visitInsn(Opcodes.ARETURN);
+        loadHandle.visitMaxs(0, 0);
+        loadHandle.visitEnd();
+
+        var writeHandle = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "writeHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        writeHandle.visitCode();
+        writeHandle.visitLdcInsn(new org.objectweb.asm.Handle(Opcodes.H_INVOKEVIRTUAL, OLD, "writeToNBT",
+                "(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;", false));
+        writeHandle.visitInsn(Opcodes.ARETURN);
+        writeHandle.visitMaxs(0, 0);
+        writeHandle.visitEnd();
+
         writer.visitEnd();
         return writer.toByteArray();
     }

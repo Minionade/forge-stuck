@@ -40,6 +40,14 @@ final class ItemHandlerMappings {
                                 "<init>(Lnet/minecraft/world/Container;)V",
                                 "extractItem(IIZ)" + itemStack,
                                 "insertItem(I" + itemStack + "Z)" + itemStack,
-                                "isItemValid(I" + itemStack + ")Z")));
+                                "isItemValid(I" + itemStack + ")Z")),
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/items/wrapper/EmptyHandler",
+                        "net/neoforged/forgestuck/compat/LegacyEmptyItemHandler",
+                        Set.of("INSTANCELnet/minecraftforge/items/IItemHandler;")),
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/items/wrapper/SidedInvWrapper",
+                        "net/neoforged/neoforge/items/wrapper/SidedInvWrapper",
+                        Set.of("<init>(Lnet/minecraft/world/WorldlyContainer;Lnet/minecraft/core/Direction;)V")));
     }
 }

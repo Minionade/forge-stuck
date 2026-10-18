@@ -64,6 +64,17 @@ final class CommonHookMappings {
                                         + "Ljava/util/function/Consumer;)V",
                                 "openScreen(Lnet/minecraft/server/level/ServerPlayer;"
                                         + "Lnet/minecraft/world/MenuProvider;"
-                                        + "Lnet/minecraft/core/BlockPos;)V")));
+                                        + "Lnet/minecraft/core/BlockPos;)V")),
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/server/ServerLifecycleHooks",
+                        "net/neoforged/neoforge/server/ServerLifecycleHooks",
+                        Set.of("getCurrentServer()Lnet/minecraft/server/MinecraftServer;")),
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/event/entity/player/CriticalHitEvent",
+                        "net/neoforged/neoforge/event/entity/player/CriticalHitEvent",
+                        Set.of(
+                                "getEntity()Lnet/minecraft/world/entity/player/Player;",
+                                "getTarget()Lnet/minecraft/world/entity/Entity;",
+                                "isVanillaCritical()Z")));
     }
 }

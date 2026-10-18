@@ -1,6 +1,7 @@
 package net.neoforged.forgestuck.compat;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -12,7 +13,7 @@ import net.minecraft.resources.ResourceLocation;
  * vanilla registry of the same key. It stays an interface because legacy bytecode invokes it with
  * {@code invokeinterface}.
  */
-public interface IForgeRegistry<V> {
+public interface IForgeRegistry<V> extends Iterable<V> {
     ResourceKey<? extends net.minecraft.core.Registry<V>> getRegistryKey();
 
     ResourceLocation getRegistryName();
@@ -32,6 +33,11 @@ public interface IForgeRegistry<V> {
     Collection<V> getValues();
 
     Set<Map.Entry<ResourceKey<V>, V>> getEntries();
+
+    @Override
+    default Iterator<V> iterator() {
+        return getValues().iterator();
+    }
 
     default void register(ResourceLocation key, V value) {
         throw new UnsupportedOperationException("Registry " + getRegistryName()

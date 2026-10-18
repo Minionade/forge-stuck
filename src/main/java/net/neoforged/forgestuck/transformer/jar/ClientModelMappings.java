@@ -15,6 +15,12 @@ final class ClientModelMappings {
 
     static List<ForgeOwnerMappings.Entry> entries() {
         return List.of(
+                entry("ChunkRenderTypeSet", Set.of(
+                        "iterator()Ljava/util/Iterator;",
+                        "of([Lnet/minecraft/client/renderer/RenderType;)"
+                                + "Lnet/minecraftforge/client/ChunkRenderTypeSet;",
+                        "union([Lnet/minecraftforge/client/ChunkRenderTypeSet;)"
+                                + "Lnet/minecraftforge/client/ChunkRenderTypeSet;")),
                 entry("RenderTypeGroup", Set.of(
                         "EMPTY" + GROUP,
                         "<init>(Lnet/minecraft/client/renderer/RenderType;"
@@ -96,6 +102,22 @@ final class ClientModelMappings {
                 entry("model/SimpleModelState", Set.of(
                         "<init>(Lcom/mojang/math/Transformation;)V",
                         "<init>(Lcom/mojang/math/Transformation;Z)V")),
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/client/ForgeHooksClient",
+                        "net/neoforged/neoforge/client/ClientHooks",
+                        Set.of(
+                                "fillNormal([ILnet/minecraft/core/Direction;)V",
+                                "getArmorModel(Lnet/minecraft/world/entity/LivingEntity;"
+                                        + "Lnet/minecraft/world/item/ItemStack;"
+                                        + "Lnet/minecraft/world/entity/EquipmentSlot;"
+                                        + "Lnet/minecraft/client/model/HumanoidModel;)"
+                                        + "Lnet/minecraft/client/model/Model;",
+                                "getBlockMaterial(Lnet/minecraft/resources/ResourceLocation;)"
+                                        + "Lnet/minecraft/client/resources/model/Material;",
+                                "handleCameraTransforms(Lcom/mojang/blaze3d/vertex/PoseStack;"
+                                        + "Lnet/minecraft/client/resources/model/BakedModel;"
+                                        + "Lnet/minecraft/world/item/ItemDisplayContext;Z)"
+                                        + "Lnet/minecraft/client/resources/model/BakedModel;")),
                 new ForgeOwnerMappings.Entry(
                         "net/minecraftforge/client/model/data/ModelDataManager",
                         "net/neoforged/neoforge/client/model/data/ModelDataManager",

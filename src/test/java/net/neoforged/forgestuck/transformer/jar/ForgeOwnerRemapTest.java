@@ -88,6 +88,182 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void criticalHitHooksAndLegacyEventMembersUseCompatAdapter() {
+        String hooks = "net/minecraftforge/common/ForgeHooks";
+        String oldEvent = "net/minecraftforge/event/entity/player/CriticalHitEvent";
+        String helper = "net/neoforged/forgestuck/compat/LegacyCriticalHitEvent";
+        String eventDesc = "L" + oldEvent + ";";
+        String oldResult = "Lnet/minecraftforge/eventbus/api/Event$Result;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/CriticalHitCompat", null, "java/lang/Object", null);
+
+        var create = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "create",
+                "(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/entity/Entity;ZF)" + eventDesc,
+                null, null);
+        create.visitCode();
+        create.visitVarInsn(Opcodes.ALOAD, 0);
+        create.visitVarInsn(Opcodes.ALOAD, 1);
+        create.visitVarInsn(Opcodes.ILOAD, 2);
+        create.visitVarInsn(Opcodes.FLOAD, 3);
+        create.visitMethodInsn(Opcodes.INVOKESTATIC, hooks, "getCriticalHit",
+                "(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/entity/Entity;ZF)" + eventDesc,
+                false);
+        create.visitInsn(Opcodes.ARETURN);
+        create.visitMaxs(0, 0);
+        create.visitEnd();
+
+        var getDamage = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "getDamage",
+                "(" + eventDesc + ")F", null, null);
+        getDamage.visitCode();
+        getDamage.visitVarInsn(Opcodes.ALOAD, 0);
+        getDamage.visitMethodInsn(Opcodes.INVOKEVIRTUAL, oldEvent, "getDamageModifier", "()F", false);
+        getDamage.visitInsn(Opcodes.FRETURN);
+        getDamage.visitMaxs(0, 0);
+        getDamage.visitEnd();
+
+        var setResult = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "setResult",
+                "(" + eventDesc + oldResult + ")V", null, null);
+        setResult.visitCode();
+        setResult.visitVarInsn(Opcodes.ALOAD, 0);
+        setResult.visitVarInsn(Opcodes.ALOAD, 1);
+        setResult.visitMethodInsn(Opcodes.INVOKEVIRTUAL, oldEvent, "setResult", "(" + oldResult + ")V", false);
+        setResult.visitInsn(Opcodes.RETURN);
+        setResult.visitMaxs(0, 0);
+        setResult.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.CriticalHitCompat", writer.toByteArray()));
+        List<MethodInsnNode> calls = java.util.Arrays.stream(transformed.methods.toArray(new org.objectweb.asm.tree.MethodNode[0]))
+                .flatMap(method -> java.util.Arrays.stream(method.instructions.toArray()))
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(3, calls.size());
+        assertTrue(calls.stream().allMatch(call -> call.getOpcode() == Opcodes.INVOKESTATIC
+                && helper.equals(call.owner)));
+        assertEquals("(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/entity/Entity;ZF)"
+                + "Lnet/neoforged/neoforge/event/entity/player/CriticalHitEvent;", calls.get(0).desc);
+        assertEquals("(Lnet/neoforged/neoforge/event/entity/player/CriticalHitEvent;)F", calls.get(1).desc);
+        assertEquals("(Lnet/neoforged/neoforge/event/entity/player/CriticalHitEvent;"
+                + "Lnet/neoforged/forgestuck/compat/LegacyEventResult;)V", calls.get(2).desc);
+    }
+
+    @Test
+    void cropGrowthHooksAndMethodHandlesUseCompatAdapter() {
+        String hooks = "net/minecraftforge/common/ForgeHooks";
+        String helper = "net/neoforged/forgestuck/compat/LegacyCropGrowth";
+        String preDesc = "(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                + "Lnet/minecraft/world/level/block/state/BlockState;Z)Z";
+        String postDesc = "(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                + "Lnet/minecraft/world/level/block/state/BlockState;)V";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/CropGrowthCompat", null, "java/lang/Object", null);
+        var pre = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "pre", preDesc, null, null);
+        pre.visitCode();
+        pre.visitInsn(Opcodes.ACONST_NULL);
+        pre.visitInsn(Opcodes.ACONST_NULL);
+        pre.visitInsn(Opcodes.ACONST_NULL);
+        pre.visitInsn(Opcodes.ICONST_1);
+        pre.visitMethodInsn(Opcodes.INVOKESTATIC, hooks, "onCropsGrowPre", preDesc, false);
+        pre.visitInsn(Opcodes.IRETURN);
+        pre.visitMaxs(0, 0);
+        pre.visitEnd();
+
+        var post = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "post", postDesc, null, null);
+        post.visitCode();
+        post.visitInsn(Opcodes.ACONST_NULL);
+        post.visitInsn(Opcodes.ACONST_NULL);
+        post.visitInsn(Opcodes.ACONST_NULL);
+        post.visitMethodInsn(Opcodes.INVOKESTATIC, hooks, "onCropsGrowPost", postDesc, false);
+        post.visitInsn(Opcodes.RETURN);
+        post.visitMaxs(0, 0);
+        post.visitEnd();
+
+        var handle = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "preHandle", "()V", null, null);
+        handle.visitCode();
+        handle.visitLdcInsn(new org.objectweb.asm.Handle(Opcodes.H_INVOKESTATIC, hooks, "onCropsGrowPre",
+                preDesc, false));
+        handle.visitInsn(Opcodes.POP);
+        handle.visitInsn(Opcodes.RETURN);
+        handle.visitMaxs(0, 0);
+        handle.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.CropGrowthCompat", writer.toByteArray()));
+        List<MethodInsnNode> calls = java.util.Arrays.stream(transformed.methods.toArray(new org.objectweb.asm.tree.MethodNode[0]))
+                .flatMap(method -> java.util.Arrays.stream(method.instructions.toArray()))
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().allMatch(call -> call.getOpcode() == Opcodes.INVOKESTATIC
+                && helper.equals(call.owner)));
+        assertEquals("onCropsGrowPre", calls.get(0).name);
+        assertEquals(preDesc, calls.get(0).desc);
+        assertEquals("onCropsGrowPost", calls.get(1).name);
+        assertEquals(postDesc, calls.get(1).desc);
+
+        org.objectweb.asm.tree.LdcInsnNode handleConstant = java.util.Arrays.stream(
+                        transformed.methods.get(2).instructions.toArray())
+                .filter(org.objectweb.asm.tree.LdcInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.LdcInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        org.objectweb.asm.Handle transformedHandle = (org.objectweb.asm.Handle) handleConstant.cst;
+        assertEquals(Opcodes.H_INVOKESTATIC, transformedHandle.getTag());
+        assertEquals(helper, transformedHandle.getOwner());
+        assertEquals("onCropsGrowPre", transformedHandle.getName());
+        assertEquals(preDesc, transformedHandle.getDesc());
+    }
+
+    @Test
+    void hasNoElementsHookUsesIngredientCompatibilityAdapter() {
+        String hook = "net/minecraftforge/common/ForgeHooks";
+        String helper = "net/neoforged/forgestuck/compat/LegacyIngredientHooks";
+        String desc = "(Lnet/minecraft/world/item/crafting/Ingredient;)Z";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/IngredientHookCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "empty", desc, null, null);
+        method.visitCode();
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, hook, "hasNoElements", desc, false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.IngredientHookCompat",
+                writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals(helper, call.owner);
+        assertEquals("hasNoElements", call.name);
+        assertEquals(desc, call.desc);
+    }
+
+    @Test
+    void fmlLoaderProductionQueryUsesCompatibilityAdapter() {
+        String oldOwner = "net/minecraftforge/fml/loading/FMLLoader";
+        String helper = "net/neoforged/forgestuck/compat/LegacyFMLLoader";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/FMLLoaderCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "production", "()Z", null, null);
+        method.visitCode();
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, oldOwner, "isProduction", "()Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.FMLLoaderCompat",
+                writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals(helper, call.owner);
+        assertEquals("isProduction", call.name);
+        assertEquals("()Z", call.desc);
+    }
+
+    @Test
     void legacySrgMobEffectModifierCallUsesHolderAndResourceLocationAdapter() {
         String owner = "net/minecraft/world/effect/MobEffect";
         String callOwner = "cofh/core/common/effect/ChilledMobEffect";

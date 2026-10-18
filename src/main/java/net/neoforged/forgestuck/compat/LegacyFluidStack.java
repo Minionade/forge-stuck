@@ -3,9 +3,13 @@ package net.neoforged.forgestuck.compat;
 import java.util.Collections;
 import java.util.Map;
 import java.util.WeakHashMap;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.material.Fluid;
+import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.minecraft.world.item.component.CustomData;
 
@@ -60,6 +64,25 @@ public final class LegacyFluidStack {
             stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag.copy()));
         }
         return stack;
+    }
+
+    public static FluidStack loadFluidStackFromNBT(CompoundTag nbt) {
+        if (nbt == null || !nbt.contains("FluidName", Tag.TAG_STRING)) return FluidStack.EMPTY;
+        ResourceLocation id = ResourceLocation.parse(nbt.getString("FluidName"));
+        Fluid fluid = BuiltInRegistries.FLUID.getOptional(id).orElse(null);
+        if (fluid == null) return FluidStack.EMPTY;
+        FluidStack stack = new FluidStack(fluid, nbt.getInt("Amount"));
+        if (nbt.contains("Tag", Tag.TAG_COMPOUND)) setTag(stack, nbt.getCompound("Tag"));
+        return stack;
+    }
+
+    public static CompoundTag writeToNBT(FluidStack stack, CompoundTag nbt) {
+        Fluid fluid = stack.isEmpty() ? Fluids.EMPTY : stack.getFluid();
+        nbt.putString("FluidName", BuiltInRegistries.FLUID.getKey(fluid).toString());
+        nbt.putInt("Amount", stack.getAmount());
+        CompoundTag tag = getTag(stack);
+        if (tag != null) nbt.put("Tag", tag);
+        return nbt;
     }
 
     private static CustomData owned(FluidStack stack, CustomData current) {

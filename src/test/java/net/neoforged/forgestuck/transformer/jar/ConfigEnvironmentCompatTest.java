@@ -260,9 +260,8 @@ class ConfigEnvironmentCompatTest {
     }
 
     @Test
-    void unsupportedPostNoLongerUnmapsEventBusOrMinecraftForge() {
-        // MinecraftForge.EVENT_BUS is typed IEventBus; post(Event) has no verified equivalent, so IEventBus stays
-        // unmapped and MinecraftForge must stay unmapped too (a mapped getstatic would carry the legacy descriptor).
+    void eventBusPostAdapterKeepsEventBusAndMinecraftForgeMapped() {
+        // Forge's boolean post result is adapted to NeoForge's cancellable event state.
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/cfg/Post", null, "java/lang/Object", null);
         var m = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "go", "(Lzz/cfg/Ev;)V", null, null);
@@ -279,7 +278,7 @@ class ConfigEnvironmentCompatTest {
         cw.visitEnd();
         byte[] in = cw.toByteArray();
 
-        // Second class only reads EVENT_BUS: the jar-wide scan must still keep it unmapped.
+        // A class that only reads EVENT_BUS remains mappable independently of the call adapter.
         ClassWriter other = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         other.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/cfg/OnlyBus", null, "java/lang/Object", null);
         var g = other.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "go", "()V", null, null);
@@ -297,11 +296,11 @@ class ConfigEnvironmentCompatTest {
         OwnerRemapReport report = new OwnerRemapReport();
         byte[] outPost = step.apply("zz.cfg.Post", in, report);
         byte[] outBus = step.apply("zz.cfg.OnlyBus", onlyBus, report);
-        // Unsupported IEventBus.post no longer unmaps IEventBus/MinecraftForge: the call site fails at call time.
+        // The adapter preserves the boolean result without leaving legacy owners or unsupported calls behind.
         assertEquals(Set.of(), report.blockedOwners());
         assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(outPost));
         assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(outBus));
-        assertEquals(1, report.unsupportedCalls().size());
+        assertTrue(report.unsupportedCalls().isEmpty());
     }
 
     @Test

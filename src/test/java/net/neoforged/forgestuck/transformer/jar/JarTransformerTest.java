@@ -16,6 +16,7 @@ import java.util.jar.JarFile;
 import java.util.jar.JarOutputStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.objectweb.asm.ClassWriter;
 
 class JarTransformerTest {
     static final String MODS_TOML = """
@@ -52,7 +53,15 @@ class JarTransformerTest {
             side = "BOTH"
             """;
 
-    static final byte[] CLASS_BYTES = {(byte) 0xCA, (byte) 0xFE, (byte) 0xBA, (byte) 0xBE, 1, 2, 3, 4};
+    static final byte[] CLASS_BYTES = emptyClassBytes();
+
+    private static byte[] emptyClassBytes() {
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(org.objectweb.asm.Opcodes.V21, org.objectweb.asm.Opcodes.ACC_PUBLIC,
+                "com/example/Foo", null, "java/lang/Object", null);
+        writer.visitEnd();
+        return writer.toByteArray();
+    }
 
     static Path buildJar(Path dir, String name, String modsToml, String implVersion) throws IOException {
         Path jar = dir.resolve(name);
