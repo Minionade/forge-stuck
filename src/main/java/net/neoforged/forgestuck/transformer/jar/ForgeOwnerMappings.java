@@ -87,6 +87,95 @@ public final class ForgeOwnerMappings {
                                 "getColor(Lnet/minecraft/world/item/ItemStack;)I",
                                 "clearColor(Lnet/minecraft/world/item/ItemStack;)V",
                                 "setColor(Lnet/minecraft/world/item/ItemStack;I)V")))
+                .add(new Entry("net/minecraftforge/common/extensions/IForgeBlock",
+                        "net/neoforged/neoforge/common/extensions/IBlockExtension", Set.of(
+                                "getFriction(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/entity/Entity;)F",
+                                "getLightEmission(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)I",
+                                "isLadder(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/entity/LivingEntity;)Z",
+                                "isBurning(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Z",
+                                "canHarvestBlock(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/entity/player/Player;)Z",
+                                "setBedOccupied(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/entity/LivingEntity;Z)V",
+                                "getBedDirection(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)"
+                                        + "Lnet/minecraft/core/Direction;",
+                                "getExplosionResistance(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/level/Explosion;)F",
+                                "getCloneItemStack(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/phys/HitResult;Lnet/minecraft/world/level/LevelReader;"
+                                        + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;)"
+                                        + "Lnet/minecraft/world/item/ItemStack;",
+                                "addLandingEffects(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/entity/LivingEntity;I)Z",
+                                "addRunningEffects(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/entity/Entity;)Z",
+                                "isFertile(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Z",
+                                "isConduitFrame(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/core/BlockPos;)Z",
+                                "isPortalFrame(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Z",
+                                "rotate(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/level/block/Rotation;)"
+                                        + "Lnet/minecraft/world/level/block/state/BlockState;",
+                                "getEnchantPowerBonus(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)F",
+                                "onNeighborChange(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/core/BlockPos;)V",
+                                "shouldCheckWeakPower(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/SignalGetter;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/core/Direction;)Z",
+                                "getWeakChanges(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;)Z",
+                                "isSlimeBlock(Lnet/minecraft/world/level/block/state/BlockState;)Z",
+                                "isStickyBlock(Lnet/minecraft/world/level/block/state/BlockState;)Z",
+                                "canStickTo(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/block/state/BlockState;)Z",
+                                "isFlammable(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/core/Direction;)Z",
+                                "getFireSpreadSpeed(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/core/Direction;)I",
+                                "isFireSource(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/LevelReader;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/core/Direction;)Z",
+                                "canEntityDestroy(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/entity/Entity;)Z",
+                                "canDropFromExplosion(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/level/Explosion;)Z",
+                                "onBlockExploded(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                                        + "Lnet/minecraft/world/level/Explosion;)V")))
+                .add(new Entry("net/minecraftforge/items/IItemHandler",
+                        "net/neoforged/neoforge/items/IItemHandler", Set.of(
+                                "getSlots()I",
+                                "getStackInSlot(I)Lnet/minecraft/world/item/ItemStack;",
+                                "insertItem(ILnet/minecraft/world/item/ItemStack;Z)Lnet/minecraft/world/item/ItemStack;",
+                                "extractItem(IIZ)Lnet/minecraft/world/item/ItemStack;",
+                                "getSlotLimit(I)I",
+                                "isItemValid(ILnet/minecraft/world/item/ItemStack;)Z")))
+                .add(new Entry("net/minecraftforge/items/IItemHandlerModifiable",
+                        "net/neoforged/neoforge/items/IItemHandlerModifiable",
+                        Set.of("setStackInSlot(ILnet/minecraft/world/item/ItemStack;)V")))
                 .add(new Entry(FU + "LazyOptional", COMPAT + "LazyOptional", Set.of(
                         "of(" + nns + ")" + lo,
                         "empty()" + lo,
