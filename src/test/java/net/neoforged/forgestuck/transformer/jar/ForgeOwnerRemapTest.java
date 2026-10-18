@@ -144,6 +144,19 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void legacyNbtSerializableOwnerMapsToContextBridge() {
+        String oldOwner = "net/minecraftforge/common/util/INBTSerializable";
+        String newOwner = "net/neoforged/forgestuck/compat/LegacyINBTSerializable";
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/Serializable", null, "java/lang/Object",
+                new String[] {oldOwner});
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.Serializable", writer.toByteArray()));
+        assertEquals(newOwner, node.interfaces.get(0));
+    }
+
+    @Test
     void classWithoutForgeOwnersIsUnchanged() {
         byte[] in = SrgCompatTest.callerClass("com/ex/Plain", LIVING, "m_1_");
         OwnerRemapReport report = new OwnerRemapReport();

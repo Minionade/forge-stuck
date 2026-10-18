@@ -34,6 +34,7 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/common/extensions/IForgeItem", "net/minecraft/world/item/DyeableLeatherItem",
             "net/minecraftforge/common/extensions/IForgeBlock",
             "net/minecraftforge/items/IItemHandler", "net/minecraftforge/items/IItemHandlerModifiable",
+            "net/minecraftforge/common/util/INBTSerializable",
             "net/minecraftforge/common/ForgeConfigSpec", "net/minecraftforge/common/ForgeConfigSpec$Builder",
             "net/minecraftforge/common/ForgeConfigSpec$ConfigValue", "net/minecraftforge/common/ForgeConfigSpec$BooleanValue",
             "net/minecraftforge/common/ForgeConfigSpec$IntValue", "net/minecraftforge/common/ForgeConfigSpec$LongValue",
