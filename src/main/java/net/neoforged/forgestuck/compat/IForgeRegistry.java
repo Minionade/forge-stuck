@@ -32,4 +32,9 @@ public interface IForgeRegistry<V> {
     Collection<V> getValues();
 
     Set<Map.Entry<ResourceKey<V>, V>> getEntries();
+
+    default void register(ResourceLocation key, V value) {
+        throw new UnsupportedOperationException("Registry " + getRegistryName()
+                + " does not support legacy registration through IForgeRegistry");
+    }
 }

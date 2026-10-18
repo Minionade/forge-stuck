@@ -1,7 +1,10 @@
 package net.neoforged.forgestuck.compat;
 
+import java.util.function.Supplier;
 import net.minecraft.core.Registry;
+import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.network.syncher.EntityDataSerializer;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.stats.StatType;
@@ -10,9 +13,9 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.VillagerProfession;
-import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.alchemy.Potion;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
@@ -21,15 +24,12 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraft.core.particles.ParticleType;
-import net.minecraft.network.syncher.EntityDataSerializer;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 /**
- * Stand-in for Forge 1.20.1's {@code ForgeRegistries}, limited to fields whose registry is a static (non-datapack)
- * registry in 1.21.1, plus {@code ENCHANTMENTS} as a {@link DatapackRegistryView} that links but fails per call.
- * Other legacy fields without a 1.21.1 static registry (e.g. {@code BIOMES}) are intentionally absent so that a
- * class using them is reported rather than silently mis-wired.
+ * Stand-in for Forge 1.20.1's {@code ForgeRegistries}, backed by static registries where possible. {@code ENCHANTMENTS}
+ * is a {@link DatapackRegistryView}, while {@code DISPLAY_CONTEXTS} views enum extensions rather than a runtime
+ * registry. Other legacy fields without a 1.21.1 equivalent (e.g. {@code BIOMES}) remain absent.
  */
 public final class ForgeRegistries {
     private ForgeRegistries() {}
@@ -56,6 +56,8 @@ public final class ForgeRegistries {
 
     public static final IForgeRegistry<EntityDataSerializer<?>> ENTITY_DATA_SERIALIZERS =
             of(NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS);
+    public static final Supplier<IForgeRegistry<ItemDisplayContext>> DISPLAY_CONTEXTS =
+            () -> DisplayContextRegistryView.INSTANCE;
 
     private static <V> IForgeRegistry<V> of(ResourceKey<? extends Registry<V>> key) {
         return new VanillaRegistryView<>(key);
@@ -85,6 +87,7 @@ public final class ForgeRegistries {
         public static final ResourceKey<Registry<Enchantment>> ENCHANTMENTS = Registries.ENCHANTMENT;
         public static final ResourceKey<Registry<EntityDataSerializer<?>>> ENTITY_DATA_SERIALIZERS =
                 NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS;
+        public static final ResourceKey<Registry<ItemDisplayContext>> DISPLAY_CONTEXTS = DisplayContextRegistryView.KEY;
         public static final ResourceKey<? extends Registry<?>> GLOBAL_LOOT_MODIFIER_SERIALIZERS =
                 NeoForgeRegistries.Keys.GLOBAL_LOOT_MODIFIER_SERIALIZERS;
         public static final ResourceKey<? extends Registry<?>> BIOME_MODIFIER_SERIALIZERS =

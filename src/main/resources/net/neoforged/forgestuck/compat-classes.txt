@@ -11,6 +11,7 @@ ForgeRegistries$Keys
 ForgeRegistries
 IForgeRegistry
 LazyOptional
+DisplayContextRegistryView
 LegacyDeferredRegister
 LegacyGameTestSupport
 LegacyConfigSpec

@@ -452,7 +452,12 @@ public final class ForgeOwnerMappings {
         String desc = keys ? "Lnet/minecraft/resources/ResourceKey;" : "L" + R + "IForgeRegistry;";
         Set<String> out = new java.util.TreeSet<>();
         for (String f : FORGE_REGISTRY_FIELDS) out.add(f + desc);
-        if (keys) for (String f : NEOFORGE_KEY_FIELDS) out.add(f + desc);
+        if (keys) {
+            for (String f : NEOFORGE_KEY_FIELDS) out.add(f + desc);
+            out.add("DISPLAY_CONTEXTS" + desc);
+        } else {
+            out.add("DISPLAY_CONTEXTS" + "Ljava/util/function/Supplier;");
+        }
         return out;
     }
 
@@ -466,7 +471,8 @@ public final class ForgeOwnerMappings {
                 "getResourceKey(Ljava/lang/Object;)Ljava/util/Optional;",
                 "getKeys()Ljava/util/Set;",
                 "getValues()Ljava/util/Collection;",
-                "getEntries()Ljava/util/Set;");
+                "getEntries()Ljava/util/Set;",
+                "register(Lnet/minecraft/resources/ResourceLocation;Ljava/lang/Object;)V");
     }
 
     private static Entry registryObject() {
