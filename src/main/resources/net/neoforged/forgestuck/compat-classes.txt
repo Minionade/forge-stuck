@@ -104,6 +104,8 @@ LegacySpawnEntity
 LegacyLivingAttack
 LegacyAbstractTreeGrower
 LegacySaplingBlock
+LegacyLivingDamageEvent
+LegacyDamageBridge
 LegacyLivingHurtEvent
 LegacyHurtBridge
 LegacyShearable

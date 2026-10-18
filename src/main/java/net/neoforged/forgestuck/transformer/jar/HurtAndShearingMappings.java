@@ -7,6 +7,12 @@ final class HurtAndShearingMappings {
     private HurtAndShearingMappings() {}
     static List<ForgeOwnerMappings.Entry> entries() {
         return List.of(
+                new ForgeOwnerMappings.Entry("net/minecraftforge/event/entity/living/LivingDamageEvent",
+                        "net/neoforged/forgestuck/compat/LegacyLivingDamageEvent", Set.of(
+                        "getEntity()Lnet/minecraft/world/entity/LivingEntity;",
+                        "getEntity()Lnet/minecraft/world/entity/Entity;",
+                        "getSource()Lnet/minecraft/world/damagesource/DamageSource;",
+                        "getAmount()F", "setAmount(F)V")),
                 new ForgeOwnerMappings.Entry("net/minecraftforge/event/entity/living/LivingHurtEvent",
                         "net/neoforged/forgestuck/compat/LegacyLivingHurtEvent", Set.of(
                         "<init>(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/damagesource/DamageSource;F)V",

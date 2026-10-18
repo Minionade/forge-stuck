@@ -16,6 +16,7 @@ class ForgeOwnerMappingTargetsTest {
     private static final List<String> OWNERS = List.of(
             "net/minecraftforge/eventbus/api/IGenericEvent",
             "net/minecraftforge/eventbus/api/GenericEvent",
+            "net/minecraftforge/event/entity/living/LivingDamageEvent",
             "net/minecraftforge/common/SoundAction", "net/minecraftforge/common/SoundActions",
             "net/minecraftforge/event/AttachCapabilitiesEvent",
             "net/minecraftforge/common/capabilities/ICapabilityProvider",

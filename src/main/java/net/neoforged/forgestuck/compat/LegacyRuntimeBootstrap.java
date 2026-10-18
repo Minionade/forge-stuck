@@ -4,6 +4,7 @@ package net.neoforged.forgestuck.compat;
 public final class LegacyRuntimeBootstrap {
     private LegacyRuntimeBootstrap() {}
     public static void install() {
+        LegacyDamageBridge.install();
         LegacyHurtBridge.install();
         // The existing installer guards duplicate registration and loads client hooks only on Dist.CLIENT.
         LegacyTickBridge.install();
