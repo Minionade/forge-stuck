@@ -582,4 +582,4 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 
 | Date | Change |
 | --- | --- |
-| 2026-10-17 | t29: distinct hurt relay and bidirectional shearing adapter; PR link to follow. |
+| 2026-10-17 | t29: distinct hurt relay and bidirectional shearing adapter; [PR #42](https://github.com/Minionade/forge-stuck/pull/42). |
