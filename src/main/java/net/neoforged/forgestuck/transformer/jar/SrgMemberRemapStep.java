@@ -118,7 +118,10 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     }
                     boolean own = call.owner.equals(node.name)
                             && ownRenamed.contains("M" + call.name + call.desc + "=" + mapped);
-                    if (own || ownerIsGame(call.owner) || isInheritedResourceLocationMethod(call)) {
+                    boolean inherited = !call.owner.equals(node.name)
+                            || node.methods.stream().noneMatch(declared -> declared.name.equals(call.name)
+                                    && declared.desc.equals(call.desc));
+                    if (own || ownerIsGame(call.owner) || inherited || isInheritedResourceLocationMethod(call)) {
                         remapped.add(call.name + "->" + mapped);
                         call.name = mapped;
                         modified = true;
@@ -152,7 +155,10 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                         continue;
                     }
                     boolean own = field.owner.equals(node.name) && ownRenamed.contains("F" + field.name + "=" + mapped);
-                    if (own || ownerIsGame(field.owner)) {
+                    boolean inherited = !field.owner.equals(node.name)
+                            || node.fields.stream().noneMatch(declared -> declared.name.equals(field.name)
+                                    && declared.desc.equals(field.desc));
+                    if (own || ownerIsGame(field.owner) || inherited) {
                         remapped.add(field.name + "->" + mapped);
                         field.name = mapped;
                         modified = true;
