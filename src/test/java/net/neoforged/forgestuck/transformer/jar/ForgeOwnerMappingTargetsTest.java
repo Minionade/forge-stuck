@@ -14,7 +14,9 @@ import org.objectweb.asm.Type;
 /** Guards that every default owner mapping points at a real class and every whitelisted member really exists. */
 class ForgeOwnerMappingTargetsTest {
     private static final List<String> OWNERS = List.of(
+            "net/minecraftforge/event/AttachCapabilitiesEvent",
             "net/minecraftforge/common/capabilities/ICapabilityProvider",
+            "net/minecraftforge/common/extensions/IForgeBlockEntity",
             "net/minecraft/network/FriendlyByteBuf$Writer", "net/minecraft/network/FriendlyByteBuf$Reader",
             "net/minecraftforge/registries/RegistryObject", "net/minecraftforge/registries/DeferredRegister",
             "net/minecraftforge/registries/IForgeRegistry", "net/minecraftforge/registries/ForgeRegistries",

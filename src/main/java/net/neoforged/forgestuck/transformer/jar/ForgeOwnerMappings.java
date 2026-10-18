@@ -69,6 +69,15 @@ public final class ForgeOwnerMappings {
         String dr = "L" + R + "DeferredRegister;";
         String ro = "L" + R + "RegistryObject;";
         return new ForgeOwnerMappings()
+                .add(new Entry("net/minecraftforge/event/AttachCapabilitiesEvent",
+                        COMPAT + "LegacyAttachCapabilitiesEvent", Set.of(
+                                "<init>(Ljava/lang/Class;Ljava/lang/Object;)V",
+                                "getObject()Ljava/lang/Object;",
+                                "addCapability(Lnet/minecraft/resources/ResourceLocation;"
+                                        + "Lnet/minecraftforge/common/capabilities/ICapabilityProvider;)V",
+                                "getCapabilities()Ljava/util/Map;",
+                                "addListener(Ljava/lang/Runnable;)V",
+                                "getListeners()Ljava/util/List;")))
                 .add(new Entry("net/minecraftforge/common/capabilities/ICapabilityProvider",
                         COMPAT + "LegacyICapabilityProvider", Set.of()))
                 .add(new Entry("net/minecraft/network/FriendlyByteBuf$Writer",
@@ -233,6 +242,14 @@ public final class ForgeOwnerMappings {
                                 "onBlockExploded(Lnet/minecraft/world/level/block/state/BlockState;"
                                         + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
                                         + "Lnet/minecraft/world/level/Explosion;)V")))
+                .add(new Entry("net/minecraftforge/common/extensions/IForgeBlockEntity",
+                        "net/neoforged/neoforge/common/extensions/IBlockEntityExtension", Set.of(
+                                "onChunkUnloaded()V",
+                                "onLoad()V",
+                                "getPersistentData()Lnet/minecraft/nbt/CompoundTag;",
+                                "requestModelDataUpdate()V",
+                                "getModelData()Lnet/minecraftforge/client/model/data/ModelData;",
+                                "hasCustomOutlineRendering(Lnet/minecraft/world/entity/player/Player;)Z")))
                 .add(new Entry("net/minecraftforge/items/IItemHandler",
                         "net/neoforged/neoforge/items/IItemHandler", Set.of(
                                 "getSlots()I",

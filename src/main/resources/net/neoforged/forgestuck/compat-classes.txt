@@ -29,6 +29,7 @@ LegacyItemPickup
 LegacyByteBufWriter
 LegacyByteBufReader
 LegacyICapabilityProvider
+LegacyAttachCapabilitiesEvent
 LegacyEntityDataSerializer
 LegacyAbstractMegaTreeGrower
 LegacyRegistryBuilder
