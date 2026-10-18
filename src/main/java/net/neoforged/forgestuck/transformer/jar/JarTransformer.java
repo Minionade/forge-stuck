@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "32";
+    public static final String TRANSFORMER_VERSION = "33";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 
@@ -404,7 +404,7 @@ public class JarTransformer {
                 data = is.readAllBytes();
             }
             String className = name.substring(0, name.length() - ".class".length()).replace('/', '.');
-            if (LegacyEnumPrescan.mentionsItemDisplayContext(data)) {
+            if (LegacyEnumPrescan.mentionsLegacyExtensibleEnum(data)) {
                 enumCandidates.add(name.substring(0, name.length() - ".class".length()));
             }
             for (ClassTransformStep step : steps) {
@@ -420,8 +420,8 @@ public class JarTransformer {
     }
 
     /**
-     * Generates NeoForge enum-extension JSON (one file per mod) for statically evaluable legacy
-     * {@code ItemDisplayContext.create} calls and returns the metadata path to register for each mod id.
+     * Generates NeoForge enum-extension JSON (one file per mod) for statically evaluable legacy enum factories and
+     * returns the metadata path to register for each mod id.
      */
     private Map<String, String> writeEnumExtensions(JarFile in, List<String> candidates, String modsToml,
             String jarName, JarOutputStream out) throws IOException {
@@ -435,7 +435,8 @@ public class JarTransformer {
                 return null;
             }
         });
-        if (plan.entries().isEmpty() && plan.unresolvedSites().isEmpty()) return Map.of();
+        if (plan.entries().isEmpty() && plan.placementEntries().isEmpty() && plan.unresolvedSites().isEmpty()
+                && plan.unresolvedPlacementSites().isEmpty()) return Map.of();
         Set<String> modIds = new TreeSet<>();
         List<UnmodifiableConfig> sourceMods = new TomlParser().parse(modsToml).getOrElse("mods", List.of());
         for (UnmodifiableConfig mod : sourceMods) {
@@ -443,8 +444,10 @@ public class JarTransformer {
             if (id != null) modIds.add(id);
         }
         Map<String, String> files = new LinkedHashMap<>();
+        boolean includeUnprefixedPlacements = modIds.size() == 1;
         for (String modId : modIds) {
-            String json = EnumExtensionJson.render(modId, plan.entries());
+            String json = EnumExtensionJson.render(modId, plan.entries(), plan.placementEntries(),
+                    includeUnprefixedPlacements);
             if (json == null) continue;
             String path = EnumExtensionJson.path(modId);
             out.putNextEntry(new JarEntry(path));
@@ -461,9 +464,22 @@ public class JarTransformer {
         }
         LOGGER.info("{} {} generated {} ItemDisplayContext enum extension(s) for mod(s) {}", TAG, jarName,
                 plan.entries().size(), files.keySet());
+        LOGGER.info("{} {} generated {} SpawnPlacements.Type enum extension(s)", TAG, jarName,
+                plan.placementEntries().size());
         for (String site : plan.unresolvedSites()) {
             LOGGER.warn("{} {} ItemDisplayContext.create in {} has arguments that cannot be evaluated statically; "
                     + "that call fails precisely when executed (no enum extension generated)", TAG, jarName, site);
+        }
+        for (String site : plan.unresolvedPlacementSites()) {
+            LOGGER.warn("{} {} SpawnPlacements.Type.create in {} has arguments that cannot be evaluated statically; "
+                    + "that call fails precisely when executed (no enum extension generated)", TAG, jarName, site);
+        }
+        for (LegacyEnumExtensionPlanner.PlacementEntry entry : plan.placementEntries()) {
+            if (modIds.size() > 1 && modIds.stream().noneMatch(id ->
+                    entry.name().toLowerCase(Locale.ROOT).startsWith(id.toLowerCase(Locale.ROOT)))) {
+                LOGGER.warn("{} {} SpawnPlacements.Type.create name {} does not identify a mod id in this "
+                        + "multi-mod jar; no enum constant is generated for it", TAG, jarName, entry.name());
+            }
         }
         return files;
     }

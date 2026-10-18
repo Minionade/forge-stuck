@@ -84,6 +84,36 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void removedItemOwnersAreMappedToNeoForgeAndComponentShim() {
+        String forgeItem = "net/minecraftforge/common/extensions/IForgeItem";
+        String dyeable = "net/minecraft/world/item/DyeableLeatherItem";
+        String compatDyeable = "net/neoforged/forgestuck/compat/LegacyDyeableLeatherItem";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LegacyItem", null, "java/lang/Object",
+                new String[] {forgeItem, dyeable});
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "color",
+                "(L" + dyeable + ";Lnet/minecraft/world/item/ItemStack;)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, dyeable, "getColor",
+                "(Lnet/minecraft/world/item/ItemStack;)I", true);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        byte[] out = new ForgeOwnerRemapStep().apply("com.ex.LegacyItem", writer.toByteArray());
+        ClassNode node = parse(out);
+        assertEquals("net/neoforged/neoforge/common/extensions/IItemExtension", node.interfaces.get(0));
+        assertEquals(compatDyeable, node.interfaces.get(1));
+        MethodInsnNode call = (MethodInsnNode) node.methods.get(0).instructions.toArray()[2];
+        assertEquals(compatDyeable, call.owner);
+        assertFalse(new String(out, StandardCharsets.ISO_8859_1).contains(forgeItem));
+        assertFalse(new String(out, StandardCharsets.ISO_8859_1).contains(dyeable));
+    }
+
+    @Test
     void classWithoutForgeOwnersIsUnchanged() {
         byte[] in = SrgCompatTest.callerClass("com/ex/Plain", LIVING, "m_1_");
         OwnerRemapReport report = new OwnerRemapReport();
