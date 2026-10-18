@@ -55,6 +55,8 @@ class CompatRelocationTest {
                 String body = new String(jf.getInputStream(e).readAllBytes(), StandardCharsets.ISO_8859_1);
                 assertFalse(body.contains(CompatRelocation.FROM), e.getName());
             }
+            assertTrue(jf.getEntry(CompatRelocation.TO + "LegacyContainerFactory.class") != null);
+            assertTrue(jf.getEntry(CompatRelocation.TO + "LegacyForgeMenuType.class") != null);
         }
         try (URLClassLoader l = new URLClassLoader(new URL[] {jar.toUri().toURL()}, app)) {
             Class<?> c = Class.forName("net.neoforged.forgestuck.gamecompat.UnsupportedForgeApi", true, l);

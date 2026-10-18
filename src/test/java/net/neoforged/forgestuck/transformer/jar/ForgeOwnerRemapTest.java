@@ -188,6 +188,41 @@ class ForgeOwnerRemapTest {
         assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(node)));
     }
 
+    @Test
+    void fluidHandlerAndActionOwnersMapToNeoForge() {
+        String oldHandler = "net/minecraftforge/fluids/capability/IFluidHandler";
+        String newHandler = "net/neoforged/neoforge/fluids/capability/IFluidHandler";
+        String oldItemHandler = oldHandler + "Item";
+        String newItemHandler = "net/neoforged/neoforge/fluids/capability/IFluidHandlerItem";
+        String oldAction = oldHandler + "$FluidAction";
+        String newAction = newHandler + "$FluidAction";
+        String oldStack = "net/minecraftforge/fluids/FluidStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/FluidCompat", null, "java/lang/Object",
+                new String[] {oldHandler, oldItemHandler});
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "fill",
+                "(L" + oldHandler + ";" + "L" + oldStack + ";L" + oldAction + ";)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, oldHandler, "fill",
+                "(L" + oldStack + ";L" + oldAction + ";)I", true);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.FluidCompat", writer.toByteArray()));
+        assertEquals(List.of(newHandler, newItemHandler), node.interfaces);
+        assertEquals("(L" + newHandler + ";Lnet/neoforged/neoforge/fluids/FluidStack;"
+                + "L" + newAction + ";)I", node.methods.get(0).desc);
+        MethodInsnNode call = (MethodInsnNode) node.methods.get(0).instructions.toArray()[3];
+        assertEquals(newHandler, call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/fluids/FluidStack;L" + newAction + ";)I", call.desc);
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(node)));
+    }
+
     private static byte[] nodeBytes(ClassNode node) {
         org.objectweb.asm.ClassWriter writer = new org.objectweb.asm.ClassWriter(0);
         node.accept(writer);

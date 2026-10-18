@@ -71,6 +71,8 @@ LegacyNetworkEvent$ServerCustomPayloadEvent
 LegacyCustomPacket
 LegacyEventChannel
 LegacyEventChannel$Raw
+LegacyContainerFactory
+LegacyForgeMenuType
 DatapackRegistryView
 LegacyMessageHandler
 LegacyEnchantmentRegistry

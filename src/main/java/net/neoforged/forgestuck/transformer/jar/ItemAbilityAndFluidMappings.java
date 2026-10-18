@@ -50,11 +50,33 @@ final class ItemAbilityAndFluidMappings {
         }
         String props = "L" + F + "$Properties;";
         String sup = "Ljava/util/function/Supplier;";
+        String fluidStack = "Lnet/minecraftforge/fluids/FluidStack;";
+        String fluidAction = "Lnet/minecraftforge/fluids/capability/IFluidHandler$FluidAction;";
         List<ForgeOwnerMappings.Entry> list = new ArrayList<>(List.of(
                 e("net/minecraftforge/common/ToolAction", "net/neoforged/neoforge/common/ItemAbility", Set.of(
                         "get(Ljava/lang/String;)" + ta, "name()Ljava/lang/String;",
                         "getActions()Ljava/util/Collection;")),
                 e("net/minecraftforge/common/ToolActions", "net/neoforged/neoforge/common/ItemAbilities", actions),
+                e("net/minecraftforge/fluids/capability/IFluidHandler",
+                        "net/neoforged/neoforge/fluids/capability/IFluidHandler", Set.of(
+                                "getTanks()I",
+                                "getFluidInTank(I)" + fluidStack,
+                                "getTankCapacity(I)I",
+                                "isFluidValid(I" + fluidStack + ")Z",
+                                "fill(" + fluidStack + fluidAction + ")I",
+                                "drain(" + fluidStack + fluidAction + ")" + fluidStack,
+                                "drain(I" + fluidAction + ")" + fluidStack)),
+                e("net/minecraftforge/fluids/capability/IFluidHandler$FluidAction",
+                        "net/neoforged/neoforge/fluids/capability/IFluidHandler$FluidAction", Set.of(
+                                "EXECUTEL" + "net/minecraftforge/fluids/capability/IFluidHandler$FluidAction;",
+                                "SIMULATEL" + "net/minecraftforge/fluids/capability/IFluidHandler$FluidAction;",
+                                "values()[Lnet/minecraftforge/fluids/capability/IFluidHandler$FluidAction;",
+                                "valueOf(Ljava/lang/String;)Lnet/minecraftforge/fluids/capability/IFluidHandler$FluidAction;",
+                                "execute()Z",
+                                "simulate()Z")),
+                e("net/minecraftforge/fluids/capability/IFluidHandlerItem",
+                        "net/neoforged/neoforge/fluids/capability/IFluidHandlerItem",
+                        Set.of("getContainer()Lnet/minecraft/world/item/ItemStack;")),
                 e("net/minecraftforge/fluids/FluidStack", "net/neoforged/neoforge/fluids/FluidStack", Set.of(
                         "<init>(Lnet/minecraft/world/level/material/Fluid;I)V",
                         "EMPTYLnet/minecraftforge/fluids/FluidStack;",
