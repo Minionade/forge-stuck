@@ -69,6 +69,14 @@ public final class ForgeOwnerMappings {
         String dr = "L" + R + "DeferredRegister;";
         String ro = "L" + R + "RegistryObject;";
         return new ForgeOwnerMappings()
+                .add(new Entry("net/minecraftforge/eventbus/api/IGenericEvent",
+                        COMPAT + "LegacyIGenericEvent", Set.of(
+                                "getGenericType()Ljava/lang/reflect/Type;")))
+                .add(new Entry("net/minecraftforge/eventbus/api/GenericEvent",
+                        COMPAT + "LegacyGenericEvent", Set.of(
+                                "<init>()V",
+                                "<init>(Ljava/lang/Class;)V",
+                                "getGenericType()Ljava/lang/reflect/Type;")))
                 .add(new Entry("net/minecraftforge/event/AttachCapabilitiesEvent",
                         COMPAT + "LegacyAttachCapabilitiesEvent", Set.of(
                                 "<init>(Ljava/lang/Class;Ljava/lang/Object;)V",
@@ -78,6 +86,16 @@ public final class ForgeOwnerMappings {
                                 "getCapabilities()Ljava/util/Map;",
                                 "addListener(Ljava/lang/Runnable;)V",
                                 "getListeners()Ljava/util/List;")))
+                .add(new Entry("net/minecraftforge/common/SoundAction",
+                        "net/neoforged/neoforge/common/SoundAction", Set.of(
+                                "get(Ljava/lang/String;)Lnet/minecraftforge/common/SoundAction;",
+                                "name()Ljava/lang/String;",
+                                "toString()Ljava/lang/String;")))
+                .add(new Entry("net/minecraftforge/common/SoundActions",
+                        "net/neoforged/neoforge/common/SoundActions", Set.of(
+                                "BUCKET_FILLLnet/minecraftforge/common/SoundAction;",
+                                "BUCKET_EMPTYLnet/minecraftforge/common/SoundAction;",
+                                "FLUID_VAPORIZELnet/minecraftforge/common/SoundAction;")))
                 .add(new Entry("net/minecraftforge/common/capabilities/ICapabilityProvider",
                         COMPAT + "LegacyICapabilityProvider", Set.of()))
                 .add(new Entry("net/minecraft/network/FriendlyByteBuf$Writer",

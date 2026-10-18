@@ -72,6 +72,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         boolean mixin = isMixin(node);
         int replaced = mixin ? 0 : rewriteLegacyFluidStackConstructors(className, node);
         if (!mixin) {
+            replaced += rewriteGenericListenerCalls(node);
             replaced += rewriteByteBufCodecCalls(node);
             replaced += rewriteLegacyEntityDataSerializerFactories(node);
         }
@@ -125,7 +126,6 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */
     private static final java.util.Map<String, String> REDIRECTS = java.util.Map.ofEntries(
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V", "net/neoforged/forgestuck/compat/LegacyEventBusRegistration"),
-            java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.addGenericListener(Ljava/lang/Class;Ljava/util/function/Consumer;)V", "net/neoforged/forgestuck/compat/LegacyGenericListenerRegistration"),
             java.util.Map.entry("net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V", "net/neoforged/forgestuck/compat/LegacyCapabilities"),
             java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
             java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
@@ -204,6 +204,63 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             "Lnet/neoforged/forgestuck/compat/LegacyByteBufWriter;";
     private static final String LEGACY_READER =
             "Lnet/neoforged/forgestuck/compat/LegacyByteBufReader;";
+    private static final String GENERIC_LISTENER_OWNER = "net/minecraftforge/eventbus/api/IEventBus";
+    private static final String GENERIC_LISTENER_DESC =
+            "(Ljava/lang/Class;Ljava/util/function/Consumer;)V";
+    private static final String GENERIC_LISTENER_HELPER =
+            "net/neoforged/forgestuck/compat/LegacyGenericListenerRegistration";
+
+    private static int rewriteGenericListenerCalls(ClassNode node) {
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (!(insn instanceof MethodInsnNode call)
+                        || !GENERIC_LISTENER_OWNER.equals(call.owner)
+                        || !"addGenericListener".equals(call.name)
+                        || !GENERIC_LISTENER_DESC.equals(call.desc)) {
+                    continue;
+                }
+                Type listenerEventType = invokedConsumerEventType(previousMeaningful(call));
+                if (listenerEventType == null) {
+                    call.setOpcode(Opcodes.INVOKESTATIC);
+                    call.owner = GENERIC_LISTENER_HELPER;
+                    call.name = "addGenericListener";
+                    call.desc = "(Lnet/neoforged/bus/api/IEventBus;" + GENERIC_LISTENER_DESC.substring(1);
+                    call.itf = false;
+                } else {
+                    method.instructions.insertBefore(call, new LdcInsnNode(listenerEventType));
+                    call.setOpcode(Opcodes.INVOKESTATIC);
+                    call.owner = GENERIC_LISTENER_HELPER;
+                    call.name = "addGenericListener";
+                    call.desc = "(Lnet/neoforged/bus/api/IEventBus;" + GENERIC_LISTENER_DESC.substring(1)
+                            .replace(")V", ";Ljava/lang/Class;)V");
+                    call.itf = false;
+                }
+                rewritten++;
+            }
+        }
+        return rewritten;
+    }
+
+    private static AbstractInsnNode previousMeaningful(AbstractInsnNode insn) {
+        AbstractInsnNode previous = insn.getPrevious();
+        while (previous != null && (previous.getType() == AbstractInsnNode.LABEL
+                || previous.getType() == AbstractInsnNode.LINE || previous.getType() == AbstractInsnNode.FRAME)) {
+            previous = previous.getPrevious();
+        }
+        return previous;
+    }
+
+    private static Type invokedConsumerEventType(AbstractInsnNode consumer) {
+        if (!(consumer instanceof InvokeDynamicInsnNode indy) || indy.bsmArgs.length < 3
+                || !(indy.bsmArgs[2] instanceof Type instantiatedType)
+                || instantiatedType.getSort() != Type.METHOD) {
+            return null;
+        }
+        Type[] parameters = instantiatedType.getArgumentTypes();
+        if (parameters.length != 1 || parameters[0].getSort() != Type.OBJECT) return null;
+        return parameters[0];
+    }
 
     /**
      * 1.21's FriendlyByteBuf helpers take StreamEncoder/StreamDecoder where 1.20.1 took Writer/Reader. The compat

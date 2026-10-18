@@ -30,6 +30,8 @@ LegacyByteBufWriter
 LegacyByteBufReader
 LegacyICapabilityProvider
 LegacyAttachCapabilitiesEvent
+LegacyIGenericEvent
+LegacyGenericEvent
 LegacyEntityDataSerializer
 LegacyAbstractMegaTreeGrower
 LegacyRegistryBuilder

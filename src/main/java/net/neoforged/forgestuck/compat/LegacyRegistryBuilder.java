@@ -11,6 +11,9 @@ public class LegacyRegistryBuilder<T> {
     private int maxId = Integer.MAX_VALUE - 1;
     private ResourceLocation defaultKey;
     private boolean sync = true;
+    private boolean savingDisabled;
+    private boolean modificationsAllowed;
+    private boolean tagsEnabled;
 
     public LegacyRegistryBuilder() {}
 
@@ -19,6 +22,17 @@ public class LegacyRegistryBuilder<T> {
         if (maxId != Integer.MAX_VALUE - 1) target.maxId(maxId);
         if (defaultKey != null) target.defaultKey(defaultKey);
         target.sync(sync);
+        if (savingDisabled) {
+            UnsupportedForgeApi.fail("net.minecraftforge.registries.RegistryBuilder.disableSaving()",
+                    String.valueOf(name));
+        }
+        if (modificationsAllowed) {
+            UnsupportedForgeApi.fail("net.minecraftforge.registries.RegistryBuilder.allowModification()",
+                    String.valueOf(name));
+        }
+        if (tagsEnabled) {
+            UnsupportedForgeApi.fail("net.minecraftforge.registries.RegistryBuilder.hasTags()", String.valueOf(name));
+        }
     }
 
     public LegacyRegistryBuilder<T> setName(ResourceLocation name) {
@@ -37,6 +51,7 @@ public class LegacyRegistryBuilder<T> {
     }
 
     public LegacyRegistryBuilder<T> disableSaving() {
+        savingDisabled = true;
         return this;
     }
 
@@ -46,10 +61,12 @@ public class LegacyRegistryBuilder<T> {
     }
 
     public LegacyRegistryBuilder<T> allowModification() {
+        modificationsAllowed = true;
         return this;
     }
 
     public LegacyRegistryBuilder<T> hasTags() {
+        tagsEnabled = true;
         return this;
     }
 

@@ -118,7 +118,7 @@ class LegacyEventChannelTest {
         assertEquals("(Lnet/neoforged/neoforge/capabilities/RegisterCapabilitiesEvent;Ljava/lang/Class;)V", call.desc);
         assertTrue(java.util.Arrays.stream(m.instructions.toArray()).anyMatch(i -> i instanceof org.objectweb.asm.tree.FieldInsnNode f
                 && f.owner.equals("net/neoforged/neoforge/common/ItemAbilities") && f.desc.equals("Lnet/neoforged/neoforge/common/ItemAbility;")));
-        LegacyCapabilities.register(null, String.class);
-        assertTrue(LegacyCapabilities.declared().contains(String.class));
+        assertThrows(UnsupportedOperationException.class,
+                () -> LegacyCapabilities.register(null, String.class));
     }
 }
