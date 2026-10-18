@@ -60,9 +60,10 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
 
     @Override
     public byte[] apply(String className, byte[] bytes, OwnerRemapReport report) {
-        if (bytes == null || className.startsWith("net.neoforged.forgestuck") || !mappings.mayReference(bytes)) {
+        if (bytes == null || className.startsWith("net.neoforged.forgestuck")) {
             return bytes;
         }
+        if (!mappings.mayReference(bytes) && !hasLegacyGameApiCalls(bytes)) return bytes;
         ClassNode node = new ClassNode();
         new ClassReader(bytes).accept(node, 0);
 
@@ -72,10 +73,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         boolean mixin = isMixin(node);
         int replaced = mixin ? 0 : rewriteLegacyFluidStackConstructors(className, node);
         if (!mixin) {
+            replaced += rewriteLegacyMobEffectModifiers(node);
             replaced += rewriteGenericListenerCalls(node);
             replaced += rewriteByteBufCodecCalls(node);
             replaced += rewriteLegacyEntityDataSerializerFactories(node);
         }
+
         if (!mixin) replaced += replaceUnsupported(className, node, report);
         if (!mixin) replaced += replaceUnsupportedHandles(className, node, report);
         collectBlocked(className, node, blocked, adapted, uses);
@@ -105,6 +108,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         return writer.toByteArray();
     }
 
+    private static boolean hasLegacyGameApiCalls(byte[] bytes) {
+        String content = new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1);
+        return content.contains("net/minecraft/world/effect/MobEffect")
+                || content.contains("net/minecraft/world/entity/EntityType$Builder");
+    }
+
     /**
      * An InnerClasses entry names (inner, outer, simple name). When a mapping turns a nested legacy class into a
      * top-level one (or into a differently nested one) the remapped triple no longer satisfies
@@ -125,6 +134,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
 
     /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */
     private static final java.util.Map<String, String> REDIRECTS = java.util.Map.ofEntries(
+            java.util.Map.entry("net/minecraft/world/entity/EntityType$Builder.setCustomClientFactory(Ljava/util/function/BiFunction;)Lnet/minecraft/world/entity/EntityType$Builder;",
+                    "net/neoforged/forgestuck/compat/LegacyEntityTypeBuilder"),
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V", "net/neoforged/forgestuck/compat/LegacyEventBusRegistration"),
             java.util.Map.entry("net/minecraftforge/registries/RegisterEvent.getForgeRegistry()Lnet/minecraftforge/registries/IForgeRegistry;",
                     "net/neoforged/forgestuck/compat/LegacyRegisterEvent"),
@@ -144,6 +155,28 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                         java.util.Map.entry(PICKUP + ".isCanceled()Z", LEGACY_PICKUP),
                         java.util.Map.entry(PICKUP + ".isCancelable()Z", LEGACY_PICKUP),
                         java.util.Map.entry(PICKUP + ".hasResult()Z", LEGACY_PICKUP));
+
+    private static int rewriteLegacyMobEffectModifiers(ClassNode node) {
+        int rewritten = 0;
+        String owner = "net/minecraft/world/effect/MobEffect";
+        String desc = "(Lnet/minecraft/world/entity/ai/attributes/Attribute;Ljava/lang/String;D"
+                + "Lnet/minecraft/world/entity/ai/attributes/AttributeModifier$Operation;)L" + owner + ";";
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (!(insn instanceof MethodInsnNode call) || !call.owner.equals(owner)
+                        || !call.name.equals("addAttributeModifier") || !call.desc.equals(desc)) continue;
+                Type[] args = Type.getArgumentTypes(desc);
+                Type[] staticArgs = new Type[args.length + 1];
+                staticArgs[0] = Type.getObjectType(owner);
+                System.arraycopy(args, 0, staticArgs, 1, args.length);
+                method.instructions.set(call, new MethodInsnNode(Opcodes.INVOKESTATIC,
+                        "net/neoforged/forgestuck/compat/LegacyMobEffect", "addAttributeModifier",
+                        Type.getMethodDescriptor(Type.getReturnType(desc), staticArgs), false));
+                rewritten++;
+            }
+        }
+        return rewritten;
+    }
 
                 /**
                  * Unsupported members no longer leave their owner unmapped (which guaranteed NoClassDefFoundError for every

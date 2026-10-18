@@ -108,7 +108,15 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         for (MethodNode m : node.methods) {
             java.util.Map<AbstractInsnNode, String> unmapped = new java.util.LinkedHashMap<>();
             for (AbstractInsnNode insn : m.instructions.toArray()) {
-                if (insn instanceof MethodInsnNode call && LegacyNameMappings.looksLikeSrg(call.name)) {
+                if (insn instanceof MethodInsnNode call && isLegacyItemStackGetTag(call)) {
+                    call.setOpcode(org.objectweb.asm.Opcodes.INVOKESTATIC);
+                    call.owner = "net/neoforged/forgestuck/compat/LegacyItemStackShim";
+                    call.name = "getTag";
+                    call.desc = "(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/nbt/CompoundTag;";
+                    call.itf = false;
+                    modified = true;
+                    remapped.add("ItemStack.getTag -> LegacyItemStackShim.getTag");
+                } else if (insn instanceof MethodInsnNode call && LegacyNameMappings.looksLikeSrg(call.name)) {
                     String mapped = mappings.map(call.owner, call.name, call.desc);
                     if (mapped == null) {
                         if (!isMixin && ownerIsGame(call.owner) && !call.owner.equals(node.name)) {
@@ -118,8 +126,8 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     }
                     boolean own = call.owner.equals(node.name)
                             && ownRenamed.contains("M" + call.name + call.desc + "=" + mapped);
-                    boolean inherited = !call.owner.equals(node.name)
-                            || node.methods.stream().noneMatch(declared -> declared.name.equals(call.name)
+                    boolean inherited = call.owner.equals(node.name)
+                            && node.methods.stream().noneMatch(declared -> declared.name.equals(call.name)
                                     && declared.desc.equals(call.desc));
                     if (own || ownerIsGame(call.owner) || inherited || isInheritedResourceLocationMethod(call)) {
                         remapped.add(call.name + "->" + mapped);
@@ -155,8 +163,8 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                         continue;
                     }
                     boolean own = field.owner.equals(node.name) && ownRenamed.contains("F" + field.name + "=" + mapped);
-                    boolean inherited = !field.owner.equals(node.name)
-                            || node.fields.stream().noneMatch(declared -> declared.name.equals(field.name)
+                    boolean inherited = field.owner.equals(node.name)
+                            && node.fields.stream().noneMatch(declared -> declared.name.equals(field.name)
                                     && declared.desc.equals(field.desc));
                     if (own || ownerIsGame(field.owner) || inherited) {
                         remapped.add(field.name + "->" + mapped);
@@ -183,6 +191,13 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         ClassWriter writer = new ClassWriter(0);
         node.accept(writer);
         return writer.toByteArray();
+    }
+
+    private static boolean isLegacyItemStackGetTag(MethodInsnNode call) {
+        return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKEVIRTUAL
+                && call.owner.equals("net/minecraft/world/item/ItemStack")
+                && (call.name.equals("m_41783_") || call.name.equals("getTag"))
+                && call.desc.equals("()Lnet/minecraft/nbt/CompoundTag;");
     }
 
     private static boolean isInheritedResourceLocationMethod(MethodInsnNode call) {

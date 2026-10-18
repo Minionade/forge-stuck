@@ -35,6 +35,7 @@ LegacyAttachCapabilitiesEvent
 LegacyIGenericEvent
 LegacyGenericEvent
 LegacyEntityDataSerializer
+LegacyEntityTypeBuilder
 LegacyAbstractMegaTreeGrower
 LegacyRegistryBuilder
 LegacyStemGrownBlock
@@ -55,6 +56,7 @@ LegacyTickEvent$ServerTickEvent
 LegacyTickEvent$ClientTickEvent
 LegacyTickEvent$LevelTickEvent
 LegacyLivingTickEvent
+LegacyMobEffect
 LegacyTickBridge
 LegacyClientTickBridge
 LegacyBufferBuilders

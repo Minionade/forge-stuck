@@ -61,6 +61,7 @@ final class ConditionMappings {
                                 + "Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "sound(Lnet/minecraftforge/common/SoundAction;Lnet/minecraft/sounds/SoundEvent;)"
                                 + "Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "rarity(Lnet/minecraft/world/item/Rarity;)Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "lightLevel(I)Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "density(I)Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "temperature(I)Lnet/minecraftforge/fluids/FluidType$Properties;",
