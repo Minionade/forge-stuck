@@ -223,6 +223,87 @@ class ForgeOwnerRemapTest {
         assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(node)));
     }
 
+    @Test
+    void unsupportedFluidStackCallsDoNotLeaveTheForgeOwnerUnmapped() {
+        String oldStack = "net/minecraftforge/fluids/FluidStack";
+        String newStack = "net/neoforged/neoforge/fluids/FluidStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/FluidTagAccess", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "tag",
+                "(L" + oldStack + ";)Lnet/minecraft/nbt/CompoundTag;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, oldStack, "getTag", "()Lnet/minecraft/nbt/CompoundTag;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.FluidTagAccess", writer.toByteArray()));
+        assertEquals("(L" + newStack + ";)Lnet/minecraft/nbt/CompoundTag;", node.methods.get(0).desc);
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(node)));
+        assertTrue(new String(nodeBytes(node), StandardCharsets.ISO_8859_1).contains("UnsupportedForgeApi"));
+    }
+
+    @Test
+    void unsupportedFluidStackMethodHandlesDoNotLeaveTheForgeOwnerUnmapped() {
+        String oldStack = "net/minecraftforge/fluids/FluidStack";
+        String newStack = "net/neoforged/neoforge/fluids/FluidStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/FluidTagHandle", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "tagHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        method.visitCode();
+        method.visitLdcInsn(new org.objectweb.asm.Handle(Opcodes.H_INVOKEVIRTUAL, oldStack, "getTag",
+                "()Lnet/minecraft/nbt/CompoundTag;", false));
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.FluidTagHandle", writer.toByteArray()));
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(node)));
+        var handle = (org.objectweb.asm.Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                node.methods.get(0).instructions.getFirst()).cst;
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals("com/ex/FluidTagHandle", handle.getOwner());
+        assertTrue(handle.getName().startsWith("$forgestuck$unsupported$"));
+        assertEquals("(L" + newStack + ";)Lnet/minecraft/nbt/CompoundTag;", handle.getDesc());
+        assertTrue(node.methods.stream().anyMatch(m -> m.name.equals(handle.getName())));
+    }
+
+    @Test
+    void nbtFluidStackConstructorUsesNeoForgeComponentAdapter() {
+        String oldStack = "net/minecraftforge/fluids/FluidStack";
+        String compatFactory = "net/neoforged/forgestuck/compat/LegacyFluidStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/FluidStackFactory", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "create",
+                "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)L" + oldStack + ";",
+                null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW, oldStack);
+        method.visitInsn(Opcodes.DUP);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ILOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, oldStack, "<init>",
+                "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)V", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.FluidStackFactory", writer.toByteArray()));
+        MethodInsnNode call = (MethodInsnNode) node.methods.get(0).instructions.toArray()[3];
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals(compatFactory, call.owner);
+        assertEquals("create", call.name);
+        assertEquals("(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)"
+                + "Lnet/neoforged/neoforge/fluids/FluidStack;", call.desc);
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(node)));
+    }
+
     private static byte[] nodeBytes(ClassNode node) {
         org.objectweb.asm.ClassWriter writer = new org.objectweb.asm.ClassWriter(0);
         node.accept(writer);

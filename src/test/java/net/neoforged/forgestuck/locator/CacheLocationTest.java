@@ -44,4 +44,24 @@ class CacheLocationTest {
             assertEquals(List.of(out), files.toList(), "no leftover temp files");
         }
     }
+
+    @Test
+    void staleGeneratedCacheFilesArePrunedWithoutRemovingActiveOrUnknownFiles(@TempDir Path game) throws Exception {
+        Path cache = Files.createDirectories(ForgeStuckCandidateLocator.cacheDir(game));
+        Path active = Files.write(cache.resolve("a".repeat(64) + "-t0-123456789abc.jar"), new byte[] {1});
+        Path stale = Files.write(cache.resolve("b".repeat(64) + "-t33-abcdefabcdef.jar"), new byte[] {1});
+        Path legacyStale = Files.write(cache.resolve("c".repeat(64) + "-t32.jar"), new byte[] {1});
+        Path staleCompat = Files.write(cache.resolve("forgestuck-compat-1234567890abcdef.jar"), new byte[] {1});
+        Path unrelated = Files.write(cache.resolve("user-notes.txt"), new byte[] {1});
+        Path temp = Files.write(cache.resolve("forgestuck-abandoned.tmp"), new byte[] {1});
+
+        ForgeStuckCandidateLocator.pruneStaleCacheFiles(cache, java.util.Set.of(active));
+
+        assertTrue(Files.exists(active));
+        assertFalse(Files.exists(stale));
+        assertFalse(Files.exists(legacyStale));
+        assertFalse(Files.exists(staleCompat));
+        assertFalse(Files.exists(temp));
+        assertTrue(Files.exists(unrelated));
+    }
 }

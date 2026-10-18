@@ -47,8 +47,8 @@ import org.slf4j.LoggerFactory;
  * NOTE: this does not remap Forge 1.20.1 APIs to NeoForge 1.21.1 APIs.
  */
 public class JarTransformer {
-    /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "33";
+    /** Stable production cache index; the code fingerprint invalidates transformed jars as code changes. */
+    public static final String TRANSFORMER_VERSION = "0";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 

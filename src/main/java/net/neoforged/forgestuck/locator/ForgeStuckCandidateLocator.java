@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Locale;
@@ -33,6 +34,10 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
      */
     public static final String CACHE_DIR_NAME = ".forgestuck";
     private static final String OLD_CACHE_DIR = ".forgestuck/cache";
+    private static final java.util.regex.Pattern TRANSFORMED_JAR =
+            java.util.regex.Pattern.compile("[0-9a-f]{64}-t[0-9]+(?:-[0-9a-f]{12})?\\.jar");
+    private static final java.util.regex.Pattern COMPAT_JAR =
+            java.util.regex.Pattern.compile("forgestuck-compat-[0-9a-f]{16}\\.jar");
 
     public static Path cacheDir(Path gameDir) {
         return gameDir.resolve("mods").resolve(CACHE_DIR_NAME);
@@ -81,17 +86,20 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
         }
 
         JarTransformer transformer = JarTransformer.forRuntime();
-        addRuntimeCompatJar(context, pipeline, cacheDir);
+        Set<Path> activeCacheFiles = new HashSet<>();
+        Path runtimeCompatJar = addRuntimeCompatJar(context, pipeline, cacheDir);
+        if (runtimeCompatJar != null) activeCacheFiles.add(runtimeCompatJar);
 
         StartupProgress progress = new StartupProgress(createDisplay(), jars.size());
         transformer.withProgress(progress);
         progress.begin();
         try {
-            processJars(context, pipeline, jars, transformer, cacheDir, progress);
+            processJars(context, pipeline, jars, transformer, cacheDir, progress, activeCacheFiles);
         } finally {
             progress.end();
             LOGGER.info("{} done: {} transformed ({} ms), {} cached", TAG, progress.transformedCount(),
                     progress.transformMillis(), progress.cachedCount());
+            pruneStaleCacheFiles(cacheDir, activeCacheFiles);
         }
     }
 
@@ -99,16 +107,18 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
      * Compat classes loaded from this jar live in the FML service layer and cannot see Minecraft; a relocated copy is
      * registered as a library so it lands in the game layer next to the transformed mods.
      */
-    private void addRuntimeCompatJar(ILaunchContext context, IDiscoveryPipeline pipeline, Path cacheDir) {
+    private Path addRuntimeCompatJar(ILaunchContext context, IDiscoveryPipeline pipeline, Path cacheDir) {
         try {
             Path jar = CompatRelocation.writeRuntimeJar(cacheDir, ForgeStuckCandidateLocator.class.getClassLoader());
             var added = pipeline.addPath(jar, ModFileDiscoveryAttributes.DEFAULT.withLocator(this),
                     IncompatibleFileReporting.ERROR);
             LOGGER.info("{} game-layer compat library {} ({})", TAG, jar.getFileName(),
                     added.isPresent() ? "registered" : "not accepted by the loader");
+            return jar;
         } catch (Exception | LinkageError e) {
             LOGGER.error("{} could not provide the game-layer compat library; transformed mods will fail to link: {}",
                     TAG, e.toString(), e);
+            return null;
         }
     }
 
@@ -130,7 +140,7 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
     }
 
     private void processJars(ILaunchContext context, IDiscoveryPipeline pipeline, List<Path> jars,
-            JarTransformer transformer, Path cacheDir, StartupProgress progress) {
+            JarTransformer transformer, Path cacheDir, StartupProgress progress, Set<Path> activeCacheFiles) {
         for (Path jar : jars) {
             String name = jar.getFileName().toString();
             String lower = name.toLowerCase(Locale.ROOT);
@@ -170,6 +180,10 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
                 reportMissingLanguageLoader(jar);
 
                 JarTransformer.Result result = transformer.transformCached(jar, cacheDir);
+                if (result.output().toAbsolutePath().normalize().getParent()
+                        .equals(cacheDir.toAbsolutePath().normalize())) {
+                    activeCacheFiles.add(result.output().toAbsolutePath().normalize());
+                }
                 ModFileDiscoveryAttributes attributes = ModFileDiscoveryAttributes.DEFAULT.withLocator(this);
                 var modFile = pipeline.addPath(result.output(), attributes, IncompatibleFileReporting.ERROR);
 
@@ -185,6 +199,24 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
             } catch (Exception | LinkageError t) {
                 LOGGER.error("{} skipped {}: {}", TAG, name, t.toString(), t);
             }
+        }
+    }
+
+    static void pruneStaleCacheFiles(Path cacheDir, Set<Path> activeCacheFiles) {
+        if (!Files.isDirectory(cacheDir)) return;
+        Set<Path> active = activeCacheFiles.stream().map(p -> p.toAbsolutePath().normalize())
+                .collect(java.util.stream.Collectors.toSet());
+        try (Stream<Path> files = Files.list(cacheDir)) {
+            for (Path file : files.toList()) {
+                String name = file.getFileName().toString();
+                boolean managedJar = TRANSFORMED_JAR.matcher(name).matches() || COMPAT_JAR.matcher(name).matches();
+                boolean abandonedTemp = name.startsWith("forgestuck-") && name.endsWith(".tmp");
+                if ((managedJar || abandonedTemp) && !active.contains(file.toAbsolutePath().normalize())) {
+                    Files.deleteIfExists(file);
+                }
+            }
+        } catch (IOException e) {
+            LOGGER.warn("{} could not prune stale cache files in {}: {}", TAG, cacheDir, e.toString());
         }
     }
 

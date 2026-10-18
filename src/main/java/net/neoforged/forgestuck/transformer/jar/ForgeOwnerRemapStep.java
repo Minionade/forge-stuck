@@ -35,6 +35,10 @@ import org.slf4j.LoggerFactory;
 public class ForgeOwnerRemapStep implements ClassTransformStep {
     private static final Logger LOGGER = LoggerFactory.getLogger("forgestuck");
     private static final String TAG = "[Forge Stuck!!]";
+    private static final String FLUID_STACK = "net/minecraftforge/fluids/FluidStack";
+    private static final String FLUID_STACK_TAG_CTOR =
+            "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)V";
+    private static final String LEGACY_FLUID_STACK = "net/neoforged/forgestuck/compat/LegacyFluidStack";
 
     private final ForgeOwnerMappings mappings;
 
@@ -63,7 +67,9 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         int[] adapted = {0};
         Set<String> uses = new HashSet<>();
         boolean mixin = isMixin(node);
-        int replaced = mixin ? 0 : replaceUnsupported(className, node, report);
+        int replaced = mixin ? 0 : rewriteLegacyFluidStackConstructors(className, node);
+        if (!mixin) replaced += replaceUnsupported(className, node, report);
+        if (!mixin) replaced += replaceUnsupportedHandles(className, node, report);
         collectBlocked(className, node, blocked, adapted, uses);
         closeDependencies(uses, blocked);
         if (report != null) report.jarBlocked().addAll(blocked);
@@ -134,8 +140,9 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
      * Unsupported members no longer leave their owner unmapped (which guaranteed NoClassDefFoundError for every
      * other use of that owner). The call site is instead replaced by a call to {@link UnsupportedForgeApi#fail}
      * followed by stack-neutral pops and a default value, so the class links and verifies, and only executing that
-     * exact path throws {@link UnsupportedOperationException}. Constructors (uninitialized-object stack shape),
-     * method handles and Mixin classes cannot be rewritten this way and keep the owner unmapped in that class.
+     * exact path throws {@link UnsupportedOperationException}. Unsupported method handles are redirected through a
+     * synthetic throwing helper; unsupported constructors are only adapted when their allocation pattern is known.
+     * Mixin classes with unsupported members remain unmapped and are dropped from their config.
      */
     private int replaceUnsupported(String className, ClassNode node, OwnerRemapReport report) {
         int replaced = 0;
@@ -178,6 +185,180 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             }
         }
         return replaced;
+    }
+
+    private static int rewriteLegacyFluidStackConstructors(String className, ClassNode node) {
+        int replaced = 0;
+        String factoryDesc = "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)"
+                + "L" + FLUID_STACK + ";";
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (!(insn instanceof org.objectweb.asm.tree.TypeInsnNode allocation)
+                        || allocation.getOpcode() != Opcodes.NEW || !FLUID_STACK.equals(allocation.desc)) continue;
+                AbstractInsnNode duplicate = nextMeaningful(insn);
+                if (duplicate == null || duplicate.getOpcode() != Opcodes.DUP) continue;
+                for (AbstractInsnNode candidate = duplicate.getNext(); candidate != null; candidate = candidate.getNext()) {
+                    if (!(candidate instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKESPECIAL
+                            || !FLUID_STACK.equals(call.owner) || !"<init>".equals(call.name)
+                            || !FLUID_STACK_TAG_CTOR.equals(call.desc)) continue;
+                    method.instructions.remove(allocation);
+                    method.instructions.remove(duplicate);
+                    call.setOpcode(Opcodes.INVOKESTATIC);
+                    call.owner = LEGACY_FLUID_STACK;
+                    call.name = "create";
+                    call.desc = factoryDesc;
+                    call.itf = false;
+                    replaced++;
+                    LOGGER.debug("{} {} adapts Forge FluidStack NBT constructor", TAG, className);
+                    break;
+                }
+            }
+        }
+        return replaced;
+    }
+
+    private static AbstractInsnNode nextMeaningful(AbstractInsnNode insn) {
+        AbstractInsnNode next = insn.getNext();
+        while (next != null && (next.getType() == AbstractInsnNode.LABEL
+                || next.getType() == AbstractInsnNode.LINE || next.getType() == AbstractInsnNode.FRAME)) {
+            next = next.getNext();
+        }
+        return next;
+    }
+
+    private int replaceUnsupportedHandles(String className, ClassNode node, OwnerRemapReport report) {
+        int replaced = 0;
+        int nextHelper = 0;
+        for (MethodNode method : List.copyOf(node.methods)) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (insn instanceof LdcInsnNode ldc) {
+                    Object replacement = replaceUnsupportedHandle(className, node, method, ldc.cst, report,
+                            nextHelper);
+                    if (replacement instanceof Handle handle && replacement != ldc.cst) {
+                        ldc.cst = handle;
+                        nextHelper++;
+                        replaced++;
+                    }
+                } else if (insn instanceof InvokeDynamicInsnNode indy) {
+                    Object bootstrap = replaceUnsupportedHandle(className, node, method, indy.bsm, report,
+                            nextHelper);
+                    if (bootstrap instanceof Handle handle && bootstrap != indy.bsm) {
+                        indy.bsm = handle;
+                        nextHelper++;
+                        replaced++;
+                    }
+                    for (int i = 0; i < indy.bsmArgs.length; i++) {
+                        Object replacement = replaceUnsupportedHandle(className, node, method, indy.bsmArgs[i],
+                                report, nextHelper);
+                        if (replacement != indy.bsmArgs[i]) {
+                            indy.bsmArgs[i] = replacement;
+                            nextHelper++;
+                            replaced++;
+                        }
+                    }
+                }
+            }
+        }
+        return replaced;
+    }
+
+    private Object replaceUnsupportedHandle(String className, ClassNode node, MethodNode method, Object value,
+            OwnerRemapReport report, int helperIndex) {
+        if (value instanceof Handle handle) {
+            ForgeOwnerMappings.Entry e = mappings.get(handle.getOwner());
+            if (e == null || e.supports(handle.getName(), handle.getDesc())) {
+                return value;
+            }
+            if (FLUID_STACK.equals(handle.getOwner()) && "<init>".equals(handle.getName())
+                    && FLUID_STACK_TAG_CTOR.equals(handle.getDesc())
+                    && handle.getTag() == Opcodes.H_NEWINVOKESPECIAL) {
+                return new Handle(Opcodes.H_INVOKESTATIC, LEGACY_FLUID_STACK, "create",
+                        "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)"
+                                + "L" + FLUID_STACK + ";", false);
+            }
+            String member = handle.getOwner().replace('/', '.') + "." + handle.getName() + handle.getDesc();
+            String caller = className + "." + method.name;
+            String helperDesc = unsupportedHandleDescriptor(handle);
+            if (helperDesc == null) return value;
+            String helperName = "$forgestuck$unsupported$" + helperIndex;
+            while (hasMethod(node, helperName, helperDesc)) {
+                helperIndex++;
+                helperName = "$forgestuck$unsupported$" + helperIndex;
+            }
+            node.methods.add(unsupportedHandleStub(helperName, helperDesc, member, caller));
+            if (report != null) report.unsupportedCall(member);
+            LOGGER.debug("{} {} references unsupported handle {}; rewritten to fail when invoked", TAG, className,
+                    member);
+            return new Handle(Opcodes.H_INVOKESTATIC, node.name, helperName, helperDesc, false);
+        }
+        if (value instanceof org.objectweb.asm.ConstantDynamic dynamic) {
+            Handle bootstrap = (Handle) replaceUnsupportedHandle(className, node, method, dynamic.getBootstrapMethod(),
+                    report, helperIndex);
+            Object[] args = new Object[dynamic.getBootstrapMethodArgumentCount()];
+            boolean changed = bootstrap != dynamic.getBootstrapMethod();
+            for (int i = 0; i < args.length; i++) {
+                args[i] = replaceUnsupportedHandle(className, node, method, dynamic.getBootstrapMethodArgument(i),
+                        report, helperIndex + i + 1);
+                changed |= args[i] != dynamic.getBootstrapMethodArgument(i);
+            }
+            if (changed) return new org.objectweb.asm.ConstantDynamic(dynamic.getName(), dynamic.getDescriptor(),
+                    bootstrap, args);
+        }
+        return value;
+    }
+
+    private static boolean hasMethod(ClassNode node, String name, String desc) {
+        for (MethodNode method : node.methods) {
+            if (method.name.equals(name) && method.desc.equals(desc)) return true;
+        }
+        return false;
+    }
+
+    private static String unsupportedHandleDescriptor(Handle handle) {
+        String desc = handle.getDesc();
+        return switch (handle.getTag()) {
+            case Opcodes.H_GETFIELD -> Type.getMethodDescriptor(Type.getType(desc),
+                    Type.getObjectType(handle.getOwner()));
+            case Opcodes.H_GETSTATIC -> Type.getMethodDescriptor(Type.getType(desc));
+            case Opcodes.H_PUTFIELD -> Type.getMethodDescriptor(Type.VOID_TYPE,
+                    Type.getObjectType(handle.getOwner()), Type.getType(desc));
+            case Opcodes.H_PUTSTATIC -> Type.getMethodDescriptor(Type.VOID_TYPE, Type.getType(desc));
+            case Opcodes.H_INVOKEVIRTUAL, Opcodes.H_INVOKEINTERFACE, Opcodes.H_INVOKESPECIAL -> {
+                Type[] arguments = Type.getArgumentTypes(desc);
+                Type[] staticArguments = new Type[arguments.length + 1];
+                staticArguments[0] = Type.getObjectType(handle.getOwner());
+                System.arraycopy(arguments, 0, staticArguments, 1, arguments.length);
+                yield Type.getMethodDescriptor(Type.getReturnType(desc), staticArguments);
+            }
+            case Opcodes.H_INVOKESTATIC -> desc;
+            case Opcodes.H_NEWINVOKESPECIAL ->
+                    Type.getMethodDescriptor(Type.getObjectType(handle.getOwner()), Type.getArgumentTypes(desc));
+            default -> null;
+        };
+    }
+
+    private static MethodNode unsupportedHandleStub(String name, String desc, String member, String caller) {
+        MethodNode method = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
+                name, desc, null, null);
+        method.instructions.add(new LdcInsnNode(member));
+        method.instructions.add(new LdcInsnNode(caller));
+        method.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC,
+                "net/neoforged/forgestuck/compat/UnsupportedForgeApi", "fail",
+                "(Ljava/lang/String;Ljava/lang/String;)V", false));
+        Type returnType = Type.getReturnType(desc);
+        if (returnType.getSort() != Type.VOID) method.instructions.add(defaultValue(returnType));
+        method.instructions.add(new InsnNode(returnType.getSort() == Type.VOID ? Opcodes.RETURN
+                : returnType.getSize() == 2 ? (returnType.getSort() == Type.LONG ? Opcodes.LRETURN : Opcodes.DRETURN)
+                        : switch (returnType.getSort()) {
+                            case Type.OBJECT, Type.ARRAY -> Opcodes.ARETURN;
+                            case Type.FLOAT -> Opcodes.FRETURN;
+                            default -> Opcodes.IRETURN;
+                        }));
+        int locals = 0;
+        for (Type argument : Type.getArgumentTypes(desc)) locals += argument.getSize();
+        method.maxStack = 2;
+        method.maxLocals = locals;
+        return method;
     }
 
     /**
