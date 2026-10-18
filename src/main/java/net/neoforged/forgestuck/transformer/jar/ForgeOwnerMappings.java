@@ -337,6 +337,12 @@ public final class ForgeOwnerMappings {
                 .add(new Entry("net/minecraft/world/level/storage/loot/Serializer", COMPAT + "LegacyLootSerializer", Set.of(
                         "serialize(Lcom/google/gson/JsonObject;Ljava/lang/Object;Lcom/google/gson/JsonSerializationContext;)V",
                         "deserialize(Lcom/google/gson/JsonObject;Lcom/google/gson/JsonDeserializationContext;)Ljava/lang/Object;")))
+                .add(entry("net/minecraft/world/level/storage/loot/entries/LootPoolEntryContainer$Serializer",
+                        COMPAT + "LegacyLootEntrySerializer", null))
+                .add(entry("net/minecraft/world/level/storage/loot/entries/LootPoolSingletonContainer$Serializer",
+                        COMPAT + "LegacyLootSingletonSerializer", null))
+                .add(entry("net/minecraft/world/level/storage/loot/functions/LootItemConditionalFunction$Serializer",
+                        COMPAT + "LegacyLootConditionalFunctionSerializer", null))
                 .add(new Entry(FU + "NonNullConsumer", COMPAT + "NonNullConsumer",
                         Set.of("accept(Ljava/lang/Object;)V")))
                 .add(new Entry(FU + "NonNullPredicate", COMPAT + "NonNullPredicate",

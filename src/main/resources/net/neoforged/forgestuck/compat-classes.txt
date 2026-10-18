@@ -62,6 +62,9 @@ LegacyMissingMappingsEvent
 LegacyEntityAdditionalSpawnData
 LegacyPotionColorCalculationEvent
 LegacyLootSerializer
+LegacyLootEntrySerializer
+LegacyLootSingletonSerializer
+LegacyLootConditionalFunctionSerializer
 LegacyLootBridge
 LegacyLootBridge$1
 LegacyLootBridge$2
