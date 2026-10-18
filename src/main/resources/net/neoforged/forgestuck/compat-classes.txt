@@ -80,3 +80,6 @@ PlantType
 LegacyEventResult
 LegacySaplingGrowth
 LegacySpawnEntity
+LegacyLivingAttack
+LegacyAbstractTreeGrower
+LegacySaplingBlock

@@ -122,7 +122,13 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             "net/minecraftforge/event/level/SaplingGrowTreeEvent.hasResult()Z",
             "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
             "net/minecraftforge/event/level/SaplingGrowTreeEvent.isCancelable()Z",
-            "net/neoforged/forgestuck/compat/LegacySaplingGrowth");
+            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
+            "net/minecraftforge/event/entity/living/LivingAttackEvent.getAmount()F",
+            "net/neoforged/forgestuck/compat/LegacyLivingAttack",
+            "net/minecraftforge/event/entity/living/LivingAttackEvent.isCancelable()Z",
+            "net/neoforged/forgestuck/compat/LegacyLivingAttack",
+            "net/minecraftforge/event/entity/living/LivingAttackEvent.hasResult()Z",
+            "net/neoforged/forgestuck/compat/LegacyLivingAttack");
 
     /**
      * Unsupported members no longer leave their owner unmapped (which guaranteed NoClassDefFoundError for every

@@ -55,6 +55,10 @@ public final class LegacyNameMappings {
         }
         Map<String, String> members = new TreeMap<>();
         for (String k : props.stringPropertyNames()) members.put(k, props.getProperty(k).trim());
+        // Removed AbstractTreeGrower methods; verified against MCP 1.20.1-20230612.114412.
+        // Descriptor keys also let indirect legacy subclass overrides retain virtual dispatch.
+        members.put("m_213888_(Lnet/minecraft/util/RandomSource;Z)Lnet/minecraft/resources/ResourceKey;", "getConfiguredFeature");
+        members.put("m_213817_(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/util/RandomSource;)Z", "growTree");
         return new LegacyNameMappings(members, missing);
     }
 
