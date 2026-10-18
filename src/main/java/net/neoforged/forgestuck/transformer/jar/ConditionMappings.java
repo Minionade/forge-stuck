@@ -55,6 +55,8 @@ final class ConditionMappings {
                         "canExtinguish(Z)Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "canConvertToSource(Z)Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "supportsBoating(Z)Lnet/minecraftforge/fluids/FluidType$Properties;",
+                        "sound(Lnet/minecraftforge/common/SoundAction;Lnet/minecraft/sounds/SoundEvent;)"
+                                + "Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "lightLevel(I)Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "density(I)Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "temperature(I)Lnet/minecraftforge/fluids/FluidType$Properties;",
