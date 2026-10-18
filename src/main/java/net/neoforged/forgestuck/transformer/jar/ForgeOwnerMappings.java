@@ -96,6 +96,29 @@ public final class ForgeOwnerMappings {
                                 "BUCKET_FILLLnet/minecraftforge/common/SoundAction;",
                                 "BUCKET_EMPTYLnet/minecraftforge/common/SoundAction;",
                                 "FLUID_VAPORIZELnet/minecraftforge/common/SoundAction;")))
+                .add(new Entry("net/minecraftforge/common/Tags$Items",
+                        "net/neoforged/neoforge/common/Tags$Items", tagFields(
+                                "ARMORS", "BONES", "CHESTS_WOODEN", "CROPS_BEETROOT", "CROPS_CARROT",
+                                "CROPS_POTATO", "CROPS_WHEAT", "CROPS", "DUSTS_GLOWSTONE", "DUSTS_REDSTONE",
+                                "DUSTS", "DYES_BLACK", "DYES_BLUE", "DYES_BROWN", "DYES_CYAN", "DYES_GRAY",
+                                "DYES_GREEN", "DYES_LIGHT_BLUE", "DYES_LIGHT_GRAY", "DYES_LIME", "DYES_MAGENTA",
+                                "DYES_ORANGE", "DYES_PINK", "DYES_PURPLE", "DYES_RED", "DYES_YELLOW", "DYES",
+                                "END_STONES", "ENDER_PEARLS", "FEATHERS", "FENCE_GATES_WOODEN", "FENCES_WOODEN",
+                                "GEMS_AMETHYST", "GEMS_DIAMOND", "GEMS_EMERALD", "GEMS_LAPIS", "GEMS_PRISMARINE",
+                                "GEMS_QUARTZ", "GEMS", "GLASS_PANES_COLORLESS", "GLASS_PANES", "INGOTS_COPPER",
+                                "INGOTS_GOLD", "INGOTS_IRON", "INGOTS_NETHERITE", "INGOTS", "MUSHROOMS",
+                                "NUGGETS_GOLD", "NUGGETS_IRON", "NUGGETS", "ORE_RATES_DENSE", "ORE_RATES_SINGULAR",
+                                "ORE_RATES_SPARSE", "ORES_DIAMOND", "ORES_EMERALD", "ORES_IN_GROUND_NETHERRACK",
+                                "ORES_NETHERITE_SCRAP", "ORES", "RAW_MATERIALS", "RODS_BLAZE", "RODS_WOODEN",
+                                "RODS", "SEEDS", "SLIMEBALLS", "STORAGE_BLOCKS_COAL", "STORAGE_BLOCKS_COPPER",
+                                "STORAGE_BLOCKS_GOLD", "STORAGE_BLOCKS_IRON", "STORAGE_BLOCKS_LAPIS",
+                                "STORAGE_BLOCKS_REDSTONE", "STORAGE_BLOCKS")))
+                .add(new Entry("net/minecraftforge/common/Tags$Blocks",
+                        "net/neoforged/neoforge/common/Tags$Blocks", tagFields(
+                                "FENCE_GATES_WOODEN", "FENCES_WOODEN", "FENCES", "GLASS_PANES_COLORLESS",
+                                "GLASS_PANES", "NEEDS_GOLD_TOOL", "NEEDS_NETHERITE_TOOL", "ORE_RATES_SINGULAR",
+                                "ORES_GOLD", "ORES_IN_GROUND_DEEPSLATE", "ORES_IN_GROUND_NETHERRACK",
+                                "ORES_IN_GROUND_STONE", "ORES", "STORAGE_BLOCKS_NETHERITE", "STORAGE_BLOCKS")))
                 .add(entry("net/minecraft/core/particles/ParticleOptions", COMPAT + "LegacyParticleOptions", null))
                 .add(entry("net/minecraft/core/particles/ParticleOptions$Deserializer",
                         COMPAT + "LegacyParticleDeserializer", null))
@@ -526,6 +549,7 @@ public final class ForgeOwnerMappings {
                 "LEAVES", "STICKY_HONEY", "COCOA", "DAMAGE_CAUTIOUS")) {
             members.add(name + desc);
         }
+
         members.addAll(Set.of(
                 "values()[" + desc,
                 "valueOf(Ljava/lang/String;)" + desc,
@@ -537,6 +561,12 @@ public final class ForgeOwnerMappings {
                 "getDeclaringClass()Ljava/lang/Class;",
                 "getMalus()F"));
         return entry(oldOwner, "net/minecraft/world/level/pathfinder/PathType", Set.copyOf(members));
+    }
+
+    private static Set<String> tagFields(String... names) {
+        Set<String> fields = new java.util.HashSet<>();
+        for (String name : names) fields.add(name + "Lnet/minecraft/tags/TagKey;");
+        return Set.copyOf(fields);
     }
 
     /** Cheap check on raw class bytes: could this class mention any mapped owner? */

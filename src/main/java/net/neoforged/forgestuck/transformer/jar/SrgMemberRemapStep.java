@@ -35,6 +35,8 @@ public class SrgMemberRemapStep implements ClassTransformStep {
     private static final String FLUID = "net/minecraft/world/level/material/Fluid";
     private static final String FLUID_STATE_DEFINITION_DESC =
             "(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V";
+    private static final String BLOCK_STATE_DEFINITION_DESC =
+            "(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V";
     private static final String ITEMSTACK = "net/minecraft/world/item/ItemStack";
     private static final String ITEMSTACK_TAG = "()Lnet/minecraft/nbt/CompoundTag;";
     private static final String LEGACY_ITEMSTACK_SHIM =
@@ -131,14 +133,14 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     call.itf = false;
                     modified = true;
                     remapped.add("CriteriaTriggers.register -> LegacyCriteriaTriggers.register");
-                } else if (insn instanceof MethodInsnNode call && isLegacyDamageSourceBypassesEffects(call)) {
+                } else if (insn instanceof MethodInsnNode call && isLegacyDamageSourceCreativePlayer(call)) {
                     call.setOpcode(org.objectweb.asm.Opcodes.INVOKESTATIC);
                     call.owner = "net/neoforged/forgestuck/compat/LegacyDamageSource";
-                    call.name = "bypassesEffects";
+                    call.name = "isCreativePlayer";
                     call.desc = "(L" + DAMAGE_SOURCE + ";)Z";
                     call.itf = false;
                     modified = true;
-                    remapped.add("DamageSource.m_269014_ -> LegacyDamageSource.bypassesEffects");
+                    remapped.add("DamageSource.m_269014_ -> LegacyDamageSource.isCreativePlayer");
                 } else if (insn instanceof MethodInsnNode call && isLegacyItemStackGetTag(call)) {
                     call.setOpcode(org.objectweb.asm.Opcodes.INVOKESTATIC);
                     call.owner = LEGACY_ITEMSTACK_SHIM;
@@ -285,7 +287,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                 && call.desc.equals("(Lnet/minecraft/advancements/CriterionTrigger;)Lnet/minecraft/advancements/CriterionTrigger;");
     }
 
-    private static boolean isLegacyDamageSourceBypassesEffects(MethodInsnNode call) {
+    private static boolean isLegacyDamageSourceCreativePlayer(MethodInsnNode call) {
         return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKEVIRTUAL
                 && call.owner.equals(DAMAGE_SOURCE)
                 && call.name.equals("m_269014_")
@@ -373,6 +375,9 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     | org.objectweb.asm.Opcodes.ACC_PRIVATE)) != 0) continue;
             List<String> candidates = new java.util.ArrayList<>(supers);
             if (m.name.equals("m_7180_") && m.desc.equals(FLUID_STATE_DEFINITION_DESC)) candidates.add(FLUID);
+            if (m.name.equals("m_7926_") && m.desc.equals(BLOCK_STATE_DEFINITION_DESC)) {
+                candidates.add("net/minecraft/world/level/block/Block");
+            }
             for (String sup : candidates) {
                 if (!ownerIsGame(sup)) continue;
                 String mapped = mappings.map(sup, m.name, m.desc);

@@ -136,6 +136,17 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     private static final java.util.Map<String, String> REDIRECTS = java.util.Map.ofEntries(
             java.util.Map.entry("net/minecraft/world/entity/EntityType$Builder.setCustomClientFactory(Ljava/util/function/BiFunction;)Lnet/minecraft/world/entity/EntityType$Builder;",
                     "net/neoforged/forgestuck/compat/LegacyEntityTypeBuilder"),
+            java.util.Map.entry(FLUID_STACK + ".getTag()Lnet/minecraft/nbt/CompoundTag;",
+                    "net/neoforged/forgestuck/compat/LegacyFluidStack"),
+            java.util.Map.entry(FLUID_STACK + ".getOrCreateTag()Lnet/minecraft/nbt/CompoundTag;",
+                    "net/neoforged/forgestuck/compat/LegacyFluidStack"),
+            java.util.Map.entry(FLUID_STACK + ".hasTag()Z",
+                    "net/neoforged/forgestuck/compat/LegacyFluidStack"),
+            java.util.Map.entry(FLUID_STACK
+                    + ".getRawFluid()Lnet/minecraft/world/level/material/Fluid;",
+                    "net/neoforged/forgestuck/compat/LegacyFluidStack"),
+            java.util.Map.entry(FLUID_STACK + ".setTag(Lnet/minecraft/nbt/CompoundTag;)V",
+                    "net/neoforged/forgestuck/compat/LegacyFluidStack"),
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V", "net/neoforged/forgestuck/compat/LegacyEventBusRegistration"),
             java.util.Map.entry("net/minecraftforge/registries/RegisterEvent.getForgeRegistry()Lnet/minecraftforge/registries/IForgeRegistry;",
                     "net/neoforged/forgestuck/compat/LegacyRegisterEvent"),

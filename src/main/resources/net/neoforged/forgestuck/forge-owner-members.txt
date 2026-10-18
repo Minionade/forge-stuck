@@ -372,3 +372,20 @@ net/minecraftforge/data/event/GatherDataEvent -> net/neoforged/neoforge/data/eve
   includeServer()Z
 net/minecraftforge/data/loading/DatagenModLoader -> net/neoforged/neoforge/data/loading/DatagenModLoader
   isRunningDataGen()Z
+net/minecraftforge/client/extensions/common/IClientFluidTypeExtensions -> net/neoforged/neoforge/client/extensions/common/IClientFluidTypeExtensions
+  getFlowingTexture(Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/resources/ResourceLocation;
+  getFlowingTexture(Lnet/minecraftforge/fluids/FluidStack;)Lnet/minecraft/resources/ResourceLocation;
+  getOverlayTexture()Lnet/minecraft/resources/ResourceLocation;
+  getOverlayTexture(Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/resources/ResourceLocation;
+  getOverlayTexture(Lnet/minecraftforge/fluids/FluidStack;)Lnet/minecraft/resources/ResourceLocation;
+  getRenderOverlayTexture(Lnet/minecraft/client/Minecraft;)Lnet/minecraft/resources/ResourceLocation;
+  getStillTexture()Lnet/minecraft/resources/ResourceLocation;
+  getStillTexture(Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/resources/ResourceLocation;
+  getStillTexture(Lnet/minecraftforge/fluids/FluidStack;)Lnet/minecraft/resources/ResourceLocation;
+  getTintColor()I
+  getTintColor(Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;)I
+  getTintColor(Lnet/minecraftforge/fluids/FluidStack;)I
+  modifyFogColor(Lnet/minecraft/client/Camera;FLnet/minecraft/client/multiplayer/ClientLevel;IFLorg/joml/Vector3f;)Lorg/joml/Vector3f;
+  modifyFogRender(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/FogRenderer$FogMode;FFFFLcom/mojang/blaze3d/shaders/FogShape;)V
+  of(Lnet/minecraft/world/level/material/Fluid;)Lnet/minecraftforge/client/extensions/common/IClientFluidTypeExtensions;
+  renderOverlay(Lnet/minecraft/client/Minecraft;Lcom/mojang/blaze3d/vertex/PoseStack;)V

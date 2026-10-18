@@ -175,6 +175,30 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void forgeItemTagConstantRemapsToVerifiedNeoForgeField() {
+        String oldOwner = "net/minecraftforge/common/Tags$Items";
+        String newOwner = "net/neoforged/neoforge/common/Tags$Items";
+        String descriptor = "Lnet/minecraft/tags/TagKey;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/TagAccess", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "get", "()" + descriptor, null, null);
+        method.visitCode();
+        method.visitFieldInsn(Opcodes.GETSTATIC, oldOwner, "ORES", descriptor);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.TagAccess", writer.toByteArray()));
+        var field = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(org.objectweb.asm.tree.FieldInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.FieldInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(newOwner, field.owner);
+        assertEquals("ORES", field.name);
+        assertEquals(descriptor, field.desc);
+    }
+
+    @Test
     void removedItemOwnersAreMappedToNeoForgeAndComponentShim() {
         String forgeItem = "net/minecraftforge/common/extensions/IForgeItem";
         String dyeable = "net/minecraft/world/item/DyeableLeatherItem";

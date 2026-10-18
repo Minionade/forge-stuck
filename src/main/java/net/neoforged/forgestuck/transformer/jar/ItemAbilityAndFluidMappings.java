@@ -129,7 +129,15 @@ final class ItemAbilityAndFluidMappings {
                                 "simulate()Z")),
                 e("net/minecraftforge/fluids/capability/IFluidHandlerItem",
                         "net/neoforged/neoforge/fluids/capability/IFluidHandlerItem",
-                        Set.of("getContainer()Lnet/minecraft/world/item/ItemStack;")),
+                        Set.of(
+                                "getContainer()Lnet/minecraft/world/item/ItemStack;",
+                                "getTanks()I",
+                                "getFluidInTank(I)" + fluidStack,
+                                "getTankCapacity(I)I",
+                                "isFluidValid(I" + fluidStack + ")Z",
+                                "fill(" + fluidStack + fluidAction + ")I",
+                                "drain(" + fluidStack + fluidAction + ")" + fluidStack,
+                                "drain(I" + fluidAction + ")" + fluidStack)),
                 e("net/minecraftforge/fluids/FluidStack", "net/neoforged/neoforge/fluids/FluidStack", Set.of(
                         "<init>(Lnet/minecraft/world/level/material/Fluid;I)V",
                         "EMPTYLnet/minecraftforge/fluids/FluidStack;",
@@ -137,6 +145,8 @@ final class ItemAbilityAndFluidMappings {
                         "grow(I)V", "shrink(I)V", "isEmpty()Z",
                         "copy()Lnet/minecraftforge/fluids/FluidStack;",
                         "isFluidEqual(Lnet/minecraftforge/fluids/FluidStack;)Z",
+                        "areFluidStackTagsEqual(Lnet/minecraftforge/fluids/FluidStack;"
+                                + "Lnet/minecraftforge/fluids/FluidStack;)Z",
                         "getDisplayName()Lnet/minecraft/network/chat/Component;")),
                 e("net/minecraftforge/common/loot/LootModifierManager",
                         "net/neoforged/forgestuck/compat/LegacyLootModifierManager",

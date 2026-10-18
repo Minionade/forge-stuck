@@ -102,6 +102,34 @@ class SrgMemberRemapStepTest {
     }
 
     @Test
+    void bridgesBlockStateOverridesInheritedThroughModSuperclass() {
+        String desc = "(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V";
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyPane", null,
+                "sample/LegacyPaneBase", null);
+        var method = writer.visitMethod(Opcodes.ACC_PROTECTED, "m_7926_", desc, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, "sample/LegacyPaneBase", "m_7926_", desc, false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyPane", writer.toByteArray()))
+                .accept(node, 0);
+        MethodNode bridge = node.methods.stream()
+                .filter(candidate -> candidate.name.equals("createBlockStateDefinition"))
+                .findFirst().orElseThrow();
+        MethodInsnNode bridgeCall = java.util.Arrays.stream(bridge.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKEVIRTUAL, bridgeCall.getOpcode());
+        assertEquals("sample/LegacyPane", bridgeCall.owner);
+        assertEquals("m_7926_", bridgeCall.name);
+    }
+
+    @Test
     void remapsLegacyFluidStateDefinitionSuperCallsOnModClasses() {
         String desc = "(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V";
         ClassWriter writer = new ClassWriter(0);
@@ -139,7 +167,7 @@ class SrgMemberRemapStepTest {
     }
 
     @Test
-    void adaptsLegacyDamageSourceBypassesEffectsCall() {
+    void adaptsLegacyDamageSourceCreativePlayerCall() {
         ClassWriter writer = new ClassWriter(0);
         writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyDamageCheck", null, "java/lang/Object", null);
         var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m_1234_check",
@@ -160,7 +188,7 @@ class SrgMemberRemapStepTest {
                 .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).findFirst().orElseThrow();
         assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
         assertEquals("net/neoforged/forgestuck/compat/LegacyDamageSource", call.owner);
-        assertEquals("bypassesEffects", call.name);
+        assertEquals("isCreativePlayer", call.name);
         assertEquals("(Lnet/minecraft/world/damagesource/DamageSource;)Z", call.desc);
     }
 

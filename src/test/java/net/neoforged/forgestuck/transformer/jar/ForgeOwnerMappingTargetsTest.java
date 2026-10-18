@@ -18,6 +18,7 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/eventbus/api/GenericEvent",
             "net/minecraftforge/event/entity/living/LivingDamageEvent",
             "net/minecraftforge/common/SoundAction", "net/minecraftforge/common/SoundActions",
+            "net/minecraftforge/common/Tags$Items", "net/minecraftforge/common/Tags$Blocks",
             "net/minecraft/core/particles/ParticleOptions",
             "net/minecraft/core/particles/ParticleOptions$Deserializer",
             "net/minecraftforge/common/loot/LootModifier",
@@ -100,6 +101,80 @@ class ForgeOwnerMappingTargetsTest {
         for (String owner : owners()) {
             assertNotNull(mappings.get(owner), "no mapping for " + owner);
             assertDoesNotThrow(() -> load(mappings.get(owner).newOwner()), "missing target for " + owner);
+        }
+    }
+
+    @Test
+    void mappedForgeTagFieldsExistOnNeoForge() throws Exception {
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        for (String owner : List.of("net/minecraftforge/common/Tags$Items",
+                "net/minecraftforge/common/Tags$Blocks")) {
+            ForgeOwnerMappings.Entry entry = mappings.get(owner);
+            Class<?> target = load(entry.newOwner());
+            for (String member : entry.supportedMembers()) {
+                var matcher = FIELD.matcher(member);
+                assertTrue(matcher.matches(), "invalid field mapping " + member);
+                assertTrue(hasField(target, matcher.group(1), matcher.group(2)),
+                        "missing target field " + entry.newOwner() + "." + member);
+            }
+        }
+    }
+
+    @Test
+    void mappedItemFluidHandlerMethodsExistOnNeoForge() throws Exception {
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        ForgeOwnerMappings.Entry entry = mappings.get("net/minecraftforge/fluids/capability/IFluidHandlerItem");
+        Class<?> target = load(entry.newOwner());
+        for (String member : entry.supportedMembers()) {
+            int paren = member.indexOf('(');
+            String name = member.substring(0, paren);
+            String descriptor = mappings.remapDescriptorTokens(member.substring(paren), new HashSet<>(),
+                    new HashMap<>());
+            assertTrue(hasMethod(target, name, descriptor), "missing target method " + name + descriptor);
+        }
+    }
+
+    @Test
+    void mappedClientFluidExtensionMethodsExistOnNeoForge() throws Exception {
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        ForgeOwnerMappings.Entry entry = GeneratedOwnerTable.entries().stream()
+                .filter(candidate -> candidate.oldOwner().equals(
+                        "net/minecraftforge/client/extensions/common/IClientFluidTypeExtensions"))
+                .findFirst().orElseThrow();
+        Class<?> target = load(entry.newOwner());
+        for (String member : entry.supportedMembers()) {
+            int paren = member.indexOf('(');
+            String name = member.substring(0, paren);
+            String descriptor = mappings.remapDescriptorTokens(member.substring(paren), new HashSet<>(),
+                    new HashMap<>());
+            assertTrue(hasMethod(target, name, descriptor), "missing target method " + name + descriptor);
+        }
+    }
+
+    @Test
+    void mappedFluidStackMembersExistOnNeoForge() throws Exception {
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        ForgeOwnerMappings.Entry entry = mappings.get("net/minecraftforge/fluids/FluidStack");
+        Class<?> target = load(entry.newOwner());
+        for (String member : entry.supportedMembers()) {
+            int paren = member.indexOf('(');
+            String name;
+            String descriptor;
+            boolean method = paren >= 0;
+            if (method) {
+                name = member.substring(0, paren);
+                descriptor = member.substring(paren);
+            } else {
+                var matcher = FIELD.matcher(member);
+                assertTrue(matcher.matches(), "invalid field mapping " + member);
+                name = matcher.group(1);
+                descriptor = matcher.group(2);
+            }
+            descriptor = mappings.remapDescriptorTokens(descriptor, new HashSet<>(), new HashMap<>());
+            boolean exists = method
+                    ? name.equals("<init>") ? hasConstructor(target, descriptor) : hasMethod(target, name, descriptor)
+                    : hasField(target, name, descriptor);
+            assertTrue(exists, "missing target member " + entry.newOwner() + "." + name + descriptor);
         }
     }
 
