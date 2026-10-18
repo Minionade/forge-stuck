@@ -114,6 +114,36 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void removedBlockAndItemHandlerOwnersAreMapped() {
+        String oldBlock = "net/minecraftforge/common/extensions/IForgeBlock";
+        String oldHandler = "net/minecraftforge/items/IItemHandlerModifiable";
+        String newBlock = "net/neoforged/neoforge/common/extensions/IBlockExtension";
+        String newHandler = "net/neoforged/neoforge/items/IItemHandlerModifiable";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/CompatInterfaces", null, "java/lang/Object",
+                new String[] {oldBlock, oldHandler});
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "set",
+                "(L" + oldHandler + ";Lnet/minecraft/world/item/ItemStack;)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitInsn(Opcodes.ICONST_0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, oldHandler, "setStackInSlot",
+                "(ILnet/minecraft/world/item/ItemStack;)V", true);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.CompatInterfaces", writer.toByteArray()));
+        assertEquals(newBlock, node.interfaces.get(0));
+        assertEquals(newHandler, node.interfaces.get(1));
+        MethodInsnNode call = (MethodInsnNode) node.methods.get(0).instructions.toArray()[3];
+        assertEquals(newHandler, call.owner);
+        assertEquals("(L" + newHandler + ";Lnet/minecraft/world/item/ItemStack;)V", node.methods.get(0).desc);
+    }
+
+    @Test
     void classWithoutForgeOwnersIsUnchanged() {
         byte[] in = SrgCompatTest.callerClass("com/ex/Plain", LIVING, "m_1_");
         OwnerRemapReport report = new OwnerRemapReport();
