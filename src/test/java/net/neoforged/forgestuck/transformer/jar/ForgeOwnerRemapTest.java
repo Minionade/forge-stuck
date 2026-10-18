@@ -215,8 +215,12 @@ class ForgeOwnerRemapTest {
         method.visitInsn(Opcodes.RETURN);
         method.visitMaxs(0, 0);
         method.visitEnd();
-        writer.visitMethod(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, "onEvent", "(L" + event + ";)V", null, null)
-                .visitEnd();
+        var handler = writer.visitMethod(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, "onEvent",
+                "(L" + event + ";)V", null, null);
+        handler.visitCode();
+        handler.visitInsn(Opcodes.RETURN);
+        handler.visitMaxs(0, 0);
+        handler.visitEnd();
         writer.visitEnd();
 
         ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.GenericListener", writer.toByteArray()));
