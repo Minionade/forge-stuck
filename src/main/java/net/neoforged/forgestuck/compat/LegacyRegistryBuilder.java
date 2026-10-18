@@ -11,7 +11,6 @@ public class LegacyRegistryBuilder<T> {
     private int maxId = Integer.MAX_VALUE - 1;
     private ResourceLocation defaultKey;
     private boolean sync = true;
-    private boolean savingDisabled;
     private boolean modificationsAllowed;
     private boolean tagsEnabled;
 
@@ -22,10 +21,6 @@ public class LegacyRegistryBuilder<T> {
         if (maxId != Integer.MAX_VALUE - 1) target.maxId(maxId);
         if (defaultKey != null) target.defaultKey(defaultKey);
         target.sync(sync);
-        if (savingDisabled) {
-            UnsupportedForgeApi.fail("net.minecraftforge.registries.RegistryBuilder.disableSaving()",
-                    String.valueOf(name));
-        }
         if (modificationsAllowed) {
             UnsupportedForgeApi.fail("net.minecraftforge.registries.RegistryBuilder.allowModification()",
                     String.valueOf(name));
@@ -51,7 +46,8 @@ public class LegacyRegistryBuilder<T> {
     }
 
     public LegacyRegistryBuilder<T> disableSaving() {
-        savingDisabled = true;
+        // NeoForge's NewRegistryEvent creates ordinary in-memory registries; persistence is a datapack-registry
+        // concern, so there is no corresponding save-to-disk behavior to disable here.
         return this;
     }
 
