@@ -97,6 +97,24 @@ final class ItemAbilityAndFluidMappings {
                                 "setFluid(" + fluidStack + ")V",
                                 "isEmpty()Z",
                                 "getSpace()I")),
+                e("net/minecraftforge/common/brewing/IBrewingRecipe",
+                        "net/neoforged/neoforge/common/brewing/IBrewingRecipe", Set.of(
+                                "isInput(Lnet/minecraft/world/item/ItemStack;)Z",
+                                "isIngredient(Lnet/minecraft/world/item/ItemStack;)Z",
+                                "getOutput(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;)"
+                                        + "Lnet/minecraft/world/item/ItemStack;")),
+                e("net/minecraftforge/common/brewing/BrewingRecipe",
+                        "net/neoforged/neoforge/common/brewing/BrewingRecipe", Set.of(
+                                "<init>(Lnet/minecraft/world/item/crafting/Ingredient;"
+                                        + "Lnet/minecraft/world/item/crafting/Ingredient;"
+                                        + "Lnet/minecraft/world/item/ItemStack;)V",
+                                "isInput(Lnet/minecraft/world/item/ItemStack;)Z",
+                                "isIngredient(Lnet/minecraft/world/item/ItemStack;)Z",
+                                "getOutput(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;)"
+                                        + "Lnet/minecraft/world/item/ItemStack;",
+                                "getInput()Lnet/minecraft/world/item/crafting/Ingredient;",
+                                "getIngredient()Lnet/minecraft/world/item/crafting/Ingredient;",
+                                "getOutput()Lnet/minecraft/world/item/ItemStack;")),
                 e("net/minecraftforge/event/entity/player/EntityItemPickupEvent",
                         "net/neoforged/neoforge/event/entity/player/ItemEntityPickupEvent$Pre", Set.of(
                                 "<init>(Lnet/minecraft/world/entity/player/Player;"
