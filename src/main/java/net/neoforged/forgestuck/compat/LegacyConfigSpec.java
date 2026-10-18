@@ -1,8 +1,9 @@
 package net.neoforged.forgestuck.compat;
 
 import com.electronwill.nightconfig.core.CommentedConfig;
-import com.electronwill.nightconfig.core.file.FileConfig;
-import java.nio.file.Path;
+import com.electronwill.nightconfig.toml.TomlWriter;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import net.neoforged.fml.config.ConfigTracker;
 import net.neoforged.fml.config.IConfigSpec;
@@ -21,19 +22,15 @@ public final class LegacyConfigSpec {
             throw new IllegalStateException("ForgeConfigSpec.setConfig called for an unregistered config spec");
         }
         IConfigSpec.ILoadedConfig loadedConfig = modConfig.getLoadedConfig();
-        if (loadedConfig == null && config instanceof FileConfig fileConfig) {
-            Path path = fileConfig.getNioPath().toAbsolutePath();
-            if (!path.getFileName().toString().equals(modConfig.getFileName())) {
-                throw new IllegalStateException("ForgeConfigSpec.setConfig file " + path.getFileName()
-                        + " does not match registered config " + modConfig.getFileName());
-            }
-            fileConfig.save();
-            ConfigTracker.INSTANCE.loadConfigs(modConfig.getType(), path.getParent());
-            loadedConfig = modConfig.getLoadedConfig();
-        }
         if (loadedConfig == null) {
-            throw new IllegalStateException("ForgeConfigSpec.setConfig called before NeoForge loaded "
-                    + modConfig.getFileName());
+            CommentedConfig corrected = CommentedConfig.inMemory();
+            corrected.addAll(config);
+            corrected.putAllComments(config);
+            spec.correct(corrected);
+            StringWriter writer = new StringWriter();
+            new TomlWriter().write(corrected, writer);
+            ConfigTracker.acceptSyncedConfig(modConfig, writer.toString().getBytes(StandardCharsets.UTF_8));
+            return;
         }
 
         CommentedConfig target = loadedConfig.config();
@@ -42,10 +39,9 @@ public final class LegacyConfigSpec {
             target.addAll(config);
             target.putAllComments(config);
         }
-        boolean alreadyCorrect = spec.isCorrect(target);
-        spec.acceptConfig(loadedConfig);
-        if (alreadyCorrect) {
-            loadedConfig.save();
+        if (!spec.isCorrect(target)) {
+            spec.correct(target);
         }
+        spec.acceptConfig(loadedConfig);
     }
 }
