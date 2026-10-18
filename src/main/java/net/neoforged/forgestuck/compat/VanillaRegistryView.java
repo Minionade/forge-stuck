@@ -12,13 +12,21 @@ import net.minecraft.resources.ResourceLocation;
 /** {@link IForgeRegistry} view over a vanilla registry that is resolved lazily from its registry key. */
 final class VanillaRegistryView<V> implements IForgeRegistry<V> {
     private final ResourceKey<? extends Registry<V>> key;
+    private final Registry<V> registry;
 
     VanillaRegistryView(ResourceKey<? extends Registry<V>> key) {
         this.key = key;
+        this.registry = null;
+    }
+
+    VanillaRegistryView(ResourceKey<? extends Registry<V>> key, Registry<V> registry) {
+        this.key = key;
+        this.registry = registry;
     }
 
     @SuppressWarnings("unchecked")
     private Registry<V> registry() {
+        if (registry != null) return registry;
         Registry<?> registry = BuiltInRegistries.REGISTRY.get(key.location());
         if (registry == null) throw new IllegalStateException("Registry " + key.location() + " is not available yet");
         return (Registry<V>) registry;
@@ -72,5 +80,10 @@ final class VanillaRegistryView<V> implements IForgeRegistry<V> {
     @Override
     public Set<Map.Entry<ResourceKey<V>, V>> getEntries() {
         return registry().entrySet();
+    }
+
+    @Override
+    public void register(ResourceLocation id, V value) {
+        Registry.register(registry(), id, value);
     }
 }

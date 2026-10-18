@@ -126,6 +126,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */
     private static final java.util.Map<String, String> REDIRECTS = java.util.Map.ofEntries(
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V", "net/neoforged/forgestuck/compat/LegacyEventBusRegistration"),
+            java.util.Map.entry("net/minecraftforge/registries/RegisterEvent.getForgeRegistry()Lnet/minecraftforge/registries/IForgeRegistry;",
+                    "net/neoforged/forgestuck/compat/LegacyRegisterEvent"),
             java.util.Map.entry("net/minecraftforge/common/ForgeConfigSpec.setConfig(Lcom/electronwill/nightconfig/core/CommentedConfig;)V", "net/neoforged/forgestuck/compat/LegacyConfigSpec"),
             java.util.Map.entry("net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V", "net/neoforged/forgestuck/compat/LegacyCapabilities"),
             java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),

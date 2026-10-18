@@ -18,6 +18,8 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/eventbus/api/GenericEvent",
             "net/minecraftforge/event/entity/living/LivingDamageEvent",
             "net/minecraftforge/common/SoundAction", "net/minecraftforge/common/SoundActions",
+            "net/minecraft/core/particles/ParticleOptions",
+            "net/minecraft/core/particles/ParticleOptions$Deserializer",
             "net/minecraftforge/common/loot/LootModifier",
             "net/minecraft/world/level/storage/loot/entries/LootPoolEntryContainer$Serializer",
             "net/minecraft/world/level/storage/loot/entries/LootPoolSingletonContainer$Serializer",

@@ -1,6 +1,7 @@
 package net.neoforged.forgestuck.compat;
 
 import java.util.function.Supplier;
+import net.minecraft.commands.synchronization.ArgumentTypeInfo;
 import net.minecraft.core.Registry;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.registries.Registries;
@@ -48,6 +49,8 @@ public final class ForgeRegistries {
     public static final IForgeRegistry<MenuType<?>> MENU_TYPES = of(Registries.MENU);
     public static final IForgeRegistry<RecipeType<?>> RECIPE_TYPES = of(Registries.RECIPE_TYPE);
     public static final IForgeRegistry<RecipeSerializer<?>> RECIPE_SERIALIZERS = of(Registries.RECIPE_SERIALIZER);
+    public static final IForgeRegistry<ArgumentTypeInfo<?, ?>> COMMAND_ARGUMENT_TYPES =
+            of(Registries.COMMAND_ARGUMENT_TYPE);
     public static final IForgeRegistry<VillagerProfession> VILLAGER_PROFESSIONS = of(Registries.VILLAGER_PROFESSION);
     public static final IForgeRegistry<PoiType> POI_TYPES = of(Registries.POINT_OF_INTEREST_TYPE);
     public static final IForgeRegistry<Feature<?>> FEATURES = of(Registries.FEATURE);
@@ -81,6 +84,8 @@ public final class ForgeRegistries {
         public static final ResourceKey<Registry<MenuType<?>>> MENU_TYPES = Registries.MENU;
         public static final ResourceKey<Registry<RecipeType<?>>> RECIPE_TYPES = Registries.RECIPE_TYPE;
         public static final ResourceKey<Registry<RecipeSerializer<?>>> RECIPE_SERIALIZERS = Registries.RECIPE_SERIALIZER;
+        public static final ResourceKey<Registry<ArgumentTypeInfo<?, ?>>> COMMAND_ARGUMENT_TYPES =
+                Registries.COMMAND_ARGUMENT_TYPE;
         public static final ResourceKey<Registry<VillagerProfession>> VILLAGER_PROFESSIONS = Registries.VILLAGER_PROFESSION;
         public static final ResourceKey<Registry<PoiType>> POI_TYPES = Registries.POINT_OF_INTEREST_TYPE;
         public static final ResourceKey<Registry<Feature<?>>> FEATURES = Registries.FEATURE;

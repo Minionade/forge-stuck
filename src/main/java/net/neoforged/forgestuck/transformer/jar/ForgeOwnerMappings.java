@@ -96,6 +96,9 @@ public final class ForgeOwnerMappings {
                                 "BUCKET_FILLLnet/minecraftforge/common/SoundAction;",
                                 "BUCKET_EMPTYLnet/minecraftforge/common/SoundAction;",
                                 "FLUID_VAPORIZELnet/minecraftforge/common/SoundAction;")))
+                .add(entry("net/minecraft/core/particles/ParticleOptions", COMPAT + "LegacyParticleOptions", null))
+                .add(entry("net/minecraft/core/particles/ParticleOptions$Deserializer",
+                        COMPAT + "LegacyParticleDeserializer", null))
                 .add(new Entry("net/minecraftforge/common/loot/LootModifier",
                         "net/neoforged/neoforge/common/loot/LootModifier", Set.of(
                                 "<init>([Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition;)V",
@@ -445,7 +448,7 @@ public final class ForgeOwnerMappings {
     static final java.util.List<String> FORGE_REGISTRY_FIELDS = java.util.List.of("BLOCKS", "FLUIDS", "ITEMS",
             "MOB_EFFECTS", "POTIONS", "ATTRIBUTES", "STAT_TYPES", "SOUND_EVENTS", "PARTICLE_TYPES", "BLOCK_ENTITY_TYPES",
             "ENTITY_TYPES", "MENU_TYPES", "RECIPE_TYPES", "RECIPE_SERIALIZERS", "VILLAGER_PROFESSIONS", "POI_TYPES",
-            "FEATURES", "ENTITY_DATA_SERIALIZERS", "ENCHANTMENTS");
+            "FEATURES", "ENTITY_DATA_SERIALIZERS", "ENCHANTMENTS", "COMMAND_ARGUMENT_TYPES");
 
     private static Iterable<Entry> configAndEnvironment() {
         return ConfigEnvironmentMappings.entries();

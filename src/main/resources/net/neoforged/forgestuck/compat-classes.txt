@@ -69,6 +69,10 @@ LegacyLootBridge
 LegacyLootBridge$1
 LegacyLootBridge$2
 LegacyLootBridge$3
+LegacyParticleOptions
+LegacyParticleDeserializer
+LegacyParticleType
+LegacyRegisterEvent
 LegacyResourceLocations
 LegacyConditionSerializer
 LegacyConditions
