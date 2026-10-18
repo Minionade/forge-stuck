@@ -25,6 +25,7 @@ LegacyItemStackShim
 LegacyEnumExtensions
 LegacyDyeableLeatherItem
 LegacyArmorMaterial
+LegacyItemPickup
 LegacyINBTSerializable
 LegacyLootModifierManager
 LegacyEnchantment

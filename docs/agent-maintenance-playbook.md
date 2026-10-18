@@ -36,6 +36,13 @@ logged at DEBUG and ignored, as in Forge. Targets with annotated handlers
 (including inherited handlers) still go through NeoForge validation; invalid
 signatures, wrong buses, and static/instance mismatches are not swallowed.
 
+### Pickup events and fluid tanks
+
+`EntityItemPickupEvent` maps to NeoForge's `ItemEntityPickupEvent.Pre`; common
+accessors and cancellation are redirected to `compat.LegacyItemPickup`
+(cancel = `TriState.FALSE`). Forge result semantics (`ALLOW`) are not modelled
+and fail explicitly. `fluids.IFluidTank` maps directly to NeoForge's interface.
+
 ### Armor materials and model data
 
 Legacy `ArmorMaterial` references map to `compat.LegacyArmorMaterial`, not the

@@ -39,6 +39,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     private static final String FLUID_STACK_TAG_CTOR =
             "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)V";
     private static final String FLUID_STACK_COPY_CTOR = "(L" + FLUID_STACK + ";I)V";
+    private static final String PICKUP = "net/minecraftforge/event/entity/player/EntityItemPickupEvent";
+    private static final String LEGACY_PICKUP = "net/neoforged/forgestuck/compat/LegacyItemPickup";
     private static final String LEGACY_FLUID_STACK = "net/neoforged/forgestuck/compat/LegacyFluidStack";
 
     private final ForgeOwnerMappings mappings;
@@ -117,30 +119,26 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     }
 
     /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */
-    private static final java.util.Map<String, String> REDIRECTS = java.util.Map.of(
-            "net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V",
-            "net/neoforged/forgestuck/compat/LegacyEventBusRegistration",
-            "net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V",
-            "net/neoforged/forgestuck/compat/LegacyCapabilities",
-            "net/minecraftforge/event/level/SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;",
-            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
-            "net/minecraftforge/event/level/SaplingGrowTreeEvent.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V",
-            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
-            "net/minecraftforge/event/level/SaplingGrowTreeEvent.getResult()Lnet/minecraftforge/eventbus/api/Event$Result;",
-            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
-            "net/minecraftforge/event/level/SaplingGrowTreeEvent.hasResult()Z",
-            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
-            "net/minecraftforge/event/level/SaplingGrowTreeEvent.isCancelable()Z",
-            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
-            "net/minecraftforge/event/entity/living/LivingAttackEvent.getAmount()F",
-            "net/neoforged/forgestuck/compat/LegacyLivingAttack",
-            "net/minecraftforge/event/entity/living/LivingAttackEvent.isCancelable()Z",
-            "net/neoforged/forgestuck/compat/LegacyLivingAttack",
-            "net/minecraftforge/event/entity/living/LivingAttackEvent.hasResult()Z",
-            "net/neoforged/forgestuck/compat/LegacyLivingAttack");
+    private static final java.util.Map<String, String> REDIRECTS = java.util.Map.ofEntries(
+            java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V", "net/neoforged/forgestuck/compat/LegacyEventBusRegistration"),
+            java.util.Map.entry("net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V", "net/neoforged/forgestuck/compat/LegacyCapabilities"),
+            java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
+            java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
+            java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.getResult()Lnet/minecraftforge/eventbus/api/Event$Result;", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
+            java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.hasResult()Z", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
+            java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.isCancelable()Z", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
+            java.util.Map.entry("net/minecraftforge/event/entity/living/LivingAttackEvent.getAmount()F", "net/neoforged/forgestuck/compat/LegacyLivingAttack"),
+            java.util.Map.entry("net/minecraftforge/event/entity/living/LivingAttackEvent.isCancelable()Z", "net/neoforged/forgestuck/compat/LegacyLivingAttack"),
+            java.util.Map.entry("net/minecraftforge/event/entity/living/LivingAttackEvent.hasResult()Z", "net/neoforged/forgestuck/compat/            LegacyLivingAttack"),
+                        java.util.Map.entry(PICKUP + ".getEntity()Lnet/minecraft/world/entity/player/Player;", LEGACY_PICKUP),
+                        java.util.Map.entry(PICKUP + ".getItem()Lnet/minecraft/world/entity/item/ItemEntity;", LEGACY_PICKUP),
+                        java.util.Map.entry(PICKUP + ".setCanceled(Z)V", LEGACY_PICKUP),
+                        java.util.Map.entry(PICKUP + ".isCanceled()Z", LEGACY_PICKUP),
+                        java.util.Map.entry(PICKUP + ".isCancelable()Z", LEGACY_PICKUP),
+                        java.util.Map.entry(PICKUP + ".hasResult()Z", LEGACY_PICKUP));
 
-    /**
-     * Unsupported members no longer leave their owner unmapped (which guaranteed NoClassDefFoundError for every
+                /**
+                 * Unsupported members no longer leave their owner unmapped (which guaranteed NoClassDefFoundError for every
      * other use of that owner). The call site is instead replaced by a call to {@link UnsupportedForgeApi#fail}
      * followed by stack-neutral pops and a default value, so the class links and verifies, and only executing that
      * exact path throws {@link UnsupportedOperationException}. Unsupported method handles are redirected through a

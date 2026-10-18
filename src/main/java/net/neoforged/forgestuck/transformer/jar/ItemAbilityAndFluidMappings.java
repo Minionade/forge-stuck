@@ -66,6 +66,16 @@ final class ItemAbilityAndFluidMappings {
                                 "fill(" + fluidStack + fluidAction + ")I",
                                 "drain(" + fluidStack + fluidAction + ")" + fluidStack,
                                 "drain(I" + fluidAction + ")" + fluidStack)),
+                e("net/minecraftforge/fluids/IFluidTank", "net/neoforged/neoforge/fluids/IFluidTank", Set.of(
+                        "getFluid()" + fluidStack, "getFluidAmount()I", "getCapacity()I",
+                        "isFluidValid(" + fluidStack + ")Z",
+                        "fill(" + fluidStack + fluidAction + ")I",
+                        "drain(I" + fluidAction + ")" + fluidStack,
+                        "drain(" + fluidStack + fluidAction + ")" + fluidStack)),
+                e("net/minecraftforge/event/entity/player/EntityItemPickupEvent",
+                        "net/neoforged/neoforge/event/entity/player/ItemEntityPickupEvent$Pre", Set.of(
+                                "<init>(Lnet/minecraft/world/entity/player/Player;"
+                                        + "Lnet/minecraft/world/entity/item/ItemEntity;)V")),
                 e("net/minecraftforge/fluids/capability/IFluidHandler$FluidAction",
                         "net/neoforged/neoforge/fluids/capability/IFluidHandler$FluidAction", Set.of(
                                 "EXECUTEL" + "net/minecraftforge/fluids/capability/IFluidHandler$FluidAction;",
