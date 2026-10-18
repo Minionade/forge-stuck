@@ -499,4 +499,9 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 
 | Date | Change |
 | --- | --- |
-| 2026-10-17 | t27: sapling event/result adapter and spawn-message type/data mapping; PR link recorded below. |
+| 2026-10-17 | t27: sapling event/result adapter and spawn-message type/data mapping; [PR #40](https://github.com/Minionade/forge-stuck/pull/40). |
+
+- Local `assemble -x test` could not reach Java compilation: NeoForm runtime failed
+  in `ExternalJavaToolAction.run` during `mergeMappings` with `NoSuchElementException`
+  (the sandbox does not expose the Java process executable path). No compiled JAR
+  or passing build is claimed for this patch.
