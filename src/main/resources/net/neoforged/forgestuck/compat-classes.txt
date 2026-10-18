@@ -129,3 +129,8 @@ LegacyRenderLivingAccess
 LegacyRenderListenerRegistration
 LegacySpawnPlacementType
 LegacySpawnPlacements
+LegacyAbstractIngredient
+LegacyIngredientBridge
+LegacyIngredientSerializer
+LegacyIngredientTypes
+LegacyIngredientTypes$1
