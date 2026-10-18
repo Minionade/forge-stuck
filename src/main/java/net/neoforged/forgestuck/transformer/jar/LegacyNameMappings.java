@@ -59,6 +59,16 @@ public final class LegacyNameMappings {
         // Descriptor keys also let indirect legacy subclass overrides retain virtual dispatch.
         members.put("m_213888_(Lnet/minecraft/util/RandomSource;Z)Lnet/minecraft/resources/ResourceKey;", "getConfiguredFeature");
         members.put("m_213817_(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/util/RandomSource;)Z", "growTree");
+        // Removed ArmorMaterial interface methods, now implemented by compat.LegacyArmorMaterial.
+        // Verified against MCP 1.20.1-20230612.114412 and Mojang 1.20.1 client mappings.
+        members.put("m_266425_", "getDurabilityForType");
+        members.put("m_7366_", "getDefenseForType");
+        members.put("m_6646_", "getEnchantmentValue");
+        members.put("m_7344_", "getEquipSound");
+        members.put("m_6230_", "getRepairIngredient");
+        members.put("m_6082_", "getName");
+        members.put("m_6651_", "getToughness");
+        members.put("m_6649_", "getKnockbackResistance");
         return new LegacyNameMappings(members, missing);
     }
 

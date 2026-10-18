@@ -69,6 +69,25 @@ public final class ForgeOwnerMappings {
         String dr = "L" + R + "DeferredRegister;";
         String ro = "L" + R + "RegistryObject;";
         return new ForgeOwnerMappings()
+                .add(new Entry("net/minecraft/world/item/ArmorMaterial",
+                        COMPAT + "LegacyArmorMaterial", armorMaterialMembers()))
+                .add(new Entry("net/minecraftforge/client/model/data/ModelData",
+                        "net/neoforged/neoforge/client/model/data/ModelData", Set.of(
+                                "EMPTYLnet/minecraftforge/client/model/data/ModelData;",
+                                "builder()Lnet/minecraftforge/client/model/data/ModelData$Builder;",
+                                "derive()Lnet/minecraftforge/client/model/data/ModelData$Builder;",
+                                "getProperties()Ljava/util/Set;",
+                                "has(Lnet/minecraftforge/client/model/data/ModelProperty;)Z",
+                                "get(Lnet/minecraftforge/client/model/data/ModelProperty;)Ljava/lang/Object;")))
+                .add(new Entry("net/minecraftforge/client/model/data/ModelData$Builder",
+                        "net/neoforged/neoforge/client/model/data/ModelData$Builder", Set.of(
+                                "with(Lnet/minecraftforge/client/model/data/ModelProperty;Ljava/lang/Object;)"
+                                        + "Lnet/minecraftforge/client/model/data/ModelData$Builder;",
+                                "build()Lnet/minecraftforge/client/model/data/ModelData;")))
+                .add(new Entry("net/minecraftforge/client/model/data/ModelProperty",
+                        "net/neoforged/neoforge/client/model/data/ModelProperty", Set.of(
+                                "<init>()V", "<init>(Ljava/util/function/Predicate;)V",
+                                "test(Ljava/lang/Object;)Z")))
                 .add(new Entry("net/minecraftforge/common/extensions/IForgeItem",
                         "net/neoforged/neoforge/common/extensions/IItemExtension", Set.of(
                                 "isRepairable(Lnet/minecraft/world/item/ItemStack;)Z",
@@ -286,6 +305,23 @@ public final class ForgeOwnerMappings {
     private static final String EB = "net/minecraftforge/eventbus/api/";
     private static final String FE = "net/minecraftforge/fml/event/lifecycle/";
     private static final String EBS = "net/neoforged/fml/common/EventBusSubscriber";
+
+    private static Set<String> armorMaterialMembers() {
+        Set<String> members = new java.util.HashSet<>();
+        // Both development names and production SRG calls link after SrgMemberRemapStep adds override bridges.
+        for (String member : java.util.List.of(
+                "m_266425_(Lnet/minecraft/world/item/ArmorItem$Type;)I",
+                "m_7366_(Lnet/minecraft/world/item/ArmorItem$Type;)I",
+                "m_6646_()I", "m_7344_()Lnet/minecraft/sounds/SoundEvent;",
+                "m_6230_()Lnet/minecraft/world/item/crafting/Ingredient;",
+                "m_6082_()Ljava/lang/String;", "m_6651_()F", "m_6649_()F")) {
+            int paren = member.indexOf('(');
+            members.add(member);
+            members.add(LegacyNameMappings.defaults().map(member.substring(0, paren))
+                    + member.substring(paren));
+        }
+        return Set.copyOf(members);
+    }
 
     /** Registry fields present on the compat {@code ForgeRegistries}; absent fields block the owner in that class. */
     static final java.util.List<String> FORGE_REGISTRY_FIELDS = java.util.List.of("BLOCKS", "FLUIDS", "ITEMS",

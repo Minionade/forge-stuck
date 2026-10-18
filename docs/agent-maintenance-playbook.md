@@ -36,6 +36,21 @@ logged at DEBUG and ignored, as in Forge. Targets with annotated handlers
 (including inherited handlers) still go through NeoForge validation; invalid
 signatures, wrong buses, and static/instance mismatches are not swallowed.
 
+### Armor materials and model data
+
+Legacy `ArmorMaterial` references map to `compat.LegacyArmorMaterial`, not the
+1.21.1 record: changing only the implemented type to that record causes an
+`IncompatibleClassChangeError`. Owner remapping precedes SRG remapping; the
+eight legacy methods get named override bridges while their original methods
+remain available to mod callers. This preserves legacy implementations, not
+registration or conversion to native registry-backed armor materials.
+
+Forge's `client.model.data.ModelData`, nested `Builder`, and `ModelProperty`
+map together to the NeoForge equivalents with verified member descriptors.
+Keep these mappings together so property and builder descriptors cannot retain
+Forge types. Regression coverage executes transformed armor implementations
+and model-data construction, rather than only inspecting rewritten names.
+
 Java implementation lives under
 [`src/main/java/net/neoforged/forgestuck`](../src/main/java/net/neoforged/forgestuck).
 The target versions are declared in [`gradle.properties`](../gradle.properties)

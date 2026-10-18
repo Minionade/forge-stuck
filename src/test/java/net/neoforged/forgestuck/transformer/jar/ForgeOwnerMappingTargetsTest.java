@@ -32,6 +32,10 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/common/util/NonNullFunction", "net/minecraftforge/common/util/NonNullSupplier",
             "net/minecraftforge/common/util/NonNullPredicate",
             "net/minecraftforge/common/extensions/IForgeItem", "net/minecraft/world/item/DyeableLeatherItem",
+            "net/minecraft/world/item/ArmorMaterial",
+            "net/minecraftforge/client/model/data/ModelData",
+            "net/minecraftforge/client/model/data/ModelData$Builder",
+            "net/minecraftforge/client/model/data/ModelProperty",
             "net/minecraftforge/common/extensions/IForgeBlock",
             "net/minecraftforge/items/IItemHandler", "net/minecraftforge/items/IItemHandlerModifiable",
             "net/minecraftforge/common/util/INBTSerializable",
@@ -109,6 +113,11 @@ class ForgeOwnerMappingTargetsTest {
                     desc = fm.group(2);
                 }
                 desc = mappings.remapDescriptorTokens(desc, new HashSet<>(), new HashMap<>());
+                if (LegacyNameMappings.looksLikeSrg(name)) {
+                    String mapped = LegacyNameMappings.defaults().map(e.newOwner(), name, desc);
+                    assertNotNull(mapped, "missing SRG mapping for " + e.newOwner() + "." + name + desc);
+                    name = mapped;
+                }
                 boolean ok = !isMethod ? hasField(target, name, desc)
                         : name.equals("<init>") ? hasConstructor(target, desc) : hasMethod(target, name, desc);
                 if (!ok) {
