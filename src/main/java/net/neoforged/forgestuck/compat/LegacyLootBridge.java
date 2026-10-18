@@ -111,7 +111,7 @@ public final class LegacyLootBridge {
 
     private static <T> T value(DataResult<T> result) {
         return result.result().orElseThrow(() -> codecFailure(
-                result.error().map(DataResult.PartialResult::message).orElse("loot codec returned no value")));
+                result.error().map(error -> error.message()).orElse("loot codec returned no value")));
     }
 
     private static IllegalStateException codecFailure(String message) {
