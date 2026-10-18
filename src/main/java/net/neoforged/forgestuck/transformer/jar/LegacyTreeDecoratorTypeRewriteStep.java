@@ -36,7 +36,7 @@ final class LegacyTreeDecoratorTypeRewriteStep implements ClassTransformStep {
             }
         }
         if (rewritten == 0) return bytes;
-        ClassWriter writer = new ClassWriter(0);
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         node.accept(writer);
         return writer.toByteArray();
     }
