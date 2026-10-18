@@ -87,6 +87,7 @@ LegacyContainerFactory
 LegacyForgeMenuType
 LegacyFluidStack
 LegacyEventBusRegistration
+LegacyGenericListenerRegistration
 DatapackRegistryView
 LegacyMessageHandler
 LegacyEnchantmentRegistry
