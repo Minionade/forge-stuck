@@ -164,7 +164,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         for (MethodNode method : node.methods) {
             for (AbstractInsnNode insn : method.instructions.toArray()) {
                 if (!(insn instanceof MethodInsnNode call) || !call.owner.equals(owner)
-                        || !call.name.equals("addAttributeModifier") || !call.desc.equals(desc)) continue;
+                        || !(call.name.equals("addAttributeModifier") || call.name.equals("m_19472_"))
+                        || !call.desc.equals(desc)) continue;
                 Type[] args = Type.getArgumentTypes(desc);
                 Type[] staticArgs = new Type[args.length + 1];
                 staticArgs[0] = Type.getObjectType(owner);

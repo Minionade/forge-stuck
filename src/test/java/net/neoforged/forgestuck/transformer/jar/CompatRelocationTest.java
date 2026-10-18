@@ -60,6 +60,7 @@ class CompatRelocationTest {
             assertTrue(jf.getEntry(CompatRelocation.TO + "LegacyIngredientSerializer.class") != null);
             assertTrue(jf.getEntry(CompatRelocation.TO + "LegacyAbstractIngredient.class") != null);
             assertTrue(jf.getEntry(CompatRelocation.TO + "LegacyIngredientTypes$1.class") != null);
+            assertTrue(jf.getEntry(CompatRelocation.TO + "LegacyCriteriaTriggers.class") != null);
         }
         try (URLClassLoader l = new URLClassLoader(new URL[] {jar.toUri().toURL()}, app)) {
             Class<?> c = Class.forName("net.neoforged.forgestuck.gamecompat.UnsupportedForgeApi", true, l);

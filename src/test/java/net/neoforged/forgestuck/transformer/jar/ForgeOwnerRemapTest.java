@@ -88,6 +88,38 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void legacySrgMobEffectModifierCallUsesHolderAndResourceLocationAdapter() {
+        String owner = "net/minecraft/world/effect/MobEffect";
+        String desc = "(Lnet/minecraft/world/entity/ai/attributes/Attribute;Ljava/lang/String;D"
+                + "Lnet/minecraft/world/entity/ai/attributes/AttributeModifier$Operation;)L" + owner + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/EffectCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "add", "(L" + owner + ";"
+                + desc.substring(1), null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.DLOAD, 3);
+        method.visitVarInsn(Opcodes.ALOAD, 5);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "m_19472_", desc, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.EffectCompat", writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyMobEffect", call.owner);
+        assertEquals("(L" + owner + ";Lnet/minecraft/world/entity/ai/attributes/Attribute;Ljava/lang/String;D"
+                + "Lnet/minecraft/world/entity/ai/attributes/AttributeModifier$Operation;)L" + owner + ";",
+                call.desc);
+    }
+
+    @Test
     void legacyCustomClientFactoryUsesEntityBuilderAdapter() {
         String owner = "net/minecraft/world/entity/EntityType$Builder";
         String desc = "(Ljava/util/function/BiFunction;)L" + owner + ";";

@@ -9,9 +9,11 @@ import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
-/** Wraps legacy tree decorator codecs in the map codec required by Minecraft 1.21.1. */
+/** Wraps legacy tree decorator and root placer codecs in the map codecs required by Minecraft 1.21.1. */
 final class LegacyTreeDecoratorTypeRewriteStep implements ClassTransformStep {
-    private static final String TYPE = "net/minecraft/world/level/levelgen/feature/treedecorators/TreeDecoratorType";
+    private static final java.util.Set<String> TYPES = java.util.Set.of(
+            "net/minecraft/world/level/levelgen/feature/treedecorators/TreeDecoratorType",
+            "net/minecraft/world/level/levelgen/feature/rootplacers/RootPlacerType");
     private static final String CODEC = "com/mojang/serialization/Codec";
     private static final String MAP_CODEC = "com/mojang/serialization/MapCodec";
 
@@ -24,7 +26,7 @@ final class LegacyTreeDecoratorTypeRewriteStep implements ClassTransformStep {
         for (MethodNode method : node.methods) {
             for (var insn : method.instructions.toArray()) {
                 if (!(insn instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKESPECIAL
-                        || !call.owner.equals(TYPE) || !call.name.equals("<init>")
+                        || !TYPES.contains(call.owner) || !call.name.equals("<init>")
                         || !call.desc.equals("(L" + CODEC + ";)V")) continue;
                 InsnList conversion = new InsnList();
                 conversion.add(new LdcInsnNode("data"));

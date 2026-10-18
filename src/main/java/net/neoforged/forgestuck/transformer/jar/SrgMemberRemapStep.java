@@ -31,6 +31,15 @@ public class SrgMemberRemapStep implements ClassTransformStep {
     private static final String TAG = "[Forge Stuck!!]";
     private static final String INHERITED_RESOURCE_LOCATION_WITH_SUFFIX =
             "m_266382_(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;";
+    private static final String FLUID = "net/minecraft/world/level/material/Fluid";
+    private static final String FLUID_STATE_DEFINITION_DESC =
+            "(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V";
+    private static final String ITEMSTACK = "net/minecraft/world/item/ItemStack";
+    private static final String ITEMSTACK_TAG = "()Lnet/minecraft/nbt/CompoundTag;";
+    private static final String LEGACY_ITEMSTACK_SHIM =
+            "net/neoforged/forgestuck/compat/LegacyItemStackShim";
+    private static final String LEGACY_CRITERIA_HELPER =
+            "net/neoforged/forgestuck/compat/LegacyCriteriaTriggers";
 
     private final LegacyNameMappings mappings;
 
@@ -108,9 +117,16 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         for (MethodNode m : node.methods) {
             java.util.Map<AbstractInsnNode, String> unmapped = new java.util.LinkedHashMap<>();
             for (AbstractInsnNode insn : m.instructions.toArray()) {
-                if (insn instanceof MethodInsnNode call && isLegacyItemStackGetTag(call)) {
+                if (insn instanceof MethodInsnNode call && isLegacyCriteriaTriggerRegister(call)) {
                     call.setOpcode(org.objectweb.asm.Opcodes.INVOKESTATIC);
-                    call.owner = "net/neoforged/forgestuck/compat/LegacyItemStackShim";
+                    call.owner = LEGACY_CRITERIA_HELPER;
+                    call.name = "register";
+                    call.itf = false;
+                    modified = true;
+                    remapped.add("CriteriaTriggers.register -> LegacyCriteriaTriggers.register");
+                } else if (insn instanceof MethodInsnNode call && isLegacyItemStackGetTag(call)) {
+                    call.setOpcode(org.objectweb.asm.Opcodes.INVOKESTATIC);
+                    call.owner = LEGACY_ITEMSTACK_SHIM;
                     call.name = "getTag";
                     call.desc = "(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/nbt/CompoundTag;";
                     call.itf = false;
@@ -148,7 +164,11 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     }
                 } else if (insn instanceof org.objectweb.asm.tree.InvokeDynamicInsnNode indy && indy.bsmArgs != null) {
                     for (int i = 0; i < indy.bsmArgs.length; i++) {
-                        if (indy.bsmArgs[i] instanceof org.objectweb.asm.Handle h && ownerIsGame(h.getOwner())
+                        if (indy.bsmArgs[i] instanceof org.objectweb.asm.Handle h && isLegacyItemStackGetTag(h)) {
+                            indy.bsmArgs[i] = legacyItemStackGetTagHandle();
+                            modified = true;
+                            remapped.add("ItemStack.getTag handle -> LegacyItemStackShim.getTag");
+                        } else if (indy.bsmArgs[i] instanceof org.objectweb.asm.Handle h && ownerIsGame(h.getOwner())
                                 && LegacyNameMappings.looksLikeSrg(h.getName())) {
                             String mapped = mappings.map(h.getOwner(), h.getName(), h.getDesc());
                             if (mapped == null) continue;
@@ -158,7 +178,22 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                             modified = true;
                         }
                     }
+                } else if (insn instanceof org.objectweb.asm.tree.LdcInsnNode ldc
+                        && ldc.cst instanceof org.objectweb.asm.Handle h && isLegacyItemStackGetTag(h)) {
+                    ldc.cst = legacyItemStackGetTagHandle();
+                    modified = true;
+                    remapped.add("ItemStack.getTag handle -> LegacyItemStackShim.getTag");
                 } else if (insn instanceof FieldInsnNode field && LegacyNameMappings.looksLikeSrg(field.name)) {
+                    if (isLegacyEmptyBlockDropsAssignment(field)) {
+                        AbstractInsnNode value = previousMeaningful(field);
+                        AbstractInsnNode receiver = previousMeaningful(value);
+                        m.instructions.remove(receiver);
+                        m.instructions.remove(value);
+                        m.instructions.remove(field);
+                        modified = true;
+                        remapped.add("Block.drops = BuiltInLootTables.EMPTY -> data-driven empty loot table");
+                        continue;
+                    }
                     String[] repl = isMixin ? null : REPLACEMENTS.get(field.owner + "." + field.name + field.desc);
                     if (repl != null) {
                         remapped.add(field.name + "->" + repl[0] + "." + repl[1]);
@@ -207,9 +242,49 @@ public class SrgMemberRemapStep implements ClassTransformStep {
 
     private static boolean isLegacyItemStackGetTag(MethodInsnNode call) {
         return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKEVIRTUAL
-                && call.owner.equals("net/minecraft/world/item/ItemStack")
+                && call.owner.equals(ITEMSTACK)
                 && (call.name.equals("m_41783_") || call.name.equals("getTag"))
-                && call.desc.equals("()Lnet/minecraft/nbt/CompoundTag;");
+                && call.desc.equals(ITEMSTACK_TAG);
+    }
+
+    private static boolean isLegacyItemStackGetTag(org.objectweb.asm.Handle handle) {
+        return handle.getTag() == org.objectweb.asm.Opcodes.H_INVOKEVIRTUAL
+                && handle.getOwner().equals(ITEMSTACK)
+                && (handle.getName().equals("m_41783_") || handle.getName().equals("getTag"))
+                && handle.getDesc().equals(ITEMSTACK_TAG);
+    }
+
+    private static org.objectweb.asm.Handle legacyItemStackGetTagHandle() {
+        return new org.objectweb.asm.Handle(org.objectweb.asm.Opcodes.H_INVOKESTATIC, LEGACY_ITEMSTACK_SHIM, "getTag",
+                "(L" + ITEMSTACK + ";)Lnet/minecraft/nbt/CompoundTag;", false);
+    }
+
+    private static boolean isLegacyCriteriaTriggerRegister(MethodInsnNode call) {
+        return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKESTATIC
+                && call.owner.equals("net/minecraft/advancements/CriteriaTriggers")
+                && call.name.equals("m_10595_")
+                && call.desc.equals("(Lnet/minecraft/advancements/CriterionTrigger;)Lnet/minecraft/advancements/CriterionTrigger;");
+    }
+
+    private static boolean isLegacyEmptyBlockDropsAssignment(FieldInsnNode field) {
+        if (field.getOpcode() != org.objectweb.asm.Opcodes.PUTFIELD
+                || !field.owner.equals("net/minecraft/world/level/block/Block")
+                || !(field.name.equals("f_60440_") || field.name.equals("drops"))
+                || !field.desc.equals("Lnet/minecraft/resources/ResourceLocation;")) return false;
+        AbstractInsnNode value = previousMeaningful(field);
+        if (!(value instanceof FieldInsnNode source && source.getOpcode() == org.objectweb.asm.Opcodes.GETSTATIC
+                && source.owner.equals("net/minecraft/world/level/storage/loot/BuiltInLootTables")
+                && (source.name.equals("f_78712_") || source.name.equals("EMPTY"))
+                && source.desc.equals("Lnet/minecraft/resources/ResourceLocation;"))) return false;
+        AbstractInsnNode receiver = previousMeaningful(value);
+        return receiver instanceof org.objectweb.asm.tree.VarInsnNode load
+                && load.getOpcode() == org.objectweb.asm.Opcodes.ALOAD && load.var == 0;
+    }
+
+    private static AbstractInsnNode previousMeaningful(AbstractInsnNode instruction) {
+        AbstractInsnNode previous = instruction.getPrevious();
+        while (previous != null && previous.getOpcode() < 0) previous = previous.getPrevious();
+        return previous;
     }
 
     private static boolean isLegacyIngredientArrayMethod(MethodInsnNode call) {
@@ -238,7 +313,9 @@ public class SrgMemberRemapStep implements ClassTransformStep {
             if (!LegacyNameMappings.looksLikeSrg(m.name) || m.name.equals("<init>") || m.name.equals("<clinit>")) continue;
             if ((m.access & (org.objectweb.asm.Opcodes.ACC_STATIC | org.objectweb.asm.Opcodes.ACC_ABSTRACT
                     | org.objectweb.asm.Opcodes.ACC_PRIVATE)) != 0) continue;
-            for (String sup : supers) {
+            List<String> candidates = new java.util.ArrayList<>(supers);
+            if (m.name.equals("m_7180_") && m.desc.equals(FLUID_STATE_DEFINITION_DESC)) candidates.add(FLUID);
+            for (String sup : candidates) {
                 if (!ownerIsGame(sup)) continue;
                 String mapped = mappings.map(sup, m.name, m.desc);
                 if (mapped == null || mapped.equals(m.name)) continue;
