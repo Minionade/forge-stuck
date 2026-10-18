@@ -649,3 +649,31 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 | Date | Change |
 | --- | --- |
 | 2026-10-18 | t31: concrete render listener registration and FinalizeSpawn mapping; direct-to-main update. |
+
+## t32: SpawnPlacementRegisterEvent
+
+- Maps `SpawnPlacementRegisterEvent` to NeoForge `RegisterSpawnPlacementsEvent`
+  and its nested `Operation` enum to the corresponding native enum. The two
+  short register overloads retain their native signatures after owner remapping.
+- Forge's five-argument register overload takes the removed `SpawnPlacements.Type`
+  enum. Exact calls and virtual method handles redirect through
+  `LegacySpawnPlacements.register`, which converts that argument to the native
+  `SpawnPlacementType` and forwards into the actual event. Null placement values
+  remain null; NeoForge enforces the original registration/replace rules and
+  performs AND/OR/REPLACE predicate merging.
+- `LegacySpawnPlacementType` preserves the four vanilla constants, names and
+  ordinal order (ON_GROUND, IN_WATER, NO_RESTRICTIONS, IN_LAVA), so legacy enum
+  switches remain valid. Each maps to its native SpawnPlacementTypes constant.
+  Enum constant names/order were checked against Mojang's 1.20.1 mappings and
+  MCP 1.20.1-20230612.114412 (which retains the constant names).
+- Non-cancellable/no-result queries on the registration event return false.
+  No substitute event is posted, so mod-bus ordering is unchanged.
+- Limits: custom enum extensions, canSpawnAt, direct legacy SpawnPlacements
+  static APIs, manual event construction, and MergedSpawnPredicate internals
+  are not adapted here. Mixins and invokespecial super calls are not rewritten.
+- Both helpers are included in game-layer relocation. Cache version is 32.
+  Compilation and tests were skipped as requested; delivered directly to main.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-18 | t32: spawn-placement event, operations and vanilla placement-type adapter; direct-to-main update. |

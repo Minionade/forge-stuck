@@ -92,3 +92,5 @@ LegacyRuntimeBootstrap
 LegacyForgeSpawnEggItem
 LegacyRenderLivingAccess
 LegacyRenderListenerRegistration
+LegacySpawnPlacementType
+LegacySpawnPlacements

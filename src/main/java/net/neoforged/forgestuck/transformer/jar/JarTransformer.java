@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "31";
+    public static final String TRANSFORMER_VERSION = "32";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 
@@ -98,7 +98,7 @@ public class JarTransformer {
 
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
-        return new JarTransformer(List.of(new LegacyHurtAndShearingStep(), new LegacyAttackAndTreeStep(), new LegacyInstanceSubscriberStep(), new LegacyRenderLivingListenerStep(), new LegacyConditionCodecStep(), new LegacyResourceLocationSubclassStep(), new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new LegacyEnchantmentSubclassStep(), new LegacyBufferBuilderRewriteStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
+        return new JarTransformer(List.of(new LegacySpawnPlacementStep(), new LegacyHurtAndShearingStep(), new LegacyAttackAndTreeStep(), new LegacyInstanceSubscriberStep(), new LegacyRenderLivingListenerStep(), new LegacyConditionCodecStep(), new LegacyResourceLocationSubclassStep(), new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new LegacyEnchantmentSubclassStep(), new LegacyBufferBuilderRewriteStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
                 new ResourceLocationClassTransformStep(), new SrgMemberRemapStep(), new GameFieldRepairStep(), new LegacyGameTestGuardStep()));
     }
 
