@@ -19,6 +19,7 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/common/SoundAction", "net/minecraftforge/common/SoundActions",
             "net/minecraftforge/event/AttachCapabilitiesEvent",
             "net/minecraftforge/common/capabilities/ICapabilityProvider",
+            "net/minecraft/world/level/pathfinder/BlockPathTypes",
             "net/minecraftforge/common/extensions/IForgeBlockEntity",
             "net/minecraft/network/FriendlyByteBuf$Writer", "net/minecraft/network/FriendlyByteBuf$Reader",
             "net/minecraftforge/registries/RegistryObject", "net/minecraftforge/registries/DeferredRegister",

@@ -98,6 +98,7 @@ public final class ForgeOwnerMappings {
                                 "FLUID_VAPORIZELnet/minecraftforge/common/SoundAction;")))
                 .add(new Entry("net/minecraftforge/common/capabilities/ICapabilityProvider",
                         COMPAT + "LegacyICapabilityProvider", Set.of()))
+                .add(blockPathTypes())
                 .add(new Entry("net/minecraft/network/FriendlyByteBuf$Writer",
                         COMPAT + "LegacyByteBufWriter", Set.of(
                                 "accept(Ljava/lang/Object;Ljava/lang/Object;)V",
@@ -482,6 +483,30 @@ public final class ForgeOwnerMappings {
                 "create(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraft/resources/ResourceKey;Ljava/lang/String;)" + ro,
                 "create(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraft/resources/ResourceLocation;Ljava/lang/String;)" + ro,
                 "create(Lnet/minecraft/resources/ResourceLocation;L" + R + "IForgeRegistry;)" + ro));
+    }
+
+    private static Entry blockPathTypes() {
+        String oldOwner = "net/minecraft/world/level/pathfinder/BlockPathTypes";
+        String desc = "L" + oldOwner + ";";
+        Set<String> members = new java.util.HashSet<>();
+        for (String name : Set.of(
+                "BLOCKED", "OPEN", "WALKABLE", "WALKABLE_DOOR", "TRAPDOOR", "POWDER_SNOW", "DANGER_POWDER_SNOW",
+                "FENCE", "LAVA", "WATER", "WATER_BORDER", "RAIL", "UNPASSABLE_RAIL", "DANGER_FIRE", "DAMAGE_FIRE",
+                "DANGER_OTHER", "DAMAGE_OTHER", "DOOR_OPEN", "DOOR_WOOD_CLOSED", "DOOR_IRON_CLOSED", "BREACH",
+                "LEAVES", "STICKY_HONEY", "COCOA", "DAMAGE_CAUTIOUS")) {
+            members.add(name + desc);
+        }
+        members.addAll(Set.of(
+                "values()[" + desc,
+                "valueOf(Ljava/lang/String;)" + desc,
+                "name()Ljava/lang/String;",
+                "ordinal()I",
+                "toString()Ljava/lang/String;",
+                "compareTo(Ljava/lang/Enum;)I",
+                "compareTo(Ljava/lang/Object;)I",
+                "getDeclaringClass()Ljava/lang/Class;",
+                "getMalus()F"));
+        return entry(oldOwner, "net/minecraft/world/level/pathfinder/PathType", Set.copyOf(members));
     }
 
     /** Cheap check on raw class bytes: could this class mention any mapped owner? */
