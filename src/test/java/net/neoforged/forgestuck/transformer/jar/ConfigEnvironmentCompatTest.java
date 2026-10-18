@@ -207,20 +207,17 @@ class ConfigEnvironmentCompatTest {
     }
 
     @Test
-    void forgeSetConfigAcceptsAndLoadsCommentedConfig() throws Exception {
+    void forgeSetConfigRejectsUnregisteredSpec() throws Exception {
         Class<?> c = transformed();
         Object[] r = (Object[]) call(c, "spec", new Class<?>[0]);
         com.electronwill.nightconfig.core.CommentedConfig config =
                 com.electronwill.nightconfig.core.CommentedConfig.inMemory();
         config.set(List.of("sec", "flag"), false);
 
-        call(c, "setConfig", new Class<?>[] {
-                net.neoforged.neoforge.common.ModConfigSpec.class,
-                com.electronwill.nightconfig.core.CommentedConfig.class}, r[0], config);
-
-        assertTrue(((net.neoforged.neoforge.common.ModConfigSpec) r[0]).isLoaded());
-        assertEquals(false, call(c, "read",
-                new Class<?>[] {net.neoforged.neoforge.common.ModConfigSpec.BooleanValue.class}, r[1]));
+        IllegalStateException error = assertThrows(IllegalStateException.class, () -> call(c, "setConfig",
+                new Class<?>[] {net.neoforged.neoforge.common.ModConfigSpec.class,
+                        com.electronwill.nightconfig.core.CommentedConfig.class}, r[0], config));
+        assertTrue(error.getMessage().contains("unregistered config spec"), error.getMessage());
     }
 
     @Test
