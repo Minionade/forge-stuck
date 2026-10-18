@@ -112,7 +112,17 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */
     private static final java.util.Map<String, String> REDIRECTS = java.util.Map.of(
             "net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V",
-            "net/neoforged/forgestuck/compat/LegacyCapabilities");
+            "net/neoforged/forgestuck/compat/LegacyCapabilities",
+            "net/minecraftforge/event/level/SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;",
+            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
+            "net/minecraftforge/event/level/SaplingGrowTreeEvent.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V",
+            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
+            "net/minecraftforge/event/level/SaplingGrowTreeEvent.getResult()Lnet/minecraftforge/eventbus/api/Event$Result;",
+            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
+            "net/minecraftforge/event/level/SaplingGrowTreeEvent.hasResult()Z",
+            "net/neoforged/forgestuck/compat/LegacySaplingGrowth",
+            "net/minecraftforge/event/level/SaplingGrowTreeEvent.isCancelable()Z",
+            "net/neoforged/forgestuck/compat/LegacySaplingGrowth");
 
     /**
      * Unsupported members no longer leave their owner unmapped (which guaranteed NoClassDefFoundError for every
