@@ -543,4 +543,4 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 
 | Date | Change |
 | --- | --- |
-| 2026-10-17 | t28: incoming attack event and legacy single-sapling grower adapters; PR link to follow. |
+| 2026-10-17 | t28: incoming attack event and legacy single-sapling grower adapters; [PR #41](https://github.com/Minionade/forge-stuck/pull/41). |
