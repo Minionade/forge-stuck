@@ -31,4 +31,5 @@ public final class LegacySaplingGrowth {
 
     public static boolean hasResult(BlockGrowFeatureEvent event) { return true; }
     public static boolean isCancelable(BlockGrowFeatureEvent event) { return true; }
+    public static boolean isCanceled(BlockGrowFeatureEvent event) { return event.isCanceled(); }
 }

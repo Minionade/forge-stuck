@@ -101,6 +101,16 @@ class RegistrationLifecycleTest {
         m.visitInsn(Opcodes.ARETURN);
         m.visitMaxs(0, 0);
         m.visitEnd();
+
+        var registry = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "legacyRegistry",
+                "(L" + FR + "RegisterEvent;)L" + FR + "IForgeRegistry;", null, null);
+        registry.visitCode();
+        registry.visitVarInsn(Opcodes.ALOAD, 0);
+        registry.visitMethodInsn(Opcodes.INVOKEVIRTUAL, FR + "RegisterEvent", "getForgeRegistry",
+                "()L" + FR + "IForgeRegistry;", false);
+        registry.visitInsn(Opcodes.ARETURN);
+        registry.visitMaxs(0, 0);
+        registry.visitEnd();
         cw.visitEnd();
         return cw.toByteArray();
     }
@@ -143,8 +153,13 @@ class RegistrationLifecycleTest {
                 .getDeclaredConstructor(keyClass, regClass);
         ctor.setAccessible(true);
         Object event = ctor.newInstance(itemKey, registry);
+        Object legacyRegistry = modClass.getMethod("legacyRegistry", event.getClass()).invoke(null, event);
+        Class<?> legacyRegistryApi = Class.forName("net.neoforged.forgestuck.compat.IForgeRegistry", true,
+                legacyRegistry.getClass().getClassLoader());
+        assertEquals(itemKey, legacyRegistryApi.getMethod("getRegistryKey").invoke(legacyRegistry));
         bus.getClass().getMethod("post", Class.forName("net.neoforged.bus.api.Event", true, busLoader)).invoke(bus, event);
 
+        assertEquals(true, legacyRegistryApi.getMethod("containsKey", rl).invoke(legacyRegistry, id));
         assertEquals(true, regClass.getMethod("containsKey", rl).invoke(registry, id),
                 "id must be registered exactly as <modid>:<name>");
         assertEquals(1, regClass.getMethod("size").invoke(registry));

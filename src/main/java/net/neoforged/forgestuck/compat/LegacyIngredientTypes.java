@@ -19,6 +19,8 @@ public final class LegacyIngredientTypes {
             new ConcurrentHashMap<>();
     private static final Map<LegacyIngredientSerializer<?>, IngredientType<LegacyAbstractIngredient>> TYPES_BY_SERIALIZER =
             new java.util.IdentityHashMap<>();
+    private static final Map<LegacyIngredientSerializer<?>, ResourceLocation> IDS_BY_SERIALIZER =
+            new java.util.IdentityHashMap<>();
 
     private LegacyIngredientTypes() {}
 
@@ -66,6 +68,7 @@ public final class LegacyIngredientTypes {
                 TYPES.remove(id, type);
                 throw new IllegalStateException("Legacy ingredient serializer is registered more than once: " + id);
             }
+            IDS_BY_SERIALIZER.put(serializer, id);
         }
 
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -85,6 +88,17 @@ public final class LegacyIngredientTypes {
                         + " was not registered through CraftingHelper.register");
             }
             return type;
+        }
+    }
+
+    static ResourceLocation idFor(LegacyIngredientSerializer<?> serializer) {
+        synchronized (TYPES_BY_SERIALIZER) {
+            ResourceLocation id = IDS_BY_SERIALIZER.get(serializer);
+            if (id == null) {
+                throw new UnsupportedOperationException("No registered id for legacy ingredient serializer "
+                        + serializer.getClass().getName());
+            }
+            return id;
         }
     }
 }

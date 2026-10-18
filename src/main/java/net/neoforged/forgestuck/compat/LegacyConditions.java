@@ -3,8 +3,10 @@ package net.neoforged.forgestuck.compat;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.resources.ResourceLocation;
@@ -58,6 +60,10 @@ public final class LegacyConditions {
         return LegacyIngredientTypes.register(id, serializer);
     }
 
+    public static ResourceLocation getID(LegacyIngredientSerializer<?> serializer) {
+        return LegacyIngredientTypes.idFor(serializer);
+    }
+
     /** Codec instance registered for a legacy condition id; used by generated {@code codec()} bridges. */
     public static MapCodec<? extends ICondition> codecFor(ResourceLocation id) {
         MapCodec<ICondition> codec = CODECS.get(id);
@@ -95,5 +101,83 @@ public final class LegacyConditions {
         JsonArray array = new JsonArray();
         for (ICondition condition : conditions) array.add(serialize(condition));
         return array;
+    }
+
+    /** Serializes a single condition without dispatching through the condition-codec registry. */
+    public static JsonObject serializeForDatagen(ICondition condition) {
+        Object codec = conditionCodec(condition);
+        Map.Entry<ResourceLocation, MapCodec<ICondition>> legacy = CODECS.entrySet().stream()
+                .filter(entry -> codec == entry.getValue())
+                .findFirst().orElse(null);
+        ResourceLocation id = legacy == null ? builtInId(condition) : legacy.getKey();
+        if (id == null) {
+            id = registeredCodecId(codec);
+        }
+        if (id == null) {
+            throw new UnsupportedOperationException("No registered NeoForge condition codec for "
+                    + condition.getClass().getName());
+        }
+        JsonObject json = encodeMapCodec(codec, condition);
+        json.addProperty("type", id.toString());
+        return json;
+    }
+
+    private static Object conditionCodec(ICondition condition) {
+        try {
+            return ICondition.class.getMethod("codec").invoke(condition);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Could not access condition codec for " + condition.getClass().getName(), e);
+        }
+    }
+
+    private static ResourceLocation builtInId(ICondition condition) {
+        return switch (condition.getClass().getName()) {
+            case "net.neoforged.neoforge.common.conditions.TrueCondition" ->
+                    ResourceLocation.fromNamespaceAndPath("neoforge", "true");
+            case "net.neoforged.neoforge.common.conditions.FalseCondition" ->
+                    ResourceLocation.fromNamespaceAndPath("neoforge", "false");
+            case "net.neoforged.neoforge.common.conditions.NotCondition" ->
+                    ResourceLocation.fromNamespaceAndPath("neoforge", "not");
+            case "net.neoforged.neoforge.common.conditions.AndCondition" ->
+                    ResourceLocation.fromNamespaceAndPath("neoforge", "and");
+            case "net.neoforged.neoforge.common.conditions.OrCondition" ->
+                    ResourceLocation.fromNamespaceAndPath("neoforge", "or");
+            case "net.neoforged.neoforge.common.conditions.ModLoadedCondition" ->
+                    ResourceLocation.fromNamespaceAndPath("neoforge", "mod_loaded");
+            case "net.neoforged.neoforge.common.conditions.ItemExistsCondition" ->
+                    ResourceLocation.fromNamespaceAndPath("neoforge", "item_exists");
+            default -> null;
+        };
+    }
+
+    private static ResourceLocation registeredCodecId(Object codec) {
+        try {
+            Object key = NeoForgeRegistries.CONDITION_SERIALIZERS.getClass()
+                    .getMethod("getKey", Object.class).invoke(NeoForgeRegistries.CONDITION_SERIALIZERS, codec);
+            return key == null ? null : ResourceLocation.parse(key.toString());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Could not look up condition codec id", e);
+        }
+    }
+
+    private static JsonObject encodeMapCodec(Object mapCodec, ICondition condition) {
+        try {
+            ClassLoader loader = mapCodec.getClass().getClassLoader();
+            Object codec = mapCodec.getClass().getMethod("codec").invoke(mapCodec);
+            Class<?> codecType = Class.forName("com.mojang.serialization.Codec", true, loader);
+            Class<?> dynamicOpsType = Class.forName("com.mojang.serialization.DynamicOps", true, loader);
+            Class<?> jsonOpsType = Class.forName("com.mojang.serialization.JsonOps", true, loader);
+            Object jsonOps = jsonOpsType.getField("INSTANCE").get(null);
+            Object result = codecType.getMethod("encodeStart", dynamicOpsType, Object.class)
+                    .invoke(codec, jsonOps, condition);
+            Object element = result.getClass().getMethod("getOrThrow", java.util.function.Function.class)
+                    .invoke(result, (java.util.function.Function<String, RuntimeException>) IllegalStateException::new);
+            return JsonParser.parseString(element.toString()).getAsJsonObject();
+        } catch (InvocationTargetException e) {
+            throw new IllegalStateException("Could not serialize condition " + condition.getClass().getName(),
+                    e.getCause());
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException("Could not serialize condition " + condition.getClass().getName(), e);
+        }
     }
 }

@@ -21,6 +21,22 @@ final class LivingRenderAndSpawnMappings {
             entries.add(new ForgeOwnerMappings.Entry("net/minecraftforge/client/event/RenderLivingEvent" + suffix,
                     "net/neoforged/neoforge/client/event/RenderLivingEvent" + suffix, members));
         }
+        entries.add(new ForgeOwnerMappings.Entry(
+                "net/minecraftforge/client/event/RenderItemInFrameEvent",
+                "net/neoforged/neoforge/client/event/RenderItemInFrameEvent",
+                Set.of("<init>(Lnet/minecraft/world/entity/decoration/ItemFrame;"
+                        + "Lnet/minecraft/client/renderer/entity/ItemFrameRenderer;"
+                        + "Lcom/mojang/blaze3d/vertex/PoseStack;"
+                        + "Lnet/minecraft/client/renderer/MultiBufferSource;I)V")));
+        entries.add(new ForgeOwnerMappings.Entry(
+                "net/minecraftforge/client/event/RenderNameTagEvent",
+                "net/neoforged/neoforge/client/event/RenderNameTagEvent",
+                Set.of("<init>(Lnet/minecraft/world/entity/Entity;"
+                        + "Lnet/minecraft/network/chat/Component;"
+                        + "Lnet/minecraft/client/renderer/entity/EntityRenderer;"
+                        + "Lcom/mojang/blaze3d/vertex/PoseStack;"
+                        + "Lnet/minecraft/client/renderer/MultiBufferSource;IF)V",
+                        "getContent()Lnet/minecraft/network/chat/Component;")));
         entries.add(new ForgeOwnerMappings.Entry("net/minecraftforge/event/entity/living/MobSpawnEvent$FinalizeSpawn",
                 "net/neoforged/neoforge/event/entity/living/FinalizeSpawnEvent", Set.of(
                 "getEntity()Lnet/minecraft/world/entity/Mob;", "getEntity()Lnet/minecraft/world/entity/Entity;",

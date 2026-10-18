@@ -13,6 +13,7 @@ import org.objectweb.asm.Type;
 import net.neoforged.forgestuck.compat.LegacyCriticalHitEvent;
 import net.neoforged.forgestuck.compat.LegacyEventResult;
 import net.neoforged.neoforge.event.entity.player.CriticalHitEvent;
+import net.neoforged.neoforge.event.entity.living.MobEffectEvent;
 
 /** Guards that every default owner mapping points at a real class and every whitelisted member really exists. */
 class ForgeOwnerMappingTargetsTest {
@@ -22,6 +23,8 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/event/entity/living/LivingDamageEvent",
             "net/minecraftforge/common/SoundAction", "net/minecraftforge/common/SoundActions",
             "net/minecraftforge/common/Tags$Items", "net/minecraftforge/common/Tags$Blocks",
+            "net/minecraftforge/client/ForgeRenderTypes",
+            "net/minecraftforge/common/ForgeI18n",
             "net/minecraft/core/particles/ParticleOptions",
             "net/minecraft/core/particles/ParticleOptions$Deserializer",
             "net/minecraftforge/common/loot/LootModifier",
@@ -30,8 +33,15 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraft/world/level/storage/loot/functions/LootItemConditionalFunction$Serializer",
             "net/minecraftforge/event/AttachCapabilitiesEvent",
             "net/minecraftforge/common/capabilities/ICapabilityProvider",
+            "net/minecraftforge/common/capabilities/Capability",
+            "net/minecraftforge/common/capabilities/CapabilityManager",
+            "net/minecraftforge/common/capabilities/CapabilityToken",
+            "net/minecraftforge/common/capabilities/ForgeCapabilities",
             "net/minecraft/world/level/pathfinder/BlockPathTypes",
             "net/minecraftforge/common/extensions/IForgeBlockEntity",
+            "net/minecraftforge/common/IPlantable",
+            "net/minecraftforge/common/crafting/IShapedRecipe",
+            "net/minecraftforge/common/crafting/VanillaIngredientSerializer",
             "net/minecraft/network/FriendlyByteBuf$Writer", "net/minecraft/network/FriendlyByteBuf$Reader",
             "net/minecraftforge/registries/RegistryObject", "net/minecraftforge/registries/DeferredRegister",
             "net/minecraftforge/registries/IForgeRegistry", "net/minecraftforge/registries/ForgeRegistries",
@@ -70,6 +80,8 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/fml/event/config/ModConfigEvent", "net/minecraftforge/fml/event/config/ModConfigEvent$Loading",
             "net/minecraftforge/fml/event/config/ModConfigEvent$Reloading", "net/minecraftforge/common/MinecraftForge",
             "net/minecraftforge/fml/ModLoadingContext", "net/minecraftforge/fml/ModContainer",
+            "net/minecraftforge/fml/ModLoader",
+            "net/minecraftforge/forgespi/language/IModInfo",
             "net/minecraftforge/fml/ModList", "net/minecraftforge/fml/loading/FMLEnvironment",
             "net/minecraftforge/fml/loading/FMLPaths", "net/minecraftforge/fml/LogicalSide",
             "net/minecraftforge/fml/DistExecutor", "net/minecraftforge/fml/DistExecutor$SafeReferent",
@@ -81,6 +93,7 @@ class ForgeOwnerMappingTargetsTest {
         for (ForgeOwnerMappings.Entry e : GeneratedOwnerTable.entries()) all.add(e.oldOwner());
         for (ForgeOwnerMappings.Entry e : TickMappings.entries()) all.add(e.oldOwner());
         for (ForgeOwnerMappings.Entry e : ConditionMappings.entries()) all.add(e.oldOwner());
+        for (ForgeOwnerMappings.Entry e : CommonApiMappings.entries()) all.add(e.oldOwner());
         for (ForgeOwnerMappings.Entry e : DataMappings.entries()) all.add(e.oldOwner());
         for (ForgeOwnerMappings.Entry e : ModelGeneratorMappings.entries()) all.add(e.oldOwner());
         for (ForgeOwnerMappings.Entry e : ClientModelMappings.entries()) all.add(e.oldOwner());
@@ -125,22 +138,241 @@ class ForgeOwnerMappingTargetsTest {
     }
 
     @Test
+    void mobEffectApplicablePreservesForgeEventResults() {
+        assertEquals(List.of("APPLY", "DEFAULT", "DO_NOT_APPLY"),
+                java.util.Arrays.stream(MobEffectEvent.Applicable.Result.values())
+                .map(Enum::name).toList());
+        MobEffectEvent.Applicable event = new MobEffectEvent.Applicable(null, null, null);
+        for (LegacyEventResult result : LegacyEventResult.values()) {
+            net.neoforged.forgestuck.compat.LegacyMobEffectApplicable.setResult(event, result);
+            assertEquals(result, net.neoforged.forgestuck.compat.LegacyMobEffectApplicable.getResult(event));
+        }
+    }
+
+    @Test
+    void legacyLootTableConditionBuilderBuildsNeoForgeCondition() {
+        var builder = new net.neoforged.neoforge.common.loot.LootTableIdCondition.Builder(
+                net.minecraft.resources.ResourceLocation.parse("test:loot"));
+        assertInstanceOf(net.neoforged.neoforge.common.loot.LootTableIdCondition.class,
+                net.neoforged.forgestuck.compat.LegacyLootTableIdCondition.m_6409_(builder));
+    }
+
+    @Test
+    void legacyCanToolPerformActionBuildsNeoForgeAbilityCondition() {
+        var builder = net.neoforged.forgestuck.compat.LegacyCanToolPerformAction.canToolPerformAction(
+                net.neoforged.neoforge.common.ItemAbility.get("forgestuck_test"));
+        assertInstanceOf(net.neoforged.neoforge.common.loot.CanItemPerformAbility.class, builder.build());
+    }
+
+    @Test
+    void legacyTierDropCheckUsesTheTierIncorrectBlocksTag() {
+        var incorrect = net.minecraft.world.item.Tiers.WOOD.getIncorrectBlocksForDrops();
+        var stone = net.minecraft.world.level.block.Blocks.STONE.defaultBlockState();
+        assertEquals(!stone.is(incorrect),
+                net.neoforged.forgestuck.compat.LegacyTierSortingRegistry.isCorrectTierForDrops(
+                        net.minecraft.world.item.Tiers.WOOD, stone));
+    }
+
+    @Test
+    void legacyGuiOverlayTokensPreserveIdentityForVanillaLayers() {
+        assertSame(net.neoforged.forgestuck.compat.LegacyVanillaGuiOverlay.CROSSHAIR.type(),
+                net.neoforged.forgestuck.compat.LegacyNamedGuiOverlay.of(
+                        net.neoforged.neoforge.client.gui.VanillaGuiLayers.CROSSHAIR));
+        assertSame(net.neoforged.forgestuck.compat.LegacyVanillaGuiOverlay.HOTBAR.type(),
+                net.neoforged.forgestuck.compat.LegacyNamedGuiOverlay.of(
+                        net.neoforged.neoforge.client.gui.VanillaGuiLayers.HOTBAR));
+        assertSame(net.neoforged.forgestuck.compat.LegacyVanillaGuiOverlay.PLAYER_HEALTH.type(),
+                net.neoforged.forgestuck.compat.LegacyNamedGuiOverlay.of(
+                        net.neoforged.neoforge.client.gui.VanillaGuiLayers.PLAYER_HEALTH));
+    }
+
+    @Test
+    void legacyItemTagAliasesUseTheExpectedTargetKeys() {
+        assertEquals(net.minecraft.tags.ItemTags.FOOT_ARMOR,
+                net.neoforged.forgestuck.compat.LegacyItemTags.ARMORS_BOOTS);
+        assertEquals(net.minecraft.tags.ItemTags.CHEST_ARMOR,
+                net.neoforged.forgestuck.compat.LegacyItemTags.ARMORS_CHESTPLATES);
+        assertEquals(net.minecraft.tags.ItemTags.HEAD_ARMOR,
+                net.neoforged.forgestuck.compat.LegacyItemTags.ARMORS_HELMETS);
+        assertEquals(net.minecraft.tags.ItemTags.LEG_ARMOR,
+                net.neoforged.forgestuck.compat.LegacyItemTags.ARMORS_LEGGINGS);
+        assertEquals(net.minecraft.tags.ItemTags.SKULLS,
+                net.neoforged.forgestuck.compat.LegacyItemTags.HEADS);
+        assertEquals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("c", "storage_blocks/quartz"),
+                net.neoforged.forgestuck.compat.LegacyItemTags.STORAGE_BLOCKS_QUARTZ.location());
+        assertEquals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("forge", "dusts/prismarine"),
+                net.neoforged.forgestuck.compat.LegacyItemTags.DUSTS_PRISMARINE.location());
+        assertEquals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("forge", "stained_glass"),
+                net.neoforged.forgestuck.compat.LegacyItemTags.STAINED_GLASS.location());
+        assertEquals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("forge", "stained_glass_panes"),
+                net.neoforged.forgestuck.compat.LegacyItemTags.STAINED_GLASS_PANES.location());
+        assertEquals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("forge", "stained_glass"),
+                net.neoforged.forgestuck.compat.LegacyBlockTags.STAINED_GLASS.location());
+        assertEquals(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("forge", "stained_glass_panes"),
+                net.neoforged.forgestuck.compat.LegacyBlockTags.STAINED_GLASS_PANES.location());
+    }
+
+    @Test
+    void legacyNoneBiomeModifierHolderKeepsTheTargetRegistryKey() {
+        net.neoforged.forgestuck.testsupport.TestBootstrap.init();
+        assertEquals(net.neoforged.neoforge.common.NeoForgeMod.NONE_BIOME_MODIFIER_TYPE.getKey(),
+                net.neoforged.forgestuck.compat.LegacyForgeMod.NONE_BIOME_MODIFIER_TYPE.getKey());
+    }
+
+    @Test
+    void legacyPlantableContractPreservesItsMethods() throws Exception {
+        Class<?> target = net.neoforged.forgestuck.compat.LegacyIPlantable.class;
+        assertTrue(target.isInterface());
+        assertTrue(hasMethod(target, "getPlant",
+                "(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)"
+                        + "Lnet/minecraft/world/level/block/state/BlockState;"));
+        assertTrue(hasMethod(target, "getPlantType",
+                "(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)"
+                        + "Lnet/neoforged/forgestuck/compat/PlantType;"));
+    }
+
+    @Test
+    void legacyPlantableAdapterPreservesVanillaBlockDefaults() {
+        net.neoforged.forgestuck.testsupport.TestBootstrap.init();
+        var block = net.minecraft.world.level.block.Blocks.DEAD_BUSH;
+        assertEquals(block.defaultBlockState(), net.neoforged.forgestuck.compat.LegacyPlantable.getPlant(
+                (Object) block, null, null));
+        assertEquals(net.neoforged.forgestuck.compat.PlantType.DESERT,
+                net.neoforged.forgestuck.compat.LegacyPlantable.getPlantType((Object) block, null, null));
+    }
+
+    @Test
+    void legacyShapedRecipeAdapterReadsVanillaDimensions() {
+        net.neoforged.forgestuck.testsupport.TestBootstrap.init();
+        var recipe = new net.minecraft.world.item.crafting.ShapedRecipe(
+                "", net.minecraft.world.item.crafting.CraftingBookCategory.MISC,
+                net.minecraft.world.item.crafting.ShapedRecipePattern.of(
+                        java.util.Map.of('X',
+                                net.minecraft.world.item.crafting.Ingredient.of(net.minecraft.world.item.Items.STONE)),
+                        "XX", " X"),
+                new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE));
+        assertEquals(2, net.neoforged.forgestuck.compat.LegacyShapedRecipe.getRecipeWidth(recipe));
+        assertEquals(2, net.neoforged.forgestuck.compat.LegacyShapedRecipe.getRecipeHeight(recipe));
+        assertEquals("net/minecraft/world/item/crafting/ShapedRecipe",
+                ForgeOwnerMappings.defaults().get("net/minecraftforge/common/crafting/IShapedRecipe").newOwner());
+    }
+
+    @Test
+    void legacyVanillaIngredientSerializerParsesVanillaJson() throws Exception {
+        net.neoforged.forgestuck.testsupport.TestBootstrap.init();
+        var serializer = net.neoforged.forgestuck.compat.LegacyVanillaIngredientSerializer.INSTANCE;
+        var ingredient = serializer.parse(com.google.gson.JsonParser.parseString(
+                "{\"item\":\"minecraft:stone\"}").getAsJsonObject());
+        assertTrue(ingredient.test(new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE)));
+
+        var entry = ForgeOwnerMappings.defaults().get(
+                "net/minecraftforge/common/crafting/VanillaIngredientSerializer");
+        assertTrue(hasField(load(entry.newOwner()), "INSTANCE",
+                "Lnet/neoforged/forgestuck/compat/LegacyVanillaIngredientSerializer;"));
+    }
+
+    @Test
+    void conditionalAdvancementBuilderMapsOnlyItsSupportedSingleVariantCalls() throws Exception {
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        String oldOwner = "net/minecraftforge/common/crafting/ConditionalAdvancement$Builder";
+        String newOwner = "net/neoforged/forgestuck/compat/LegacyConditionalAdvancement$Builder";
+        var entry = mappings.get(oldOwner);
+        assertNotNull(entry);
+        assertEquals(newOwner, entry.newOwner());
+
+        Class<?> target = load(newOwner);
+        assertTrue(hasConstructor(target, "()V"));
+        assertTrue(hasMethod(target, "addAdvancement",
+                "(Lnet/minecraft/advancements/Advancement$Builder;)L" + newOwner + ";"));
+        assertTrue(hasMethod(target, "addCondition",
+                "(Lnet/neoforged/neoforge/common/conditions/ICondition;)L" + newOwner + ";"));
+        assertTrue(hasMethod(target, "write", "()Lcom/google/gson/JsonObject;"));
+        assertNull(mappings.get("net/minecraftforge/common/crafting/ConditionalRecipe$Builder"));
+    }
+
+    @Test
+    void legacyArmorTextureHookPreservesFallback() {
+        net.neoforged.forgestuck.testsupport.TestBootstrap.init();
+        assertEquals("default:texture",
+                net.neoforged.forgestuck.compat.LegacyArmorTextureHooks.getArmorTexture(null,
+                        new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.STONE), "default:texture",
+                        net.minecraft.world.entity.EquipmentSlot.CHEST, "overlay"));
+    }
+
+    @Test
+    void legacyBonemealHookPreservesNullPlayerNoOp() {
+        assertEquals(0, net.neoforged.forgestuck.compat.LegacyBonemealHook.onApplyBonemeal(
+                null, null, null, null, null));
+    }
+
+    @Test
+    void legacyGeometryHelperPreservesEmptyBakeResult() {
+        assertTrue(net.neoforged.forgestuck.compat.LegacyUnbakedGeometryHelper.bakeElements(
+                List.of(), null, null, null).isEmpty());
+    }
+
+    @Test
     void mappedForgeTagFieldsExistOnNeoForge() throws Exception {
         ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
         List<String> missing = new ArrayList<>();
         for (String owner : List.of("net/minecraftforge/common/Tags$Items",
-                "net/minecraftforge/common/Tags$Blocks")) {
+                "net/minecraftforge/common/Tags$Blocks", "net/minecraftforge/common/Tags$Fluids",
+                "net/minecraftforge/common/Tags$Biomes")) {
             ForgeOwnerMappings.Entry entry = mappings.get(owner);
             Class<?> target = load(entry.newOwner());
             for (String member : entry.supportedMembers()) {
                 var matcher = FIELD.matcher(member);
                 assertTrue(matcher.matches(), "invalid field mapping " + member);
-                if (!hasField(target, matcher.group(1), matcher.group(2))) {
+                String targetName = mappings.mappedFieldName(owner, matcher.group(1), matcher.group(2));
+                if (!hasField(target, targetName, matcher.group(2))) {
                     missing.add(entry.newOwner() + "." + member);
                 }
             }
         }
         assertEquals(List.of(), missing);
+    }
+
+    @Test
+    void legacyCommonTagFieldAliasesPointAtExistingNeoForgeFields() throws Exception {
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        for (String[] alias : List.of(
+                new String[] {"net/minecraftforge/common/Tags$Items", "GLASS", "GLASS_BLOCKS"},
+                new String[] {"net/minecraftforge/common/Tags$Items", "GUNPOWDER", "GUNPOWDERS"},
+                new String[] {"net/minecraftforge/common/Tags$Items", "STRING", "STRINGS"},
+                new String[] {"net/minecraftforge/common/Tags$Items", "TOOLS_BOWS", "TOOLS_BOW"},
+                new String[] {"net/minecraftforge/common/Tags$Items", "GLASS_SILICA", "GLASS_BLOCKS_CHEAP"},
+                new String[] {"net/minecraftforge/common/Tags$Items", "TOOLS_TRIDENTS", "TOOLS_SPEAR"},
+                new String[] {"net/minecraftforge/common/Tags$Blocks", "GLASS", "GLASS_BLOCKS"},
+                new String[] {"net/minecraftforge/common/Tags$Blocks", "GLASS_SILICA", "GLASS_BLOCKS_CHEAP"})) {
+            ForgeOwnerMappings.Entry entry = mappings.get(alias[0]);
+            Class<?> target = load(entry.newOwner());
+            String descriptor = "Lnet/minecraft/tags/TagKey;";
+            assertEquals(alias[2], mappings.mappedFieldName(alias[0], alias[1], descriptor));
+            assertTrue(hasField(target, alias[2], descriptor));
+            assertTrue(mappings.supportsMember(alias[0], alias[1], descriptor));
+        }
+    }
+
+    @Test
+    void mappedForgeRenderTypeMembersExistOnNeoForge() throws Exception {
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        ForgeOwnerMappings.Entry entry = mappings.get("net/minecraftforge/client/ForgeRenderTypes");
+        Class<?> target = load(entry.newOwner());
+        for (String member : entry.supportedMembers()) {
+            if (member.contains("(")) {
+                int paren = member.indexOf('(');
+                String name = member.substring(0, paren);
+                String descriptor = mappings.remapDescriptorTokens(member.substring(paren), new HashSet<>(),
+                        new HashMap<>());
+                assertTrue(hasMethod(target, name, descriptor), "missing method " + member);
+            } else {
+                var matcher = FIELD.matcher(member);
+                assertTrue(matcher.matches(), "invalid field mapping " + member);
+                String descriptor = mappings.remapDescriptorTokens(matcher.group(2), new HashSet<>(),
+                        new HashMap<>());
+                assertTrue(hasField(target, matcher.group(1), descriptor), "missing field " + member);
+            }
+        }
     }
 
     @Test
@@ -179,6 +411,42 @@ class ForgeOwnerMappingTargetsTest {
     }
 
     @Test
+    void mappedClientExtensionsAndRenderEventsExistOnNeoForge() throws Exception {
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        List<String> owners = List.of(
+                "net/minecraftforge/client/extensions/common/IClientItemExtensions",
+                "net/minecraftforge/client/extensions/common/IClientItemExtensions$FontContext",
+                "net/minecraftforge/client/extensions/common/IClientMobEffectExtensions",
+                "net/minecraftforge/client/event/RenderItemInFrameEvent",
+                "net/minecraftforge/client/event/RenderNameTagEvent",
+                "net/minecraftforge/client/gui/overlay/ForgeGui");
+        for (String owner : owners) {
+            ForgeOwnerMappings.Entry entry = mappings.get(owner);
+            Class<?> target = load(entry.newOwner());
+            for (String member : entry.supportedMembers()) {
+                boolean method = member.contains("(");
+                String name;
+                String descriptor;
+                if (method) {
+                    int paren = member.indexOf('(');
+                    name = member.substring(0, paren);
+                    descriptor = member.substring(paren);
+                } else {
+                    var matcher = FIELD.matcher(member);
+                    assertTrue(matcher.matches(), "invalid field mapping " + member);
+                    name = matcher.group(1);
+                    descriptor = matcher.group(2);
+                }
+                descriptor = mappings.remapDescriptorTokens(descriptor, new HashSet<>(), new HashMap<>());
+                boolean exists = method
+                        ? name.equals("<init>") ? hasConstructor(target, descriptor) : hasMethod(target, name, descriptor)
+                        : hasField(target, name, descriptor);
+                assertTrue(exists, "missing target member " + entry.newOwner() + "." + name + descriptor);
+            }
+        }
+    }
+
+    @Test
     void mappedFluidStackMembersExistOnNeoForge() throws Exception {
         ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
         ForgeOwnerMappings.Entry entry = mappings.get("net/minecraftforge/fluids/FluidStack");
@@ -202,6 +470,52 @@ class ForgeOwnerMappingTargetsTest {
                     ? name.equals("<init>") ? hasConstructor(target, descriptor) : hasMethod(target, name, descriptor)
                     : hasField(target, name, descriptor);
             assertTrue(exists, "missing target member " + entry.newOwner() + "." + name + descriptor);
+        }
+    }
+
+    @Test
+    void existingFileHelperResourceTypeTrackGeneratedOverloadExistsOnNeoForge() throws Exception {
+        ForgeOwnerMappings.Entry entry = DataMappings.entries().stream()
+                .filter(candidate -> candidate.oldOwner().equals(
+                        "net/minecraftforge/common/data/ExistingFileHelper"))
+                .findFirst().orElseThrow();
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        Class<?> target = load(entry.newOwner());
+        String oldDescriptor = "(Lnet/minecraft/resources/ResourceLocation;"
+                + "Lnet/minecraftforge/common/data/ExistingFileHelper$IResourceType;)V";
+        String descriptor = mappings.remapDescriptorTokens(oldDescriptor, new HashSet<>(), new HashMap<>());
+        assertTrue(hasMethod(target, "trackGenerated", descriptor));
+    }
+
+    @Test
+    void existingFileHelperResourceTypeExistsOverloadExistsOnNeoForge() throws Exception {
+        ForgeOwnerMappings.Entry entry = DataMappings.entries().stream()
+                .filter(candidate -> candidate.oldOwner().equals(
+                        "net/minecraftforge/common/data/ExistingFileHelper"))
+                .findFirst().orElseThrow();
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        Class<?> target = load(entry.newOwner());
+        String oldDescriptor = "(Lnet/minecraft/resources/ResourceLocation;"
+                + "Lnet/minecraftforge/common/data/ExistingFileHelper$IResourceType;)Z";
+        String descriptor = mappings.remapDescriptorTokens(oldDescriptor, new HashSet<>(), new HashMap<>());
+        assertTrue(hasMethod(target, "exists", descriptor));
+    }
+
+    @Test
+    void reloadContextAndModInfoMembersExistOnNeoForge() throws Exception {
+        ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
+        for (String owner : List.of("net/minecraftforge/event/AddReloadListenerEvent",
+                "net/minecraftforge/fml/ModContainer", "net/minecraftforge/forgespi/language/IModInfo")) {
+            ForgeOwnerMappings.Entry entry = mappings.get(owner);
+            Class<?> target = load(entry.newOwner());
+            for (String member : entry.supportedMembers()) {
+                if (member.indexOf('(') < 0) continue;
+                int paren = member.indexOf('(');
+                String name = member.substring(0, paren);
+                String descriptor = mappings.remapDescriptorTokens(member.substring(paren), new HashSet<>(),
+                        new HashMap<>());
+                assertTrue(hasMethod(target, name, descriptor), "missing target method " + owner + "." + member);
+            }
         }
     }
 
@@ -307,7 +621,8 @@ class ForgeOwnerMappingTargetsTest {
                 boolean exists = method
                         ? name.equals("<init>") ? hasConstructor(target, descriptor) : hasMethod(target, name, descriptor)
                         : hasField(target, name, descriptor);
-                if (!exists) missing.add(entry.newOwner() + "." + name + descriptor);
+                if (!exists) missing.add(entry.newOwner() + "." + name + descriptor + " available="
+                        + java.util.Arrays.toString(target.getDeclaredMethods()));
             }
         }
         assertEquals(List.of(), missing);
@@ -344,13 +659,28 @@ class ForgeOwnerMappingTargetsTest {
     }
 
     @Test
-    void capabilityProviderUsesLinkOnlyCompatWhileOtherCapabilityTypesRemainUnmapped() {
+    void legacyCapabilityTokenAndBuiltInConstantsHaveCompatibilityTypes() {
         ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
         assertEquals("net/neoforged/forgestuck/compat/LegacyICapabilityProvider",
                 mappings.get("net/minecraftforge/common/capabilities/ICapabilityProvider").newOwner());
-        for (String n : List.of("Capability", "CapabilityManager", "ICapabilitySerializable", "CapabilityToken")) {
-            assertNull(mappings.get("net/minecraftforge/common/capabilities/" + n), n);
+        for (String n : List.of("Capability", "CapabilityManager", "CapabilityToken", "ForgeCapabilities")) {
+            assertNotNull(mappings.get("net/minecraftforge/common/capabilities/" + n), n);
         }
+        assertNull(mappings.get("net/minecraftforge/common/capabilities/ICapabilitySerializable"));
+    }
+
+    @Test
+    void legacyCapabilityTokensResolveCanonicalCapabilities() {
+        var itemHandler = net.neoforged.forgestuck.compat.LegacyCapabilityManager.get(
+                new net.neoforged.forgestuck.compat.LegacyCapabilityToken<
+                        net.neoforged.neoforge.items.IItemHandler>() {});
+        assertSame(net.neoforged.forgestuck.compat.LegacyForgeCapabilities.ITEM_HANDLER, itemHandler);
+
+        var present = net.neoforged.forgestuck.compat.LazyOptional.of(() -> "present");
+        var stringCapability = net.neoforged.forgestuck.compat.LegacyCapabilityManager.get(
+                new net.neoforged.forgestuck.compat.LegacyCapabilityToken<String>() {});
+        assertSame(present, stringCapability.orEmpty(stringCapability, present));
+        assertFalse(stringCapability.orEmpty(null, present).isPresent());
     }
 
     @Test

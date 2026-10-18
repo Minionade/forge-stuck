@@ -80,6 +80,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         boolean mixin = isMixin(node);
         int replaced = mixin ? 0 : rewriteLegacyFluidStackConstructors(className, node);
         if (!mixin) {
+            replaced += rewriteLegacyItemTagAliases(node);
+            replaced += rewriteLegacyBlockTagAliases(node);
             replaced += rewriteLegacyConditionListConstructors(node);
             replaced += rewriteLegacyMobEffectRemoveConstructors(node);
             replaced += rewriteEmptyFluidHandlerConstructors(node);
@@ -119,6 +121,48 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         if (report != null) report.record(counts, mappings, adapted[0]);
         LOGGER.debug("{} remapped Forge owners in {}: {}", TAG, className, counts);
         return writer.toByteArray();
+    }
+
+    private static int rewriteLegacyItemTagAliases(ClassNode node) {
+        String oldOwner = "net/minecraftforge/common/Tags$Items";
+        String newOwner = "net/neoforged/forgestuck/compat/LegacyItemTags";
+        Set<String> fields = Set.of("ARMORS_BOOTS", "ARMORS_CHESTPLATES", "ARMORS_HELMETS",
+                "ARMORS_LEGGINGS", "DUSTS_PRISMARINE", "HEADS", "STAINED_GLASS", "STAINED_GLASS_PANES",
+                "STORAGE_BLOCKS_QUARTZ");
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (instruction instanceof FieldInsnNode field
+                        && field.getOpcode() == Opcodes.GETSTATIC
+                        && field.owner.equals(oldOwner)
+                        && fields.contains(field.name)
+                        && field.desc.equals("Lnet/minecraft/tags/TagKey;")) {
+                    field.owner = newOwner;
+                    rewritten++;
+                }
+            }
+        }
+        return rewritten;
+    }
+
+    private static int rewriteLegacyBlockTagAliases(ClassNode node) {
+        String oldOwner = "net/minecraftforge/common/Tags$Blocks";
+        String newOwner = "net/neoforged/forgestuck/compat/LegacyBlockTags";
+        Set<String> fields = Set.of("STAINED_GLASS", "STAINED_GLASS_PANES");
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (instruction instanceof FieldInsnNode field
+                        && field.getOpcode() == Opcodes.GETSTATIC
+                        && field.owner.equals(oldOwner)
+                        && fields.contains(field.name)
+                        && field.desc.equals("Lnet/minecraft/tags/TagKey;")) {
+                    field.owner = newOwner;
+                    rewritten++;
+                }
+            }
+        }
+        return rewritten;
     }
 
     private static int rewriteLegacyBurnTimeCalls(ClassNode node) {
@@ -167,6 +211,86 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
 
     /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */
     private static final java.util.Map<String, String> REDIRECTS = java.util.Map.ofEntries(
+            java.util.Map.entry("net/minecraftforge/client/event/ModelEvent$RegisterAdditional"
+                    + ".register(Lnet/minecraft/resources/ResourceLocation;)V",
+                    "net/neoforged/forgestuck/compat/LegacyAdditionalModelEvent"),
+            java.util.Map.entry("net/minecraftforge/client/event/EntityRenderersEvent$AddLayers"
+                    + ".getRenderer(Lnet/minecraft/world/entity/EntityType;)"
+                    + "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;",
+                    "net/neoforged/forgestuck/compat/LegacyAddLayersEvent"),
+            java.util.Map.entry("net/minecraftforge/client/event/ModelEvent$RegisterGeometryLoaders"
+                    + ".register(Ljava/lang/String;Lnet/minecraftforge/client/model/geometry/IGeometryLoader;)V",
+                    "net/neoforged/forgestuck/compat/LegacyGeometryLoaderRegistration"),
+            java.util.Map.entry("net/minecraftforge/event/BuildCreativeModeTabContentsEvent"
+                    + ".m_246342_(Lnet/minecraft/world/item/ItemStack;)V",
+                    "net/neoforged/forgestuck/compat/LegacyCreativeTabEvent"),
+            java.util.Map.entry("net/minecraftforge/client/event/RenderLevelStageEvent.getPartialTick()F",
+                    "net/neoforged/forgestuck/compat/LegacyRenderLevelStage"),
+            java.util.Map.entry("net/minecraftforge/client/event/RenderNameTagEvent.getResult()"
+                    + "Lnet/minecraftforge/eventbus/api/Event$Result;",
+                    "net/neoforged/forgestuck/compat/LegacyRenderNameTagEvent"),
+            java.util.Map.entry("net/minecraftforge/client/event/RenderGuiOverlayEvent$Post.getOverlay()"
+                    + "Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;",
+                    "net/neoforged/forgestuck/compat/LegacyGuiOverlayEvent"),
+            java.util.Map.entry("net/minecraftforge/client/event/RenderGuiOverlayEvent$Pre.getOverlay()"
+                    + "Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;",
+                    "net/neoforged/forgestuck/compat/LegacyGuiOverlayEvent"),
+            java.util.Map.entry("net/minecraftforge/common/loot/LootTableIdCondition$Builder"
+                    + ".m_6409_()Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition;",
+                    "net/neoforged/forgestuck/compat/LegacyLootTableIdCondition"),
+            java.util.Map.entry("net/minecraftforge/common/crafting/IShapedRecipe.getRecipeWidth()I",
+                    "net/neoforged/forgestuck/compat/LegacyShapedRecipe"),
+            java.util.Map.entry("net/minecraftforge/common/crafting/IShapedRecipe.getRecipeHeight()I",
+                    "net/neoforged/forgestuck/compat/LegacyShapedRecipe"),
+            java.util.Map.entry("net/minecraftforge/common/IPlantable.getPlant("
+                    + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)"
+                    + "Lnet/minecraft/world/level/block/state/BlockState;",
+                    "net/neoforged/forgestuck/compat/LegacyPlantable"),
+            java.util.Map.entry("net/minecraftforge/common/IPlantable.getPlantType("
+                    + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)"
+                    + "Lnet/minecraftforge/common/PlantType;",
+                    "net/neoforged/forgestuck/compat/LegacyPlantable"),
+            java.util.Map.entry("net/minecraftforge/client/ForgeHooksClient.getArmorTexture("
+                    + "Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/item/ItemStack;"
+                    + "Ljava/lang/String;Lnet/minecraft/world/entity/EquipmentSlot;Ljava/lang/String;)"
+                    + "Ljava/lang/String;",
+                    "net/neoforged/forgestuck/compat/LegacyArmorTextureHooks"),
+            java.util.Map.entry("net/minecraftforge/event/ForgeEventFactory.canCreateFluidSource("
+                    + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                    + "Lnet/minecraft/world/level/block/state/BlockState;Z)Z",
+                    "net/neoforged/forgestuck/compat/LegacyFluidSourceEvent"),
+            java.util.Map.entry("net/minecraftforge/event/ForgeEventFactory.onApplyBonemeal("
+                    + "Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/Level;"
+                    + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;"
+                    + "Lnet/minecraft/world/item/ItemStack;)I",
+                    "net/neoforged/forgestuck/compat/LegacyBonemealHook"),
+            java.util.Map.entry("net/minecraftforge/client/model/geometry/UnbakedGeometryHelper"
+                    + ".createUnbakedItemElements(ILnet/minecraft/client/renderer/texture/SpriteContents;)"
+                    + "Ljava/util/List;",
+                    "net/neoforged/forgestuck/compat/LegacyUnbakedGeometryHelper"),
+            java.util.Map.entry("net/minecraftforge/client/model/geometry/UnbakedGeometryHelper"
+                    + ".createUnbakedItemMaskElements(ILnet/minecraft/client/renderer/texture/SpriteContents;)"
+                    + "Ljava/util/List;",
+                    "net/neoforged/forgestuck/compat/LegacyUnbakedGeometryHelper"),
+            java.util.Map.entry("net/minecraftforge/client/model/geometry/UnbakedGeometryHelper"
+                    + ".bakeElements(Ljava/util/List;Ljava/util/function/Function;"
+                    + "Lnet/minecraft/client/resources/model/ModelState;Lnet/minecraft/resources/ResourceLocation;)"
+                    + "Ljava/util/List;",
+                    "net/neoforged/forgestuck/compat/LegacyUnbakedGeometryHelper"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/PlayerInteractEvent$RightClickBlock"
+                    + ".getUseBlock()Lnet/minecraftforge/eventbus/api/Event$Result;",
+                    "net/neoforged/forgestuck/compat/LegacyPlayerInteractEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/PlayerInteractEvent$RightClickBlock"
+                    + ".getUseItem()Lnet/minecraftforge/eventbus/api/Event$Result;",
+                    "net/neoforged/forgestuck/compat/LegacyPlayerInteractEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/EntityAttributeModificationEvent.add("
+                    + "Lnet/minecraft/world/entity/EntityType;"
+                    + "Lnet/minecraft/world/entity/ai/attributes/Attribute;)V",
+                    "net/neoforged/forgestuck/compat/LegacyEntityAttributeModification"),
+            java.util.Map.entry("net/minecraftforge/event/entity/EntityAttributeModificationEvent.add("
+                    + "Lnet/minecraft/world/entity/EntityType;"
+                    + "Lnet/minecraft/world/entity/ai/attributes/Attribute;D)V",
+                    "net/neoforged/forgestuck/compat/LegacyEntityAttributeModification"),
             java.util.Map.entry("net/minecraft/world/entity/EntityType$Builder.setCustomClientFactory(Ljava/util/function/BiFunction;)Lnet/minecraft/world/entity/EntityType$Builder;",
                     "net/neoforged/forgestuck/compat/LegacyEntityTypeBuilder"),
             java.util.Map.entry(FLUID_STACK + ".getTag()Lnet/minecraft/nbt/CompoundTag;",
@@ -186,6 +310,13 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             java.util.Map.entry(FLUID_STACK
                     + ".writeToNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;",
                     "net/neoforged/forgestuck/compat/LegacyFluidStack"),
+            java.util.Map.entry("net/minecraftforge/fluids/capability/templates/FluidTank"
+                    + ".readFromNBT(Lnet/minecraft/nbt/CompoundTag;)"
+                    + "Lnet/minecraftforge/fluids/capability/templates/FluidTank;",
+                    "net/neoforged/forgestuck/compat/LegacyFluidTank"),
+            java.util.Map.entry("net/minecraftforge/fluids/capability/templates/FluidTank"
+                    + ".writeToNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;",
+                    "net/neoforged/forgestuck/compat/LegacyFluidTank"),
             java.util.Map.entry("net/minecraftforge/common/ForgeHooks.getCriticalHit("
                     + "Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/entity/Entity;ZF)"
                     + "Lnet/minecraftforge/event/entity/player/CriticalHitEvent;",
@@ -203,6 +334,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     "net/neoforged/forgestuck/compat/LegacyIngredientHooks"),
             java.util.Map.entry("net/minecraftforge/fml/loading/FMLLoader.isProduction()Z",
                     "net/neoforged/forgestuck/compat/LegacyFMLLoader"),
+            java.util.Map.entry("net/minecraftforge/fml/ModLoader.isLoadingStateValid()Z",
+                    "net/neoforged/forgestuck/compat/LegacyFMLLoader"),
             java.util.Map.entry("net/minecraftforge/event/entity/player/CriticalHitEvent.getDamageModifier()F",
                     "net/neoforged/forgestuck/compat/LegacyCriticalHitEvent"),
             java.util.Map.entry("net/minecraftforge/event/entity/player/CriticalHitEvent.setDamageModifier(F)V",
@@ -213,6 +346,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             java.util.Map.entry("net/minecraftforge/event/entity/player/CriticalHitEvent.setResult("
                     + "Lnet/minecraftforge/eventbus/api/Event$Result;)V",
                     "net/neoforged/forgestuck/compat/LegacyCriticalHitEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/living/MobEffectEvent$Applicable.setResult("
+                    + "Lnet/minecraftforge/eventbus/api/Event$Result;)V",
+                    "net/neoforged/forgestuck/compat/LegacyMobEffectApplicable"),
+            java.util.Map.entry("net/minecraftforge/event/entity/living/MobEffectEvent$Applicable.getResult()"
+                    + "Lnet/minecraftforge/eventbus/api/Event$Result;",
+                    "net/neoforged/forgestuck/compat/LegacyMobEffectApplicable"),
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V", "net/neoforged/forgestuck/compat/LegacyEventBusRegistration"),
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.post(Lnet/minecraftforge/eventbus/api/Event;)Z",
                     "net/neoforged/forgestuck/compat/LegacyEventBusPost"),
@@ -220,9 +359,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     "net/neoforged/forgestuck/compat/LegacyRegisterEvent"),
             java.util.Map.entry("net/minecraftforge/common/ForgeConfigSpec.setConfig(Lcom/electronwill/nightconfig/core/CommentedConfig;)V", "net/neoforged/forgestuck/compat/LegacyConfigSpec"),
             java.util.Map.entry("net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V", "net/neoforged/forgestuck/compat/LegacyCapabilities"),
+            java.util.Map.entry("net/minecraftforge/common/brewing/BrewingRecipeRegistry.addRecipe(Lnet/minecraftforge/common/brewing/IBrewingRecipe;)Z",
+                    "net/neoforged/forgestuck/compat/LegacyBrewingRecipeRegistry"),
             java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
             java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
             java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.getResult()Lnet/minecraftforge/eventbus/api/Event$Result;", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
+            java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.isCanceled()Z", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
             java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.hasResult()Z", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
             java.util.Map.entry("net/minecraftforge/event/level/SaplingGrowTreeEvent.isCancelable()Z", "net/neoforged/forgestuck/compat/LegacySaplingGrowth"),
             java.util.Map.entry("net/minecraftforge/event/entity/living/LivingAttackEvent.getAmount()F", "net/neoforged/forgestuck/compat/LegacyLivingAttack"),
@@ -303,7 +445,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     continue;
                 }
                 ForgeOwnerMappings.Entry e = mappings.get(owner);
-                if (e == null || "<init>".equals(name) || isObjectMethod(name, desc) || e.supports(name, desc)) continue;
+                if (e == null || "<init>".equals(name) || isObjectMethod(name, desc)
+                        || mappings.supportsMember(owner, name, desc)) continue;
                 String member = owner.replace('/', '.') + (field ? "." + name : "." + name + desc);
                 failAtCall(m, insn, member, className + "." + m.name);
                 replaced++;
@@ -656,7 +799,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                         Type.getMethodDescriptor(Type.getReturnType(handle.getDesc()), redirectedArguments), false);
             }
             ForgeOwnerMappings.Entry e = mappings.get(handle.getOwner());
-            if (e == null || e.supports(handle.getName(), handle.getDesc())) {
+            if (e == null || mappings.supportsMember(handle.getOwner(), handle.getName(), handle.getDesc())) {
                 return value;
             }
             if (FLUID_STACK.equals(handle.getOwner()) && "<init>".equals(handle.getName())
@@ -875,7 +1018,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             Set<String> uses) {
         ForgeOwnerMappings.Entry e = mappings.get(owner);
         if (e != null && desc.contains("L")) uses.add(owner + '\0' + desc);
-        if (e == null || isObjectMethod(name, desc) || e.supports(name, desc) || !blocked.add(owner)) return;
+        if (e == null || isObjectMethod(name, desc) || mappings.supportsMember(owner, name, desc)
+                || !blocked.add(owner)) return;
         LOGGER.warn("{} {} uses {}.{}{} which has no verified equivalent on {}; owner left unmapped in this class",
                 TAG, className, owner, name, desc, e.newOwner());
     }

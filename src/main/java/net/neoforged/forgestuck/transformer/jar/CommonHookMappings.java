@@ -54,6 +54,12 @@ final class CommonHookMappings {
                                 "onProjectileImpact(Lnet/minecraft/world/entity/projectile/Projectile;"
                                         + "Lnet/minecraft/world/phys/HitResult;)Z")),
                 new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/event/entity/living/MobEffectEvent$Applicable",
+                        "net/neoforged/neoforge/event/entity/living/MobEffectEvent$Applicable",
+                        Set.of(
+                                "getEffectInstance()Lnet/minecraft/world/effect/MobEffectInstance;",
+                                "getEntity()Lnet/minecraft/world/entity/LivingEntity;")),
+                new ForgeOwnerMappings.Entry(
                         "net/minecraftforge/network/NetworkHooks",
                         "net/neoforged/forgestuck/compat/LegacyNetworkHooks",
                         Set.of(

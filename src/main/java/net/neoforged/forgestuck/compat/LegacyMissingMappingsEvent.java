@@ -1,5 +1,7 @@
 package net.neoforged.forgestuck.compat;
 
+import java.util.List;
+import net.minecraft.resources.ResourceKey;
 import net.neoforged.bus.api.Event;
 
 /**
@@ -8,4 +10,20 @@ import net.neoforged.bus.api.Event;
  */
 public class LegacyMissingMappingsEvent extends Event {
     LegacyMissingMappingsEvent() {}
+
+    public List<?> getAllMappings(ResourceKey<?> registryKey) {
+        return List.of();
+    }
+
+    public static final class Mapping {
+        private Mapping() {}
+
+        public net.minecraft.resources.ResourceLocation getKey() {
+            throw new UnsupportedOperationException("NeoForge does not fire legacy missing-mapping events");
+        }
+
+        public void remap(Object value) {
+            throw new UnsupportedOperationException("NeoForge does not fire legacy missing-mapping events");
+        }
+    }
 }

@@ -1,11 +1,16 @@
 package net.neoforged.forgestuck.compat;
 
 import net.neoforged.fml.loading.FMLEnvironment;
+import net.neoforged.fml.ModLoader;
 
 public final class LegacyFMLLoader {
     private LegacyFMLLoader() {}
 
     public static boolean isProduction() {
         return FMLEnvironment.production;
+    }
+
+    public static boolean isLoadingStateValid() {
+        return !ModLoader.hasErrors();
     }
 }

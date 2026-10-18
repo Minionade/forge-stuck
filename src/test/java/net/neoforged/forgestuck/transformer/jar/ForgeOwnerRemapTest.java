@@ -56,6 +56,36 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void legacyBrewingRecipeRegistrationUsesNeoForgeCompatibilityQueue() {
+        String owner = "net/minecraftforge/common/brewing/BrewingRecipeRegistry";
+        String recipe = "net/minecraftforge/common/brewing/IBrewingRecipe";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/BrewingCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "register",
+                "(L" + recipe + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, owner, "addRecipe", "(L" + recipe + ";)Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.BrewingCompat", writer.toByteArray()));
+        MethodInsnNode call = null;
+        for (var instruction : transformed.methods.get(0).instructions) {
+            if (instruction instanceof MethodInsnNode methodCall) {
+                call = methodCall;
+                break;
+            }
+        }
+        assertNotNull(call);
+        assertEquals("net/neoforged/forgestuck/compat/LegacyBrewingRecipeRegistry", call.owner);
+        assertEquals("net/neoforged/neoforge/common/brewing/IBrewingRecipe",
+                Type.getArgumentTypes(call.desc)[0].getInternalName());
+    }
+
+    @Test
     void legacyMobEffectModifierCallUsesHolderAndResourceLocationAdapter() {
         String owner = "net/minecraft/world/effect/MobEffect";
         String desc = "(Lnet/minecraft/world/entity/ai/attributes/Attribute;Ljava/lang/String;D"
@@ -144,6 +174,89 @@ class ForgeOwnerRemapTest {
         assertEquals("(Lnet/neoforged/neoforge/event/entity/player/CriticalHitEvent;)F", calls.get(1).desc);
         assertEquals("(Lnet/neoforged/neoforge/event/entity/player/CriticalHitEvent;"
                 + "Lnet/neoforged/forgestuck/compat/LegacyEventResult;)V", calls.get(2).desc);
+    }
+
+    @Test
+    void renderNameTagResultUsesTriStateCompatibilityAdapter() {
+        String owner = "net/minecraftforge/client/event/RenderNameTagEvent";
+        String result = "Lnet/minecraftforge/eventbus/api/Event$Result;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/RenderNameTagCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "result",
+                "(L" + owner + ";)" + result, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "getResult", "()" + result, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.RenderNameTagCompat",
+                writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRenderNameTagEvent", call.owner);
+        assertEquals("getResult", call.name);
+        assertEquals("(Lnet/neoforged/neoforge/client/event/RenderNameTagEvent;)"
+                + "Lnet/neoforged/forgestuck/compat/LegacyEventResult;", call.desc);
+    }
+
+    @Test
+    void lootTableBuilderMethodUsesNeoForgeBuildAdapter() {
+        String owner = "net/minecraftforge/common/loot/LootTableIdCondition$Builder";
+        String condition = "Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LootConditionCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "build",
+                "(L" + owner + ";)" + condition, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "m_6409_", "()" + condition, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.LootConditionCompat",
+                writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyLootTableIdCondition", call.owner);
+        assertEquals("m_6409_", call.name);
+        assertEquals("(Lnet/neoforged/neoforge/common/loot/LootTableIdCondition$Builder;)"
+                + "Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition;", call.desc);
+    }
+
+    @Test
+    void legacyItemTagFieldsUseVerifiedNeoForgeTags() {
+        String owner = "net/minecraftforge/common/Tags$Items";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LegacyItemTagsCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "get",
+                "()Lnet/minecraft/tags/TagKey;", null, null);
+        method.visitCode();
+        method.visitFieldInsn(Opcodes.GETSTATIC, owner, "ARMORS_BOOTS", "Lnet/minecraft/tags/TagKey;");
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.LegacyItemTagsCompat",
+                writer.toByteArray()));
+        org.objectweb.asm.tree.FieldInsnNode field = java.util.Arrays.stream(transformed.methods.get(0)
+                        .instructions.toArray())
+                .filter(org.objectweb.asm.tree.FieldInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.FieldInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.GETSTATIC, field.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemTags", field.owner);
+        assertEquals("ARMORS_BOOTS", field.name);
+        assertEquals("Lnet/minecraft/tags/TagKey;", field.desc);
     }
 
     @Test
@@ -261,6 +374,63 @@ class ForgeOwnerRemapTest {
         assertEquals(helper, call.owner);
         assertEquals("isProduction", call.name);
         assertEquals("()Z", call.desc);
+    }
+
+    @Test
+    void legacyModLoaderStateQueryUsesNeoForgeLoadingErrors() {
+        String oldOwner = "net/minecraftforge/fml/ModLoader";
+        String helper = "net/neoforged/forgestuck/compat/LegacyFMLLoader";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/ModLoaderStateCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "valid", "()Z", null, null);
+        method.visitCode();
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, oldOwner, "isLoadingStateValid", "()Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.ModLoaderStateCompat",
+                writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals(helper, call.owner);
+        assertEquals("isLoadingStateValid", call.name);
+        assertEquals("()Z", call.desc);
+    }
+
+    @Test
+    void legacyModLoaderInstanceForwardsModBusDispatch() {
+        String oldOwner = "net/minecraftforge/fml/ModLoader";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/ModLoaderDispatchCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "post",
+                "(Lnet/minecraftforge/eventbus/api/Event;)V", null, null);
+        method.visitCode();
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, oldOwner, "get", "()L" + oldOwner + ";", false);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, oldOwner, "postEvent",
+                "(Lnet/minecraftforge/eventbus/api/Event;)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.ModLoaderDispatchCompat",
+                writer.toByteArray()));
+        List<MethodInsnNode> calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyModLoader", calls.get(0).owner);
+        assertEquals("get", calls.get(0).name);
+        assertEquals("net/neoforged/forgestuck/compat/LegacyModLoader", calls.get(1).owner);
+        assertEquals("postEvent", calls.get(1).name);
+        assertEquals("Lnet/neoforged/bus/api/Event;",
+                Type.getArgumentTypes(calls.get(1).desc)[0].getDescriptor());
+        assertTrue(ForgeOwnerMappings.defaults().remainingOwners(
+                new ForgeOwnerRemapStep().apply("com.ex.ModLoaderDispatchCompat", writer.toByteArray())).isEmpty());
     }
 
     @Test
@@ -510,6 +680,652 @@ class ForgeOwnerRemapTest {
         assertEquals(newOwner, field.owner);
         assertEquals("ORES", field.name);
         assertEquals(descriptor, field.desc);
+    }
+
+    @Test
+    void legacyForgeTagFieldAliasRemapsOwnerAndFieldName() {
+        String oldOwner = "net/minecraftforge/common/Tags$Items";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LegacyTagAlias", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "get",
+                "()Lnet/minecraft/tags/TagKey;", null, null);
+        method.visitCode();
+        method.visitFieldInsn(Opcodes.GETSTATIC, oldOwner, "GLASS",
+                "Lnet/minecraft/tags/TagKey;");
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.LegacyTagAlias", writer.toByteArray()));
+        var field = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(org.objectweb.asm.tree.FieldInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.FieldInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals("net/neoforged/neoforge/common/Tags$Items", field.owner);
+        assertEquals("GLASS_BLOCKS", field.name);
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(transformed)));
+    }
+
+    @Test
+    void missingForgeTagFieldsRedirectToLegacyTagKeys() {
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LegacyTagKeys", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "get",
+                "()V", null, null);
+        method.visitCode();
+        method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraftforge/common/Tags$Items", "DUSTS_PRISMARINE",
+                "Lnet/minecraft/tags/TagKey;");
+        method.visitInsn(Opcodes.POP);
+        method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraftforge/common/Tags$Items", "STAINED_GLASS",
+                "Lnet/minecraft/tags/TagKey;");
+        method.visitInsn(Opcodes.POP);
+        method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraftforge/common/Tags$Items", "STAINED_GLASS_PANES",
+                "Lnet/minecraft/tags/TagKey;");
+        method.visitInsn(Opcodes.POP);
+        method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraftforge/common/Tags$Blocks", "STAINED_GLASS",
+                "Lnet/minecraft/tags/TagKey;");
+        method.visitInsn(Opcodes.POP);
+        method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraftforge/common/Tags$Blocks", "STAINED_GLASS_PANES",
+                "Lnet/minecraft/tags/TagKey;");
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.LegacyTagKeys", writer.toByteArray()));
+        var fields = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(org.objectweb.asm.tree.FieldInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.FieldInsnNode.class::cast)
+                .toList();
+        assertEquals(List.of(
+                "net/neoforged/forgestuck/compat/LegacyItemTags.DUSTS_PRISMARINE",
+                "net/neoforged/forgestuck/compat/LegacyItemTags.STAINED_GLASS",
+                "net/neoforged/forgestuck/compat/LegacyItemTags.STAINED_GLASS_PANES",
+                "net/neoforged/forgestuck/compat/LegacyBlockTags.STAINED_GLASS",
+                "net/neoforged/forgestuck/compat/LegacyBlockTags.STAINED_GLASS_PANES"),
+                fields.stream().map(f -> f.owner + "." + f.name).toList());
+    }
+
+    @Test
+    void forgeI18nRawPatternLookupUsesCompatibilityAdapter() {
+        String oldOwner = "net/minecraftforge/common/ForgeI18n";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LegacyI18n", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "pattern",
+                "(Ljava/lang/String;)Ljava/lang/String;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, oldOwner, "getPattern",
+                "(Ljava/lang/String;)Ljava/lang/String;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.LegacyI18n", writer.toByteArray()));
+        MethodInsnNode call = (MethodInsnNode) transformed.methods.get(0).instructions.toArray()[1];
+        assertEquals("net/neoforged/forgestuck/compat/LegacyForgeI18n", call.owner);
+        assertEquals("getPattern", call.name);
+        assertEquals("(Ljava/lang/String;)Ljava/lang/String;", call.desc);
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(transformed)));
+    }
+
+    @Test
+    void entityAttributeModificationUsesNeoForgeHolderApi() {
+        String owner = "net/minecraftforge/event/entity/EntityAttributeModificationEvent";
+        String helper = "net/neoforged/forgestuck/compat/LegacyEntityAttributeModification";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/AttributeListener", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "register",
+                "(L" + owner + ";Lnet/minecraft/world/entity/EntityType;"
+                        + "Lnet/minecraft/world/entity/ai/attributes/Attribute;)V",
+                null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "add",
+                "(Lnet/minecraft/world/entity/EntityType;"
+                        + "Lnet/minecraft/world/entity/ai/attributes/Attribute;)V",
+                false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.AttributeListener", writer.toByteArray()));
+        MethodInsnNode call = (MethodInsnNode) transformed.methods.get(0).instructions.toArray()[3];
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals(helper, call.owner);
+        assertEquals("add", call.name);
+        assertEquals("(Lnet/neoforged/neoforge/event/entity/EntityAttributeModificationEvent;"
+                + "Lnet/minecraft/world/entity/EntityType;"
+                + "Lnet/minecraft/world/entity/ai/attributes/Attribute;)V", call.desc);
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(transformed)));
+    }
+
+    @Test
+    void entityAttributeModificationWithDefaultValueUsesNeoForgeHolderApi() {
+        String owner = "net/minecraftforge/event/entity/EntityAttributeModificationEvent";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/AttributeListenerWithDefault", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "register",
+                "(L" + owner + ";Lnet/minecraft/world/entity/EntityType;"
+                        + "Lnet/minecraft/world/entity/ai/attributes/Attribute;D)V",
+                null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.DLOAD, 3);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "add",
+                "(Lnet/minecraft/world/entity/EntityType;"
+                        + "Lnet/minecraft/world/entity/ai/attributes/Attribute;D)V",
+                false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply(
+                "com.ex.AttributeListenerWithDefault", writer.toByteArray()));
+        MethodInsnNode call = (MethodInsnNode) transformed.methods.get(0).instructions.toArray()[4];
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyEntityAttributeModification", call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/event/entity/EntityAttributeModificationEvent;"
+                + "Lnet/minecraft/world/entity/EntityType;"
+                + "Lnet/minecraft/world/entity/ai/attributes/Attribute;D)V", call.desc);
+    }
+
+    @Test
+    void partialTickAndInteractionTriStateCallsUseCompatibilityAdapters() {
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LegacyRenderEvents", null, "java/lang/Object", null);
+        var render = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "partialTick",
+                "(Lnet/minecraftforge/client/event/RenderLevelStageEvent;)F", null, null);
+        render.visitCode();
+        render.visitVarInsn(Opcodes.ALOAD, 0);
+        render.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "net/minecraftforge/client/event/RenderLevelStageEvent",
+                "getPartialTick", "()F", false);
+        render.visitInsn(Opcodes.FRETURN);
+        render.visitMaxs(0, 0);
+        render.visitEnd();
+
+        String rightClick = "net/minecraftforge/event/entity/player/PlayerInteractEvent$RightClickBlock";
+        for (String name : new String[] {"getUseBlock", "getUseItem"}) {
+            var use = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, name,
+                    "(L" + rightClick + ";)Lnet/minecraftforge/eventbus/api/Event$Result;", null, null);
+            use.visitCode();
+            use.visitVarInsn(Opcodes.ALOAD, 0);
+            use.visitMethodInsn(Opcodes.INVOKEVIRTUAL, rightClick, name,
+                    "()Lnet/minecraftforge/eventbus/api/Event$Result;", false);
+            use.visitInsn(Opcodes.ARETURN);
+            use.visitMaxs(0, 0);
+            use.visitEnd();
+        }
+
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.LegacyRenderEvents",
+                writer.toByteArray()));
+        MethodInsnNode partialTick = (MethodInsnNode) transformed.methods.get(0).instructions.toArray()[1];
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRenderLevelStage", partialTick.owner);
+        assertEquals("getPartialTick", partialTick.name);
+        assertEquals("(Lnet/neoforged/neoforge/client/event/RenderLevelStageEvent;)F", partialTick.desc);
+        for (int i = 1; i < transformed.methods.size(); i++) {
+            MethodInsnNode resultCall = (MethodInsnNode) transformed.methods.get(i).instructions.toArray()[1];
+            assertEquals("net/neoforged/forgestuck/compat/LegacyPlayerInteractEvent", resultCall.owner);
+            assertEquals("(Lnet/neoforged/neoforge/event/entity/player/PlayerInteractEvent$RightClickBlock;)"
+                    + "Lnet/neoforged/forgestuck/compat/LegacyEventResult;", resultCall.desc);
+        }
+    }
+
+    @Test
+    void mobEffectApplicableResultUsesCompatibilityAdapter() {
+        String owner = "net/minecraftforge/event/entity/living/MobEffectEvent$Applicable";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LegacyMobEffectResult", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "set",
+                "(L" + owner + ";Lnet/minecraftforge/eventbus/api/Event$Result;)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "setResult",
+                "(Lnet/minecraftforge/eventbus/api/Event$Result;)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.LegacyMobEffectResult",
+                writer.toByteArray()));
+        MethodInsnNode call = (MethodInsnNode) transformed.methods.get(0).instructions.toArray()[2];
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyMobEffectApplicable", call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/event/entity/living/MobEffectEvent$Applicable;"
+                + "Lnet/neoforged/forgestuck/compat/LegacyEventResult;)V", call.desc);
+    }
+
+    @Test
+    void creativeTabSingleStackAcceptUsesNeoForgeDefaultVisibility() {
+        String owner = "net/minecraftforge/event/BuildCreativeModeTabContentsEvent";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LegacyCreativeTab", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "add",
+                "(L" + owner + ";Lnet/minecraft/world/item/ItemStack;)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "m_246342_",
+                "(Lnet/minecraft/world/item/ItemStack;)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.LegacyCreativeTab",
+                writer.toByteArray()));
+        MethodInsnNode call = (MethodInsnNode) transformed.methods.get(0).instructions.toArray()[2];
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyCreativeTabEvent", call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/event/BuildCreativeModeTabContentsEvent;"
+                + "Lnet/minecraft/world/item/ItemStack;)V", call.desc);
+    }
+
+    @Test
+    void saplingGrowthLegacyResultsAndCancellationAreAdapted() {
+        String owner = "net/minecraftforge/event/level/SaplingGrowTreeEvent";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/SaplingGrowth", null, "java/lang/Object", null);
+        var random = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "random",
+                "(L" + owner + ";)Lnet/minecraft/util/RandomSource;", null, null);
+        random.visitCode();
+        random.visitVarInsn(Opcodes.ALOAD, 0);
+        random.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "getRandomSource",
+                "()Lnet/minecraft/util/RandomSource;", false);
+        random.visitInsn(Opcodes.ARETURN);
+        random.visitMaxs(0, 0);
+        random.visitEnd();
+
+        var result = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "result",
+                "(L" + owner + ";Lnet/minecraftforge/eventbus/api/Event$Result;)V", null, null);
+        result.visitCode();
+        result.visitVarInsn(Opcodes.ALOAD, 0);
+        result.visitVarInsn(Opcodes.ALOAD, 1);
+        result.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "setResult",
+                "(Lnet/minecraftforge/eventbus/api/Event$Result;)V", false);
+        result.visitInsn(Opcodes.RETURN);
+        result.visitMaxs(0, 0);
+        result.visitEnd();
+
+        var canceled = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "isCanceled",
+                "(L" + owner + ";)Z", null, null);
+        canceled.visitCode();
+        canceled.visitVarInsn(Opcodes.ALOAD, 0);
+        canceled.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "isCanceled", "()Z", false);
+        canceled.visitInsn(Opcodes.IRETURN);
+        canceled.visitMaxs(0, 0);
+        canceled.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.SaplingGrowth", writer.toByteArray()));
+        for (int i = 0; i < transformed.methods.size(); i++) {
+            MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(i).instructions.toArray())
+                    .filter(MethodInsnNode.class::isInstance)
+                    .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+            assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+            assertEquals("net/neoforged/forgestuck/compat/LegacySaplingGrowth", call.owner);
+        }
+    }
+
+    @Test
+    void shapedRecipeDimensionCallsRedirectToCompatibilityAdapter() {
+        String owner = "net/minecraftforge/common/crafting/IShapedRecipe";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/ShapedRecipeCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "width",
+                "(L" + owner + ";)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, owner, "getRecipeWidth", "()I", true);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply(
+                "com.ex.ShapedRecipeCompat", writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyShapedRecipe", call.owner);
+        assertEquals("(Lnet/minecraft/world/item/crafting/ShapedRecipe;)I", call.desc);
+    }
+
+    @Test
+    void fluidSourceFactoryCallRedirectsToCompatibilityAdapter() {
+        String owner = "net/minecraftforge/event/ForgeEventFactory";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/FluidSourceCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "canCreate",
+                "(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                        + "Lnet/minecraft/world/level/block/state/BlockState;Z)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.ILOAD, 3);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, owner, "canCreateFluidSource",
+                "(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                        + "Lnet/minecraft/world/level/block/state/BlockState;Z)Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply(
+                "com.ex.FluidSourceCompat", writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyFluidSourceEvent", call.owner);
+        assertEquals("(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                + "Lnet/minecraft/world/level/block/state/BlockState;Z)Z", call.desc);
+    }
+
+    @Test
+    void bonemealHookRedirectsToCompatibilityAdapter() {
+        String owner = "net/minecraftforge/event/ForgeEventFactory";
+        String desc = "(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/Level;"
+                + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;"
+                + "Lnet/minecraft/world/item/ItemStack;)I";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/BonemealCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "apply", desc, null, null);
+        method.visitCode();
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, owner, "onApplyBonemeal", desc, false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply(
+                "com.ex.BonemealCompat", writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyBonemealHook", call.owner);
+        assertEquals(desc, call.desc);
+    }
+
+    @Test
+    void unbakedGeometryCallsRedirectToCompatibilityAdapter() {
+        String owner = "net/minecraftforge/client/model/geometry/UnbakedGeometryHelper";
+        String spriteContents = "Lnet/minecraft/client/renderer/texture/SpriteContents;";
+        String modelState = "Lnet/minecraft/client/resources/model/ModelState;";
+        String resourceLocation = "Lnet/minecraft/resources/ResourceLocation;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/UnbakedGeometryCompat", null,
+                "java/lang/Object", null);
+        var elements = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "elements",
+                "(I" + spriteContents + ")Ljava/util/List;", null, null);
+        elements.visitCode();
+        elements.visitInsn(Opcodes.ICONST_0);
+        elements.visitInsn(Opcodes.ACONST_NULL);
+        elements.visitMethodInsn(Opcodes.INVOKESTATIC, owner, "createUnbakedItemElements",
+                "(I" + spriteContents + ")Ljava/util/List;", false);
+        elements.visitInsn(Opcodes.ARETURN);
+        elements.visitMaxs(0, 0);
+        elements.visitEnd();
+        var mask = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "mask",
+                "(I" + spriteContents + ")Ljava/util/List;", null, null);
+        mask.visitCode();
+        mask.visitInsn(Opcodes.ICONST_0);
+        mask.visitInsn(Opcodes.ACONST_NULL);
+        mask.visitMethodInsn(Opcodes.INVOKESTATIC, owner, "createUnbakedItemMaskElements",
+                "(I" + spriteContents + ")Ljava/util/List;", false);
+        mask.visitInsn(Opcodes.ARETURN);
+        mask.visitMaxs(0, 0);
+        mask.visitEnd();
+        var bake = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "bake",
+                "(Ljava/util/List;Ljava/util/function/Function;" + modelState + resourceLocation
+                        + ")Ljava/util/List;", null, null);
+        bake.visitCode();
+        bake.visitInsn(Opcodes.ACONST_NULL);
+        bake.visitInsn(Opcodes.ACONST_NULL);
+        bake.visitInsn(Opcodes.ACONST_NULL);
+        bake.visitInsn(Opcodes.ACONST_NULL);
+        bake.visitMethodInsn(Opcodes.INVOKESTATIC, owner, "bakeElements",
+                "(Ljava/util/List;Ljava/util/function/Function;" + modelState + resourceLocation
+                        + ")Ljava/util/List;", false);
+        bake.visitInsn(Opcodes.ARETURN);
+        bake.visitMaxs(0, 0);
+        bake.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply(
+                "com.ex.UnbakedGeometryCompat", writer.toByteArray()));
+        var calls = java.util.Arrays.stream(transformed.methods.toArray(new org.objectweb.asm.tree.MethodNode[0]))
+                .flatMap(m -> java.util.Arrays.stream(m.instructions.toArray()))
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast)
+                .toList();
+        assertEquals(3, calls.size());
+        assertTrue(calls.stream().allMatch(call -> call.getOpcode() == Opcodes.INVOKESTATIC
+                && call.owner.equals("net/neoforged/forgestuck/compat/LegacyUnbakedGeometryHelper")));
+    }
+
+    @Test
+    void bufferedQuadConsumerMapsToLegacyAdapter() {
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/BufferedQuadCompat", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "consumer",
+                "()Lnet/minecraftforge/client/model/pipeline/QuadBakingVertexConsumer$Buffered;",
+                null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW,
+                "net/minecraftforge/client/model/pipeline/QuadBakingVertexConsumer$Buffered");
+        method.visitInsn(Opcodes.DUP);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL,
+                "net/minecraftforge/client/model/pipeline/QuadBakingVertexConsumer$Buffered",
+                "<init>", "()V", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply(
+                "com.ex.BufferedQuadCompat", writer.toByteArray()));
+        MethodInsnNode constructor = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals("net/neoforged/forgestuck/compat/LegacyQuadBakingVertexConsumer$Buffered",
+                constructor.owner);
+    }
+
+    @Test
+    void overlayIdentityAccessorRedirectsToLegacyTokenAdapter() {
+        String owner = "net/minecraftforge/client/event/RenderGuiOverlayEvent$Post";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/OverlayCompat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "overlay",
+                "(L" + owner + ";)Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "getOverlay",
+                "()Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply(
+                "com.ex.OverlayCompat", writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyGuiOverlayEvent", call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/client/event/RenderGuiLayerEvent$Post;)"
+                + "Lnet/neoforged/forgestuck/compat/LegacyNamedGuiOverlay;", call.desc);
+    }
+
+    @Test
+    void livingAttackAmountUsesLegacyOriginalAmountAdapter() {
+        String owner = "net/minecraftforge/event/entity/living/LivingAttackEvent";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LivingAttack", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "amount",
+                "(L" + owner + ";)F", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "getAmount", "()F", false);
+        method.visitInsn(Opcodes.FRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.LivingAttack", writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyLivingAttack", call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/event/entity/living/LivingIncomingDamageEvent;)F", call.desc);
+    }
+
+    @Test
+    void spawnPlacementRegistrationUsesLegacyPlacementAdapter() {
+        String event = SpawnPlacementMappings.EVENT;
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/SpawnPlacement", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "register",
+                "(L" + event + ";" + SpawnPlacementMappings.FULL_REGISTER.substring(1), null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, event, "register",
+                SpawnPlacementMappings.FULL_REGISTER, false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        byte[] rewritten = new LegacySpawnPlacementStep().apply("com.ex.SpawnPlacement", writer.toByteArray());
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.SpawnPlacement", rewritten));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacySpawnPlacements", call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/event/entity/RegisterSpawnPlacementsEvent;"
+                + "Lnet/minecraft/world/entity/EntityType;"
+                + "Lnet/neoforged/forgestuck/compat/LegacySpawnPlacementType;"
+                + "Lnet/minecraft/world/level/levelgen/Heightmap$Types;"
+                + "Lnet/minecraft/world/entity/SpawnPlacements$SpawnPredicate;"
+                + "Lnet/neoforged/neoforge/event/entity/RegisterSpawnPlacementsEvent$Operation;)V", call.desc);
+    }
+
+    @Test
+    void geometryLoaderRegistrationConvertsLegacyStringId() {
+        String event = "net/minecraftforge/client/event/ModelEvent$RegisterGeometryLoaders";
+        String loader = "net/minecraftforge/client/model/geometry/IGeometryLoader";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/GeometryRegistration", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "register",
+                "(L" + event + ";Ljava/lang/String;L" + loader + ";)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, event, "register",
+                "(Ljava/lang/String;L" + loader + ";)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.GeometryRegistration",
+                writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyGeometryLoaderRegistration", call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/client/event/ModelEvent$RegisterGeometryLoaders;"
+                + "Ljava/lang/String;Lnet/neoforged/neoforge/client/model/geometry/IGeometryLoader;)V", call.desc);
+    }
+
+    @Test
+    void addLayersRendererReturnTypeIsNarrowedToForgeType() {
+        String owner = "net/minecraftforge/client/event/EntityRenderersEvent$AddLayers";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/AddLayers", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "renderer",
+                "(L" + owner + ";Lnet/minecraft/world/entity/EntityType;)"
+                        + "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "getRenderer",
+                "(Lnet/minecraft/world/entity/EntityType;)"
+                        + "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.AddLayers", writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyAddLayersEvent", call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/client/event/EntityRenderersEvent$AddLayers;"
+                + "Lnet/minecraft/world/entity/EntityType;)"
+                + "Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;", call.desc);
+    }
+
+    @Test
+    void additionalModelRegistrationUsesStandaloneModelLocationAdapter() {
+        String owner = "net/minecraftforge/client/event/ModelEvent$RegisterAdditional";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/AdditionalModel", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "register",
+                "(L" + owner + ";Lnet/minecraft/resources/ResourceLocation;)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "register",
+                "(Lnet/minecraft/resources/ResourceLocation;)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply("com.ex.AdditionalModel", writer.toByteArray()));
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyAdditionalModelEvent", call.owner);
+        assertEquals("(Lnet/neoforged/neoforge/client/event/ModelEvent$RegisterAdditional;"
+                + "Lnet/minecraft/resources/ResourceLocation;)V", call.desc);
     }
 
     @Test
@@ -778,6 +1594,47 @@ class ForgeOwnerRemapTest {
                     + method.name.substring("new".length()), calls.get(1).owner);
             assertEquals("(Ljava/util/List;)V", calls.get(1).desc);
         }
+    }
+
+    @Test
+    void conditionalAdvancementBuilderCallsRemapToTheSingleVariantAdapter() {
+        String oldOwner = "net/minecraftforge/common/crafting/ConditionalAdvancement$Builder";
+        String newOwner = "net/neoforged/forgestuck/compat/LegacyConditionalAdvancement$Builder";
+        String condition = "net/minecraftforge/common/crafting/conditions/ICondition";
+        String advancement = "net/minecraft/advancements/Advancement$Builder";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/ConditionalAdvancementCalls", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "write",
+                "(L" + condition + ";L" + advancement + ";)Lcom/google/gson/JsonObject;", null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW, oldOwner);
+        method.visitInsn(Opcodes.DUP);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, oldOwner, "<init>", "()V", false);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, oldOwner, "addCondition",
+                "(L" + condition + ";)L" + oldOwner + ";", false);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, oldOwner, "addAdvancement",
+                "(L" + advancement + ";)L" + oldOwner + ";", false);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, oldOwner, "write", "()Lcom/google/gson/JsonObject;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.ConditionalAdvancementCalls",
+                writer.toByteArray()));
+        List<MethodInsnNode> calls = java.util.Arrays.stream(node.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertTrue(java.util.Arrays.stream(node.methods.get(0).instructions.toArray())
+                .filter(org.objectweb.asm.tree.TypeInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.TypeInsnNode.class::cast)
+                .anyMatch(type -> type.getOpcode() == Opcodes.NEW && type.desc.equals(newOwner)));
+        assertEquals(List.of("<init>", "addCondition", "addAdvancement", "write"),
+                calls.stream().map(call -> call.name).toList());
+        assertTrue(calls.stream().allMatch(call -> call.owner.equals(newOwner)));
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(node)));
     }
 
     @Test

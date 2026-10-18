@@ -127,7 +127,26 @@ final class ModelGeneratorMappings {
                         "<init>(Lnet/minecraft/resources/ResourceLocation;" + RESOURCE_HELPER + ")V")),
                 entry("ModelFile$UncheckedModelFile", Set.of(
                         "<init>(Ljava/lang/String;)V",
-                        "<init>(Lnet/minecraft/resources/ResourceLocation;)V")));
+                        "<init>(Lnet/minecraft/resources/ResourceLocation;)V")),
+                entry("MultiPartBlockStateBuilder", Set.of(
+                        "part()Lnet/minecraftforge/client/model/generators/ConfiguredModel$Builder;")),
+                entry("MultiPartBlockStateBuilder$PartBuilder", Set.of(
+                        "condition(Lnet/minecraft/world/level/block/state/properties/Property;"
+                                + "[Ljava/lang/Comparable;)Lnet/minecraftforge/client/model/generators/"
+                                + "MultiPartBlockStateBuilder$PartBuilder;",
+                        "end()Lnet/minecraftforge/client/model/generators/MultiPartBlockStateBuilder;")),
+                entry("VariantBlockStateBuilder", Set.of(
+                        "forAllStates(Ljava/util/function/Function;)"
+                                + "Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder;",
+                        "partialState()Lnet/minecraftforge/client/model/generators/"
+                                + "VariantBlockStateBuilder$PartialBlockstate;")),
+                entry("VariantBlockStateBuilder$PartialBlockstate", Set.of(
+                        "modelForState()Lnet/minecraftforge/client/model/generators/ConfiguredModel$Builder;",
+                        "setModels([Lnet/minecraftforge/client/model/generators/ConfiguredModel;)"
+                                + "Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder;",
+                        "with(Lnet/minecraft/world/level/block/state/properties/Property;"
+                                + "Ljava/lang/Comparable;)Lnet/minecraftforge/client/model/generators/"
+                                + "VariantBlockStateBuilder$PartialBlockstate;")));
     }
 
     private static ForgeOwnerMappings.Entry entry(String simpleName, Set<String> members) {

@@ -91,6 +91,7 @@ net/minecraftforge/client/event/RenderTooltipEvent$GatherComponents -> net/neofo
   getTooltipElements()Ljava/util/List;
 net/minecraftforge/event/AddReloadListenerEvent -> net/neoforged/neoforge/event/AddReloadListenerEvent
   addListener(Lnet/minecraft/server/packs/resources/PreparableReloadListener;)V
+  getConditionContext()Lnet/minecraftforge/common/crafting/conditions/ICondition$IContext;
   getRegistryAccess()Lnet/minecraft/core/RegistryAccess;
   getServerResources()Lnet/minecraft/server/ReloadableServerResources;
 net/minecraftforge/event/BuildCreativeModeTabContentsEvent -> net/neoforged/neoforge/event/BuildCreativeModeTabContentsEvent

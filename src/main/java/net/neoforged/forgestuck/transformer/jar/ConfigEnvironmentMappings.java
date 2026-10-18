@@ -105,7 +105,8 @@ final class ConfigEnvironmentMappings {
                         "getActiveNamespace()" + S,
                         "registerConfig(" + type + spec + ")V", "registerConfig(" + type + spec + S + ")V")),
                 e("net/minecraftforge/fml/ModContainer", "net/neoforged/fml/ModContainer",
-                        Set.of("getModId()" + S, "getNamespace()" + S)),
+                        Set.of("getModId()" + S, "getNamespace()" + S,
+                                "getModInfo()Lnet/minecraftforge/forgespi/language/IModInfo;")),
                 e("net/minecraftforge/fml/ModList", "net/neoforged/fml/ModList", Set.of(
                         "get()Lnet/minecraftforge/fml/ModList;", "isLoaded(" + S + ")Z",
                         "getModContainerById(" + S + ")Ljava/util/Optional;")),

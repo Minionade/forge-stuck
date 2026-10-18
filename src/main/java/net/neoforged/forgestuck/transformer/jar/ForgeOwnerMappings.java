@@ -25,6 +25,9 @@ public final class ForgeOwnerMappings {
     }
 
     private final Map<String, Entry> entries = new LinkedHashMap<>();
+    private final Map<FieldKey, String> fieldAliases = new java.util.HashMap<>();
+
+    private record FieldKey(String owner, String name, String descriptor) {}
 
     public ForgeOwnerMappings() {}
 
@@ -46,8 +49,23 @@ public final class ForgeOwnerMappings {
         return this;
     }
 
+    ForgeOwnerMappings addFieldAlias(String owner, String oldName, String descriptor, String newName) {
+        fieldAliases.put(new FieldKey(owner, oldName, descriptor), newName);
+        return this;
+    }
+
     public Entry get(String owner) {
         return entries.get(owner);
+    }
+
+    boolean supportsMember(String owner, String name, String descriptor) {
+        Entry entry = entries.get(owner);
+        return entry != null && (entry.supports(name, descriptor)
+                || fieldAliases.containsKey(new FieldKey(owner, name, descriptor)));
+    }
+
+    String mappedFieldName(String owner, String name, String descriptor) {
+        return fieldAliases.getOrDefault(new FieldKey(owner, name, descriptor), name);
     }
 
     public boolean isEmpty() {
@@ -68,7 +86,7 @@ public final class ForgeOwnerMappings {
         String nns = "L" + FU + "NonNullSupplier;";
         String dr = "L" + R + "DeferredRegister;";
         String ro = "L" + R + "RegistryObject;";
-        return new ForgeOwnerMappings()
+        ForgeOwnerMappings mappings = new ForgeOwnerMappings()
                 .add(new Entry("net/minecraftforge/eventbus/api/IGenericEvent",
                         COMPAT + "LegacyIGenericEvent", Set.of(
                                 "getGenericType()Ljava/lang/reflect/Type;")))
@@ -77,6 +95,10 @@ public final class ForgeOwnerMappings {
                                 "<init>()V",
                                 "<init>(Ljava/lang/Class;)V",
                                 "getGenericType()Ljava/lang/reflect/Type;")))
+                .add(new Entry("net/minecraftforge/fml/ModLoader", COMPAT + "LegacyModLoader", Set.of(
+                        "get()Lnet/minecraftforge/fml/ModLoader;",
+                        "postEvent(Lnet/minecraftforge/eventbus/api/Event;)V",
+                        "runEventGenerator(Ljava/util/function/Function;)V")))
                 .add(new Entry("net/minecraftforge/event/AttachCapabilitiesEvent",
                         COMPAT + "LegacyAttachCapabilitiesEvent", Set.of(
                                 "<init>(Ljava/lang/Class;Ljava/lang/Object;)V",
@@ -113,6 +135,18 @@ public final class ForgeOwnerMappings {
                                 "RODS", "SEEDS", "SLIMEBALLS", "STORAGE_BLOCKS_COAL", "STORAGE_BLOCKS_COPPER",
                                 "STORAGE_BLOCKS_GOLD", "STORAGE_BLOCKS_IRON", "STORAGE_BLOCKS_LAPIS",
                                 "STORAGE_BLOCKS_REDSTONE", "STORAGE_BLOCKS")))
+                .add(new Entry("net/minecraftforge/client/ForgeRenderTypes",
+                        "net/neoforged/neoforge/client/NeoForgeRenderTypes", Set.of(
+                                "ITEM_LAYERED_CUTOUTLnet/minecraftforge/client/ForgeRenderTypes;",
+                                "ITEM_UNSORTED_TRANSLUCENTLnet/minecraftforge/client/ForgeRenderTypes;",
+                                "get()Lnet/minecraft/client/renderer/RenderType;")))
+                .add(new Entry("net/minecraftforge/client/model/ForgeFaceData",
+                        "net/neoforged/neoforge/client/model/ExtraFaceData", Set.of("blockLight()I")))
+                .add(new Entry("net/minecraftforge/common/ForgeI18n", COMPAT + "LegacyForgeI18n", Set.of(
+                        "getPattern(Ljava/lang/String;)Ljava/lang/String;")))
+                .add(new Entry("net/minecraftforge/forgespi/language/IModInfo",
+                        "net/neoforged/neoforgespi/language/IModInfo",
+                        Set.of("getDisplayName()Ljava/lang/String;")))
                 .add(new Entry("net/minecraftforge/common/Tags$Blocks",
                                 "net/neoforged/neoforge/common/Tags$Blocks", tagFields(
                                         "FENCE_GATES_WOODEN", "FENCES_WOODEN", "FENCES", "GLASS_PANES_COLORLESS",
@@ -135,6 +169,37 @@ public final class ForgeOwnerMappings {
                                         + "Lit/unimi/dsi/fastutil/objects/ObjectArrayList;")))
                 .add(new Entry("net/minecraftforge/common/capabilities/ICapabilityProvider",
                         COMPAT + "LegacyICapabilityProvider", Set.of()))
+                .add(new Entry("net/minecraftforge/common/capabilities/Capability",
+                        COMPAT + "LegacyCapability", Set.of(
+                                "getName()Ljava/lang/String;",
+                                "orEmpty(Lnet/minecraftforge/common/capabilities/Capability;"
+                                        + "Lnet/minecraftforge/common/util/LazyOptional;)"
+                                        + "Lnet/minecraftforge/common/util/LazyOptional;")))
+                .add(new Entry("net/minecraftforge/common/capabilities/CapabilityManager",
+                        COMPAT + "LegacyCapabilityManager", Set.of(
+                                "get(Lnet/minecraftforge/common/capabilities/CapabilityToken;)"
+                                        + "Lnet/minecraftforge/common/capabilities/Capability;")))
+                .add(new Entry("net/minecraftforge/common/capabilities/CapabilityToken",
+                        COMPAT + "LegacyCapabilityToken", Set.of("<init>()V")))
+                .add(new Entry("net/minecraftforge/common/capabilities/ForgeCapabilities",
+                        COMPAT + "LegacyForgeCapabilities", Set.of(
+                                "ENERGYLnet/minecraftforge/common/capabilities/Capability;",
+                                "FLUID_HANDLERLnet/minecraftforge/common/capabilities/Capability;",
+                                "FLUID_HANDLER_ITEMLnet/minecraftforge/common/capabilities/Capability;",
+                                "ITEM_HANDLERLnet/minecraftforge/common/capabilities/Capability;")))
+                .add(new Entry("net/minecraftforge/common/IPlantable",
+                        COMPAT + "LegacyIPlantable", Set.of(
+                                "getPlant(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)"
+                                        + "Lnet/minecraft/world/level/block/state/BlockState;",
+                                "getPlantType(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)"
+                                        + "Lnet/minecraftforge/common/PlantType;")))
+                .add(new Entry("net/minecraftforge/common/crafting/IShapedRecipe",
+                        "net/minecraft/world/item/crafting/ShapedRecipe", Set.of()))
+                .add(new Entry("net/minecraftforge/common/crafting/VanillaIngredientSerializer",
+                        COMPAT + "LegacyVanillaIngredientSerializer", Set.of(
+                                "INSTANCELnet/minecraftforge/common/crafting/VanillaIngredientSerializer;",
+                                "parse(Lcom/google/gson/JsonObject;)"
+                                        + "Lnet/minecraft/world/item/crafting/Ingredient;")))
                 .add(new Entry("net/minecraftforge/common/util/TablePrinter",
                         COMPAT + "LegacyTablePrinter", Set.of(
                                 "<init>()V",
@@ -332,7 +397,8 @@ public final class ForgeOwnerMappings {
                         "net/neoforged/neoforge/items/SlotItemHandler", Set.of(
                                 "<init>(Lnet/minecraftforge/items/IItemHandler;III)V",
                                 "getItemHandler()Lnet/minecraftforge/items/IItemHandler;",
-                                "initialize(Lnet/minecraft/world/item/ItemStack;)V")))
+                                "initialize(Lnet/minecraft/world/item/ItemStack;)V",
+                                "m_8010_(Lnet/minecraft/world/entity/player/Player;)Z")))
                 .add(new Entry("net/minecraftforge/client/event/EntityRenderersEvent$AddLayers",
                         "net/neoforged/neoforge/client/event/EntityRenderersEvent$AddLayers", Set.of(
                                 "getEntityTypes()Ljava/util/Set;",
@@ -392,6 +458,7 @@ public final class ForgeOwnerMappings {
                 // Capability, CapabilityManager and CapabilityToken remain unmapped.
                 .add(registryObject())
                 .add(entry(R + "IForgeRegistry", COMPAT + "IForgeRegistry", registryMembers()))
+                .addAll(TagMappings.entries())
                 .add(entry(R + "ForgeRegistries", COMPAT + "ForgeRegistries", forgeRegistriesFields(false)))
                 .add(entry(R + "ForgeRegistries$Keys", COMPAT + "ForgeRegistries$Keys", forgeRegistriesFields(true)))
                 .add(entry(R + "DeferredRegister", COMPAT + "LegacyDeferredRegister", Set.of(
@@ -438,6 +505,7 @@ public final class ForgeOwnerMappings {
                 .addAll(configAndEnvironment())
                 .addAll(ConditionMappings.entries())
                 .addAll(IngredientMappings.entries())
+                .addAll(CommonApiMappings.entries())
                 .addAll(ModelGeneratorMappings.entries())
                 .addAll(ClientModelMappings.entries())
                 .addAll(CommonHookMappings.entries())
@@ -460,6 +528,43 @@ public final class ForgeOwnerMappings {
                 .add(entry(FE + "FMLClientSetupEvent", "net/neoforged/fml/event/lifecycle/FMLClientSetupEvent", enqueue()))
                 .add(entry(FE + "FMLDedicatedServerSetupEvent",
                         "net/neoforged/fml/event/lifecycle/FMLDedicatedServerSetupEvent", enqueue()));
+
+        String tagKey = "Lnet/minecraft/tags/TagKey;";
+        mappings.add(entry("net/minecraftforge/common/Tags$Fluids", "net/neoforged/neoforge/common/Tags$Fluids",
+                        tagFields("MILK")))
+                .add(entry("net/minecraftforge/common/Tags$Biomes", "net/neoforged/neoforge/common/Tags$Biomes",
+                        tagFields("IS_SANDY", "IS_SNOWY")));
+
+        String items = "net/minecraftforge/common/Tags$Items";
+        mappings.addFieldAlias(items, "COBBLESTONE", tagKey, "COBBLESTONES")
+                .addFieldAlias(items, "GLASS", tagKey, "GLASS_BLOCKS")
+                .addFieldAlias(items, "GLASS_COLORLESS", tagKey, "GLASS_BLOCKS_COLORLESS")
+                .addFieldAlias(items, "GLASS_TINTED", tagKey, "GLASS_BLOCKS_TINTED")
+                .addFieldAlias(items, "GRAVEL", tagKey, "GRAVELS")
+                .addFieldAlias(items, "GUNPOWDER", tagKey, "GUNPOWDERS")
+                .addFieldAlias(items, "LEATHER", tagKey, "LEATHERS")
+                .addFieldAlias(items, "OBSIDIAN", tagKey, "OBSIDIANS")
+                .addFieldAlias(items, "SAND", tagKey, "SANDS")
+                .addFieldAlias(items, "SAND_COLORLESS", tagKey, "SANDS_COLORLESS")
+                .addFieldAlias(items, "SAND_RED", tagKey, "SANDS_RED")
+                .addFieldAlias(items, "SANDSTONE", tagKey, "SANDSTONE_BLOCKS")
+                .addFieldAlias(items, "SHEARS", tagKey, "TOOLS_SHEAR")
+                .addFieldAlias(items, "STONE", tagKey, "STONES")
+                .addFieldAlias(items, "STRING", tagKey, "STRINGS")
+                .addFieldAlias(items, "TOOLS_BOWS", tagKey, "TOOLS_BOW")
+                .addFieldAlias(items, "TOOLS_CROSSBOWS", tagKey, "TOOLS_CROSSBOW")
+                .addFieldAlias(items, "TOOLS_FISHING_RODS", tagKey, "TOOLS_FISHING_ROD")
+                .addFieldAlias(items, "TOOLS_SHIELDS", tagKey, "TOOLS_SHIELD");
+
+        String blocks = "net/minecraftforge/common/Tags$Blocks";
+        mappings.addFieldAlias(blocks, "GLASS", tagKey, "GLASS_BLOCKS")
+                .addFieldAlias(blocks, "GLASS_COLORLESS", tagKey, "GLASS_BLOCKS_COLORLESS")
+                .addFieldAlias(blocks, "GLASS_TINTED", tagKey, "GLASS_BLOCKS_TINTED")
+                .addFieldAlias(blocks, "GLASS_SILICA", tagKey, "GLASS_BLOCKS_CHEAP");
+        mappings.addFieldAlias(items, "GLASS_SILICA", tagKey, "GLASS_BLOCKS_CHEAP")
+                .addFieldAlias(items, "TOOLS_TRIDENTS", tagKey, "TOOLS_SPEAR");
+
+        return mappings;
     }
 
     private static final String R = "net/minecraftforge/registries/";
@@ -516,6 +621,7 @@ public final class ForgeOwnerMappings {
             for (String f : NEOFORGE_KEY_FIELDS) out.add(f + desc);
             out.add("DISPLAY_CONTEXTS" + desc);
         } else {
+            out.add("FLUID_TYPES" + "Ljava/util/function/Supplier;");
             out.add("DISPLAY_CONTEXTS" + "Ljava/util/function/Supplier;");
         }
         return out;
@@ -532,6 +638,7 @@ public final class ForgeOwnerMappings {
                 "getKeys()Ljava/util/Set;",
                 "getValues()Ljava/util/Collection;",
                 "getEntries()Ljava/util/Set;",
+                "tags()Lnet/minecraftforge/registries/tags/ITagManager;",
                 "iterator()Ljava/util/Iterator;",
                 "register(Lnet/minecraft/resources/ResourceLocation;Ljava/lang/Object;)V");
     }
@@ -631,6 +738,12 @@ public final class ForgeOwnerMappings {
                 if (e == null || blocked.contains(internalName)) return internalName;
                 counts.merge(internalName, 1, Integer::sum);
                 return e.newOwner();
+            }
+
+            @Override
+            public String mapFieldName(String owner, String name, String descriptor) {
+                if (blocked.contains(owner)) return name;
+                return mappedFieldName(owner, name, descriptor);
             }
         };
     }

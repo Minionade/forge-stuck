@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.levelgen.feature.Feature;
 import net.minecraft.world.level.material.Fluid;
+import net.neoforged.neoforge.fluids.FluidType;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 /**
@@ -59,6 +60,8 @@ public final class ForgeRegistries {
 
     public static final IForgeRegistry<EntityDataSerializer<?>> ENTITY_DATA_SERIALIZERS =
             of(NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS);
+    public static final Supplier<IForgeRegistry<FluidType>> FLUID_TYPES =
+            () -> of(NeoForgeRegistries.Keys.FLUID_TYPES);
     public static final Supplier<IForgeRegistry<ItemDisplayContext>> DISPLAY_CONTEXTS =
             () -> DisplayContextRegistryView.INSTANCE;
 

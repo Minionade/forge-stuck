@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
 final class VanillaRegistryView<V> implements IForgeRegistry<V> {
     private final ResourceKey<? extends Registry<V>> key;
     private final Registry<V> registry;
+    private LegacyTagManager<V> tags;
 
     VanillaRegistryView(ResourceKey<? extends Registry<V>> key) {
         this.key = key;
@@ -80,6 +81,12 @@ final class VanillaRegistryView<V> implements IForgeRegistry<V> {
     @Override
     public Set<Map.Entry<ResourceKey<V>, V>> getEntries() {
         return registry().entrySet();
+    }
+
+    @Override
+    public synchronized LegacyTagManager<V> tags() {
+        if (tags == null) tags = LegacyTagManager.create(registry());
+        return tags;
     }
 
     @Override

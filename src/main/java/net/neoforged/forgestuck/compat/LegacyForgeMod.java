@@ -3,7 +3,9 @@ package net.neoforged.forgestuck.compat;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.material.Fluid;
+import com.mojang.serialization.MapCodec;
 import net.neoforged.neoforge.common.NeoForgeMod;
+import net.neoforged.neoforge.common.world.BiomeModifier;
 import net.neoforged.neoforge.fluids.FluidType;
 
 /**
@@ -31,6 +33,8 @@ public final class LegacyForgeMod {
             Attributes.STEP_HEIGHT.unwrapKey().orElseThrow(
                     () -> new IllegalStateException("Step height attribute has no key")));
     public static final RegistryObject<Fluid> MILK = holder(NeoForgeMod.MILK.getKey());
+    public static final RegistryObject<MapCodec<? extends BiomeModifier>> NONE_BIOME_MODIFIER_TYPE =
+            holder(NeoForgeMod.NONE_BIOME_MODIFIER_TYPE.getKey());
 
     @SuppressWarnings("unchecked")
     private static <T> RegistryObject<T> holder(net.minecraft.resources.ResourceKey<?> key) {

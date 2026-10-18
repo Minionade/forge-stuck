@@ -24,7 +24,9 @@ final class DataMappings {
                 new ForgeOwnerMappings.Entry(helper, "net/neoforged/neoforge/common/data/ExistingFileHelper",
                         Set.of("<init>(Ljava/util/Collection;Ljava/util/Set;ZLjava/lang/String;Ljava/io/File;)V",
                                 "exists(" + location + packType + ")Z",
+                                "exists(" + location + "L" + resourceType + ";)Z",
                                 "exists(" + location + packType + "Ljava/lang/String;Ljava/lang/String;)Z",
+                                "trackGenerated(" + location + "L" + resourceType + ";)V",
                                 "trackGenerated(" + location + packType + "Ljava/lang/String;Ljava/lang/String;)V",
                                 "getResource(" + location + packType + "Ljava/lang/String;Ljava/lang/String;)" + resource,
                                 "getResource(" + location + packType + ")" + resource,
@@ -43,6 +45,24 @@ final class DataMappings {
                         "net/neoforged/neoforge/common/data/BlockTagsProvider",
                         Set.of("<init>(Lnet/minecraft/data/PackOutput;"
                                 + "Ljava/util/concurrent/CompletableFuture;Ljava/lang/String;"
-                                + "Lnet/minecraftforge/common/data/ExistingFileHelper;)V")));
+                                + "Lnet/minecraftforge/common/data/ExistingFileHelper;)V")),
+                new ForgeOwnerMappings.Entry("net/minecraftforge/common/data/GlobalLootModifierProvider",
+                        "net/neoforged/forgestuck/compat/LegacyGlobalLootModifierProvider",
+                        Set.of("<init>(Lnet/minecraft/data/PackOutput;Ljava/lang/String;)V",
+                                "add(Ljava/lang/String;Lnet/minecraftforge/common/loot/IGlobalLootModifier;)V")),
+                new ForgeOwnerMappings.Entry("net/minecraftforge/common/loot/IGlobalLootModifier",
+                        "net/neoforged/neoforge/common/loot/IGlobalLootModifier",
+                        Set.of("apply(Lit/unimi/dsi/fastutil/objects/ObjectArrayList;"
+                                        + "Lnet/minecraft/world/level/storage/loot/LootContext;)"
+                                        + "Lit/unimi/dsi/fastutil/objects/ObjectArrayList;",
+                                "codec()Lcom/mojang/serialization/MapCodec;")),
+                new ForgeOwnerMappings.Entry("net/minecraftforge/common/data/SpriteSourceProvider",
+                        "net/neoforged/forgestuck/compat/LegacySpriteSourceProvider",
+                        Set.of("<init>(Lnet/minecraft/data/PackOutput;"
+                                + "Lnet/minecraftforge/common/data/ExistingFileHelper;Ljava/lang/String;)V")),
+                new ForgeOwnerMappings.Entry("net/minecraftforge/common/data/SpriteSourceProvider$SourceList",
+                        "net/neoforged/neoforge/common/data/SpriteSourceProvider$SourceList",
+                        Set.of("addSource(Lnet/minecraft/client/renderer/texture/atlas/SpriteSource;)"
+                                + "Lnet/minecraftforge/common/data/SpriteSourceProvider$SourceList;")));
     }
 }

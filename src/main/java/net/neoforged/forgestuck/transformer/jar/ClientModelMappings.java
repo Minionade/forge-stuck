@@ -37,6 +37,13 @@ final class ClientModelMappings {
                         "isGui3d()Z",
                         "useAmbientOcclusion()Z",
                         "useBlockLight()Z")),
+                entry("model/geometry/IGeometryLoader", Set.of()),
+                entry("model/geometry/IUnbakedGeometry", Set.of("getConfigurableComponentNames()Ljava/util/Set;")),
+                entry("model/BakedModelWrapper", Set.of(
+                        "<init>(Lnet/minecraft/client/resources/model/BakedModel;)V")),
+                entry("model/geometry/BlockGeometryBakingContext", Set.of(
+                        "ownerLnet/minecraft/client/renderer/block/model/BlockModel;")),
+                entry("model/geometry/SimpleUnbakedGeometry", Set.of("<init>()V")),
                 entry("model/IQuadTransformer", Set.of(
                         "andThen(" + TRANSFORMER + ")" + TRANSFORMER,
                         "COLORI",
@@ -55,6 +62,16 @@ final class ClientModelMappings {
                         "setShade(Z)V",
                         "setSprite(Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;)V",
                         "setTintIndex(I)V")),
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/client/model/pipeline/QuadBakingVertexConsumer$Buffered",
+                        "net/neoforged/forgestuck/compat/LegacyQuadBakingVertexConsumer$Buffered",
+                        Set.of(
+                                "<init>()V",
+                                "getQuad()Lnet/minecraft/client/renderer/block/model/BakedQuad;",
+                                "setHasAmbientOcclusion(Z)V",
+                                "setShade(Z)V",
+                                "setSprite(Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;)V",
+                                "setTintIndex(I)V")),
                 entry("model/CompositeModel$Baked", Set.of(
                         "builder(Lnet/minecraftforge/client/model/geometry/IGeometryBakingContext;"
                                 + "Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;"
@@ -102,6 +119,22 @@ final class ClientModelMappings {
                 entry("model/SimpleModelState", Set.of(
                         "<init>(Lcom/mojang/math/Transformation;)V",
                         "<init>(Lcom/mojang/math/Transformation;Z)V")),
+                entry("extensions/common/IClientItemExtensions", Set.of(
+                        "getFont(Lnet/minecraft/world/item/ItemStack;"
+                                + "Lnet/minecraftforge/client/extensions/common/IClientItemExtensions$FontContext;)"
+                                + "Lnet/minecraft/client/gui/Font;",
+                        "of(Lnet/minecraft/world/item/ItemStack;)"
+                                + "Lnet/minecraftforge/client/extensions/common/IClientItemExtensions;")),
+                entry("extensions/common/IClientItemExtensions$FontContext", Set.of(
+                        "TOOLTIPLnet/minecraftforge/client/extensions/common/IClientItemExtensions$FontContext;")),
+                entry("extensions/common/IClientMobEffectExtensions", Set.of(
+                        "isVisibleInGui(Lnet/minecraft/world/effect/MobEffectInstance;)Z",
+                        "of(Lnet/minecraft/world/effect/MobEffectInstance;)"
+                                + "Lnet/minecraftforge/client/extensions/common/IClientMobEffectExtensions;")),
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/client/gui/overlay/ForgeGui",
+                        "net/minecraft/client/gui/Gui",
+                        Set.of("leftHeightI")),
                 new ForgeOwnerMappings.Entry(
                         "net/minecraftforge/client/ForgeHooksClient",
                         "net/neoforged/neoforge/client/ClientHooks",

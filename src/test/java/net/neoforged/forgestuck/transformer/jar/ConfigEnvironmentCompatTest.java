@@ -304,7 +304,7 @@ class ConfigEnvironmentCompatTest {
     }
 
     @Test
-    void unsupportedRegistryUsesLinkAndReportInsteadOfUnmapping() {
+    void registryTagManagerUsesCompatibilityAdapterInsteadOfBlockingOwner() {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/cfg/Reg", null, "java/lang/Object", null);
         var m = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "go", "()V", null, null);
@@ -323,6 +323,6 @@ class ConfigEnvironmentCompatTest {
         byte[] out = new ForgeOwnerRemapStep().apply("zz.cfg.Reg", in, report);
         assertEquals(Set.of(), report.blockedOwners());
         assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(out));
-        assertTrue(report.unsupportedCalls().keySet().iterator().next().contains("IForgeRegistry.tags"));
+        assertTrue(report.unsupportedCalls().isEmpty());
     }
 }

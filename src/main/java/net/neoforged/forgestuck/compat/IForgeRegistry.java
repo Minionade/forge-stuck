@@ -34,6 +34,10 @@ public interface IForgeRegistry<V> extends Iterable<V> {
 
     Set<Map.Entry<ResourceKey<V>, V>> getEntries();
 
+    default LegacyTagManager<V> tags() {
+        throw new UnsupportedOperationException("Registry " + getRegistryName() + " does not expose tags");
+    }
+
     @Override
     default Iterator<V> iterator() {
         return getValues().iterator();

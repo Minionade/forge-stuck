@@ -6,8 +6,10 @@ import java.util.Set;
 /**
  * Forge 1.20.1 crafting conditions. NeoForge kept {@code ICondition}/{@code IContext} (different members), the
  * simple built-ins with compatible constructors, and replaced registration with codecs, so serializer/registration
- * go to {@code compat.LegacyConditions}. And/Or array constructors are adapted to NeoForge's list-backed conditions;
- * the ingredient parts of CraftingHelper remain unmapped. Members are reflection-checked in
+ * go to {@code compat.LegacyConditions}. And/Or array constructors are adapted to NeoForge's list-backed conditions.
+ * The single-variant ConditionalAdvancement builder is adapted to NeoForge's conditional advancement codec;
+ * ConditionalRecipe's first-matching recipe variants have no equivalent in RecipeOutput and remain unmapped. The
+ * remaining ingredient parsing helpers in CraftingHelper remain unmapped. Members are reflection-checked in
  * {@code ForgeOwnerMappingTargetsTest}.
  */
 final class ConditionMappings {
@@ -37,6 +39,8 @@ final class ConditionMappings {
                         "register(Lnet/minecraft/resources/ResourceLocation;"
                                 + "Lnet/minecraftforge/common/crafting/IIngredientSerializer;)"
                                 + "Lnet/minecraftforge/common/crafting/IIngredientSerializer;",
+                        "getID(Lnet/minecraftforge/common/crafting/IIngredientSerializer;)"
+                                + "Lnet/minecraft/resources/ResourceLocation;",
                         "processConditions(" + arr + ctx + ")Z",
                         "processConditions(" + json + "Ljava/lang/String;" + ctx + ")Z",
                         "serialize(" + ic + ")" + json, "serialize([" + ic + ")" + arr)),
@@ -45,6 +49,14 @@ final class ConditionMappings {
                 e(C + "NotCondition", NC + "NotCondition", Set.of("<init>(" + ic + ")V")),
                 e(C + "AndCondition", NC + "AndCondition", Set.of("<init>(Ljava/util/List;)V")),
                 e(C + "OrCondition", NC + "OrCondition", Set.of("<init>(Ljava/util/List;)V")),
+                e("net/minecraftforge/common/crafting/ConditionalAdvancement$Builder",
+                        COMPAT + "LegacyConditionalAdvancement$Builder", Set.of(
+                                "<init>()V",
+                                "addAdvancement(Lnet/minecraft/advancements/Advancement$Builder;)"
+                                        + "Lnet/minecraftforge/common/crafting/ConditionalAdvancement$Builder;",
+                                "addCondition(" + ic + ")"
+                                        + "Lnet/minecraftforge/common/crafting/ConditionalAdvancement$Builder;",
+                                "write()" + json)),
                 e(C + "ModLoadedCondition", NC + "ModLoadedCondition",
                         Set.of("<init>(Ljava/lang/String;)V")),
                 e(C + "ItemExistsCondition", NC + "ItemExistsCondition", Set.of(

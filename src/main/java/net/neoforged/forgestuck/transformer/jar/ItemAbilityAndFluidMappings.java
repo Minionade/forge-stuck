@@ -57,6 +57,10 @@ final class ItemAbilityAndFluidMappings {
                         "get(Ljava/lang/String;)" + ta, "name()Ljava/lang/String;",
                         "getActions()Ljava/util/Collection;")),
                 e("net/minecraftforge/common/ToolActions", "net/neoforged/neoforge/common/ItemAbilities", actions),
+                e("net/minecraftforge/common/loot/CanToolPerformAction",
+                        "net/neoforged/forgestuck/compat/LegacyCanToolPerformAction",
+                        Set.of("canToolPerformAction(Lnet/minecraftforge/common/ToolAction;)"
+                                + "Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition$Builder;")),
                 e("net/minecraftforge/fluids/capability/IFluidHandler",
                         "net/neoforged/neoforge/fluids/capability/IFluidHandler", Set.of(
                                 "getTanks()I",
@@ -138,6 +142,7 @@ final class ItemAbilityAndFluidMappings {
                 e("net/minecraftforge/fluids/FluidStack", "net/neoforged/neoforge/fluids/FluidStack", Set.of(
                         "<init>(Lnet/minecraft/world/level/material/Fluid;I)V",
                         "EMPTYLnet/minecraftforge/fluids/FluidStack;",
+                        "CODECLcom/mojang/serialization/Codec;",
                         "getFluid()Lnet/minecraft/world/level/material/Fluid;", "getAmount()I", "setAmount(I)V",
                         "grow(I)V", "shrink(I)V", "isEmpty()Z",
                         "copy()Lnet/minecraftforge/fluids/FluidStack;",
@@ -155,7 +160,15 @@ final class ItemAbilityAndFluidMappings {
                 e("net/minecraftforge/event/entity/living/PotionColorCalculationEvent",
                         "net/neoforged/forgestuck/compat/LegacyPotionColorCalculationEvent", Set.of()),
                 e("net/minecraftforge/registries/MissingMappingsEvent",
-                        "net/neoforged/forgestuck/compat/LegacyMissingMappingsEvent", Set.of()),
+                        "net/neoforged/forgestuck/compat/LegacyMissingMappingsEvent",
+                        Set.of("getAllMappings(Lnet/minecraft/resources/ResourceKey;)Ljava/util/List;")),
+                e("net/minecraftforge/registries/MissingMappingsEvent$Mapping",
+                        "net/neoforged/forgestuck/compat/LegacyMissingMappingsEvent$Mapping",
+                        Set.of("getKey()Lnet/minecraft/resources/ResourceLocation;",
+                                "remap(Ljava/lang/Object;)V")),
+                e("net/minecraftforge/server/command/ModIdArgument",
+                        "net/neoforged/neoforge/server/command/ModIdArgument",
+                        Set.of("modIdArgument()Lnet/minecraftforge/server/command/ModIdArgument;")),
                 e("net/minecraft/world/item/enchantment/Enchantment$Rarity",
                         "net/neoforged/forgestuck/compat/LegacyEnchantmentRarity", rarityMembers()),
                 e("net/minecraft/world/item/enchantment/EnchantmentCategory",
@@ -184,7 +197,7 @@ final class ItemAbilityAndFluidMappings {
                 e("net/minecraftforge/common/ForgeMod", "net/neoforged/forgestuck/compat/LegacyForgeMod", Set.of(
                         "LAVA_TYPE" + ro, "WATER_TYPE" + ro, "SWIM_SPEED" + ro, "NAMETAG_DISTANCE" + ro,
                         "ENTITY_GRAVITY" + ro, "BLOCK_REACH" + ro, "ENTITY_REACH" + ro,
-                        "STEP_HEIGHT_ADDITION" + ro, "MILK" + ro,
+                        "STEP_HEIGHT_ADDITION" + ro, "MILK" + ro, "NONE_BIOME_MODIFIER_TYPE" + ro,
                         "enableMilkFluid()V")),
                 // NeoForge 1.21.1 removed PlantType; the compat class is a name-interned token holder with the 1.20.1
                 // constants. Engine hooks (IPlantable.getPlantType, canSustainPlant) are not mapped.
@@ -208,7 +221,15 @@ final class ItemAbilityAndFluidMappings {
                 e("net/minecraftforge/client/event/RenderGuiOverlayEvent$Pre",
                         "net/neoforged/neoforge/client/event/RenderGuiLayerEvent$Pre",
                         Set.of("getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;", "isCanceled()Z",
-                                "setCanceled(Z)V"))));
+                                "setCanceled(Z)V")),
+                e("net/minecraftforge/client/gui/overlay/NamedGuiOverlay",
+                        "net/neoforged/forgestuck/compat/LegacyNamedGuiOverlay", Set.of()),
+                e("net/minecraftforge/client/gui/overlay/VanillaGuiOverlay",
+                        "net/neoforged/forgestuck/compat/LegacyVanillaGuiOverlay",
+                        Set.of("CROSSHAIRLnet/minecraftforge/client/gui/overlay/VanillaGuiOverlay;",
+                                "HOTBARLnet/minecraftforge/client/gui/overlay/VanillaGuiOverlay;",
+                                "PLAYER_HEALTHLnet/minecraftforge/client/gui/overlay/VanillaGuiOverlay;",
+                                "type()Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;"))));
         return list;
     }
 

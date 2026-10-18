@@ -617,16 +617,16 @@ PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar	ne
 PATCHED	method	967	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; gendustry-1.20.1-1.0.5.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.registries.RegistryObject.get()Ljava/lang/Object;
 PATCHED	method	50	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.registries.RegistryObject.getId()Lnet/minecraft/resources/ResourceLocation;
 PATCHED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.registries.RegistryObject.ifPresent(Ljava/util/function/Consumer;)V
-KNOWN_GAP	method	2	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.client.event.EntityRenderersEvent$AddLayers.getRenderer(Lnet/minecraft/world/entity/EntityType;)Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;
-KNOWN_GAP	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.ModelEvent$RegisterAdditional.register(Lnet/minecraft/resources/ResourceLocation;)V
-KNOWN_GAP	method	23	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.event.ModelEvent$RegisterGeometryLoaders.register(Ljava/lang/String;Lnet/minecraftforge/client/model/geometry/IGeometryLoader;)V
+PATCHED	method	2	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.client.event.EntityRenderersEvent$AddLayers.getRenderer(Lnet/minecraft/world/entity/EntityType;)Lnet/minecraft/client/renderer/entity/LivingEntityRenderer;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.ModelEvent$RegisterAdditional.register(Lnet/minecraft/resources/ResourceLocation;)V
+PATCHED	method	23	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.event.ModelEvent$RegisterGeometryLoaders.register(Ljava/lang/String;Lnet/minecraftforge/client/model/geometry/IGeometryLoader;)V
 KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Post.<init>(Lcom/mojang/blaze3d/platform/Window;Lnet/minecraft/client/gui/GuiGraphics;FLnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;)V
-KNOWN_GAP	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Post.getOverlay()Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;
+PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Post.getOverlay()Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Post.getPartialTick()F
-KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Pre.getOverlay()Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Pre.getOverlay()Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;
 KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Pre.getPartialTick()F
 KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Pre.getWindow()Lcom/mojang/blaze3d/platform/Window;
-KNOWN_GAP	method	3	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.event.RenderLevelStageEvent.getPartialTick()F
+PATCHED	method	3	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.event.RenderLevelStageEvent.getPartialTick()F
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.event.RenderLivingEvent.setCanceled(Z)V
 KNOWN_GAP	method	2	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.common.capabilities.ICapabilityProvider.getCapability(Lnet/minecraftforge/common/capabilities/Capability;)Lnet/minecraftforge/common/util/LazyOptional;
 KNOWN_GAP	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.common.capabilities.ICapabilityProvider.getCapability(Lnet/minecraftforge/common/capabilities/Capability;Lnet/minecraft/core/Direction;)Lnet/minecraftforge/common/util/LazyOptional;
@@ -635,30 +635,30 @@ PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.craf
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.conditions.ItemExistsCondition.<init>(Lnet/minecraft/resources/ResourceLocation;)V
 PATCHED	method	11	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.conditions.ModLoadedCondition.<init>(Ljava/lang/String;)V
 PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.conditions.NotCondition.<init>(Lnet/minecraftforge/common/crafting/conditions/ICondition;)V
-KNOWN_GAP	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.CraftingHelper.getID(Lnet/minecraftforge/common/crafting/IIngredientSerializer;)Lnet/minecraft/resources/ResourceLocation;
+PATCHED	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.CraftingHelper.getID(Lnet/minecraftforge/common/crafting/IIngredientSerializer;)Lnet/minecraft/resources/ResourceLocation;
 KNOWN_GAP	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.CraftingHelper.getIngredient(Lcom/google/gson/JsonElement;Z)Lnet/minecraft/world/item/crafting/Ingredient;
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.CraftingHelper.getItemStack(Lcom/google/gson/JsonObject;Z)Lnet/minecraft/world/item/ItemStack;
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.crafting.CraftingHelper.getItemStack(Lcom/google/gson/JsonObject;ZZ)Lnet/minecraft/world/item/ItemStack;
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.CraftingHelper.getNBT(Lcom/google/gson/JsonElement;)Lnet/minecraft/nbt/CompoundTag;
-KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.ExistingFileHelper.exists(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraftforge/common/data/ExistingFileHelper$IResourceType;)Z
-KNOWN_GAP	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.ExistingFileHelper.trackGenerated(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraftforge/common/data/ExistingFileHelper$IResourceType;)V
-KNOWN_GAP	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.ForgeConfigSpec.setConfig(Lcom/electronwill/nightconfig/core/CommentedConfig;)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.ExistingFileHelper.exists(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraftforge/common/data/ExistingFileHelper$IResourceType;)Z
+PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.ExistingFileHelper.trackGenerated(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraftforge/common/data/ExistingFileHelper$IResourceType;)V
+PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.ForgeConfigSpec.setConfig(Lcom/electronwill/nightconfig/core/CommentedConfig;)V
 PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeMod.BLOCK_REACHLnet/minecraftforge/registries/RegistryObject;
 PATCHED	field	2	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeMod.ENTITY_REACHLnet/minecraftforge/registries/RegistryObject;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeMod.MILKLnet/minecraftforge/registries/RegistryObject;
-KNOWN_GAP	field	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.ForgeMod.NONE_BIOME_MODIFIER_TYPELnet/minecraftforge/registries/RegistryObject;
+PATCHED	field	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.ForgeMod.NONE_BIOME_MODIFIER_TYPELnet/minecraftforge/registries/RegistryObject;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeMod.STEP_HEIGHT_ADDITIONLnet/minecraftforge/registries/RegistryObject;
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.IForgeShearable.isShearable(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;)Z
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.IForgeShearable.onSheared(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;I)Ljava/util/List;
-KNOWN_GAP	method	8	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.AddReloadListenerEvent.getConditionContext()Lnet/minecraftforge/common/crafting/conditions/ICondition$IContext;
-KNOWN_GAP	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.event.BuildCreativeModeTabContentsEvent.m_246342_(Lnet/minecraft/world/item/ItemStack;)V
-KNOWN_GAP	method	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.EntityAttributeModificationEvent.add(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/ai/attributes/Attribute;)V
-KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.EntityAttributeModificationEvent.add(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/ai/attributes/Attribute;D)V
-KNOWN_GAP	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.LivingAttackEvent.getAmount()F
+PATCHED	method	8	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.AddReloadListenerEvent.getConditionContext()Lnet/minecraftforge/common/crafting/conditions/ICondition$IContext;
+PATCHED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.event.BuildCreativeModeTabContentsEvent.m_246342_(Lnet/minecraft/world/item/ItemStack;)V
+PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.EntityAttributeModificationEvent.add(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/ai/attributes/Attribute;)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.EntityAttributeModificationEvent.add(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/ai/attributes/Attribute;D)V
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.LivingAttackEvent.getAmount()F
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.living.LivingDamageEvent.setCanceled(Z)V
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Added.isCanceled()Z
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Applicable.isCanceled()Z
-KNOWN_GAP	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Applicable.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Applicable.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Remove.<init>(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/effect/MobEffectInstance;)V
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.living.MobSpawnEvent$FinalizeSpawn.getSpawnTag()Lnet/minecraft/nbt/CompoundTag;
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.PotionColorCalculationEvent.getEffects()Ljava/util/Collection;
@@ -669,26 +669,26 @@ PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	ne
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.CriticalHitEvent.getResult()Lnet/minecraftforge/eventbus/api/Event$Result;
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.CriticalHitEvent.setDamageModifier(F)V
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.CriticalHitEvent.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V
-KNOWN_GAP	method	3	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.getEntity()Lnet/minecraft/world/entity/player/Player;
-KNOWN_GAP	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.getItem()Lnet/minecraft/world/entity/item/ItemEntity;
-KNOWN_GAP	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.isCanceled()Z
-KNOWN_GAP	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.setCanceled(Z)V
+PATCHED	method	3	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.getEntity()Lnet/minecraft/world/entity/player/Player;
+PATCHED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.getItem()Lnet/minecraft/world/entity/item/ItemEntity;
+PATCHED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.isCanceled()Z
+PATCHED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.setCanceled(Z)V
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.player.PlayerEvent$StartTracking.isCanceled()Z
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent.setCanceled(Z)V
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent.setCancellationResult(Lnet/minecraft/world/InteractionResult;)V
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$LeftClickEmpty.getCancellationResult()Lnet/minecraft/world/InteractionResult;
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$LeftClickEmpty.setCancellationResult(Lnet/minecraft/world/InteractionResult;)V
-KNOWN_GAP	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickBlock.getUseBlock()Lnet/minecraftforge/eventbus/api/Event$Result;
-KNOWN_GAP	method	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickBlock.getUseItem()Lnet/minecraftforge/eventbus/api/Event$Result;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickBlock.getUseBlock()Lnet/minecraftforge/eventbus/api/Event$Result;
+PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickBlock.getUseItem()Lnet/minecraftforge/eventbus/api/Event$Result;
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickEmpty.getCancellationResult()Lnet/minecraft/world/InteractionResult;
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickEmpty.setCancellationResult(Lnet/minecraft/world/InteractionResult;)V
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.ProjectileImpactEvent.setImpactResult(Lnet/minecraftforge/event/entity/ProjectileImpactEvent$ImpactResult;)V
-KNOWN_GAP	method	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.SpawnPlacementRegisterEvent.register(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/SpawnPlacements$Type;Lnet/minecraft/world/level/levelgen/Heightmap$Types;Lnet/minecraft/world/entity/SpawnPlacements$SpawnPredicate;Lnet/minecraftforge/event/entity/SpawnPlacementRegisterEvent$Operation;)V
+PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.SpawnPlacementRegisterEvent.register(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/SpawnPlacements$Type;Lnet/minecraft/world/level/levelgen/Heightmap$Types;Lnet/minecraft/world/entity/SpawnPlacements$SpawnPredicate;Lnet/minecraftforge/event/entity/SpawnPlacementRegisterEvent$Operation;)V
 KNOWN_GAP	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.level.BlockEvent$BreakEvent.getExpToDrop()I
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.level.BlockEvent$BreakEvent.setExpToDrop(I)V
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.level.SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.level.SaplingGrowTreeEvent.isCanceled()Z
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.level.SaplingGrowTreeEvent.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.level.SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.level.SaplingGrowTreeEvent.isCanceled()Z
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.level.SaplingGrowTreeEvent.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V
 KNOWN_GAP	method	7	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.eventbus.api.IEventBus.addGenericListener(Ljava/lang/Class;Ljava/util/function/Consumer;)V
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.eventbus.api.IEventBus.addGenericListener(Ljava/lang/Class;Lnet/minecraftforge/eventbus/api/EventPriority;Ljava/util/function/Consumer;)V
 PATCHED	method	15	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.eventbus.api.IEventBus.post(Lnet/minecraftforge/eventbus/api/Event;)Z
@@ -699,12 +699,12 @@ PATCHED	method	9	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; c
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.capability.IFluidHandlerItem.getTankCapacity(I)I
 PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.capability.IFluidHandlerItem.getTanks()I
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.capability.IFluidHandlerItem.isFluidValid(ILnet/minecraftforge/fluids/FluidStack;)Z
-KNOWN_GAP	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.capability.templates.FluidTank.readFromNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraftforge/fluids/capability/templates/FluidTank;
-KNOWN_GAP	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.capability.templates.FluidTank.writeToNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.capability.templates.FluidTank.readFromNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraftforge/fluids/capability/templates/FluidTank;
+PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.capability.templates.FluidTank.writeToNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;
 PATCHED	method	26	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidStack.<init>(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)V
 PATCHED	method	74	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.fluids.FluidStack.<init>(Lnet/minecraftforge/fluids/FluidStack;I)V
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidStack.areFluidStackTagsEqual(Lnet/minecraftforge/fluids/FluidStack;Lnet/minecraftforge/fluids/FluidStack;)Z
-KNOWN_GAP	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidStack.CODECLcom/mojang/serialization/Codec;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidStack.CODECLcom/mojang/serialization/Codec;
 PATCHED	method	7	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidStack.getOrCreateTag()Lnet/minecraft/nbt/CompoundTag;
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidStack.getRawFluid()Lnet/minecraft/world/level/material/Fluid;
 PATCHED	method	44	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.fluids.FluidStack.getTag()Lnet/minecraft/nbt/CompoundTag;
@@ -726,23 +726,23 @@ PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidT
 PATCHED	method	10	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidType.isLighterThanAir()Z
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidType.isVaporizedOnPlacement(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraftforge/fluids/FluidStack;)Z
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidType.onVaporize(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraftforge/fluids/FluidStack;)V
-KNOWN_GAP	method	4	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModContainer.getModInfo()Lnet/minecraftforge/forgespi/language/IModInfo;
+PATCHED	method	4	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModContainer.getModInfo()Lnet/minecraftforge/forgespi/language/IModInfo;
 PATCHED	method	4	cofh_core-1.20.1-11.0.2.56.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.items.IItemHandlerModifiable.getSlots()I
 PATCHED	method	4	cofh_core-1.20.1-11.0.2.56.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.items.IItemHandlerModifiable.getStackInSlot(I)Lnet/minecraft/world/item/ItemStack;
-KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.items.SlotItemHandler.m_8010_(Lnet/minecraft/world/entity/player/Player;)Z
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.items.SlotItemHandler.m_8010_(Lnet/minecraft/world/entity/player/Player;)Z
 KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.DeferredRegister.createOptional(Lnet/minecraft/resources/ResourceKey;Ljava/lang/String;)Lnet/minecraftforge/registries/DeferredRegister;
-KNOWN_GAP	field	3	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.ForgeRegistries.FLUID_TYPESLjava/util/function/Supplier;
+PATCHED	field	3	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.ForgeRegistries.FLUID_TYPESLjava/util/function/Supplier;
 PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.registries.IForgeRegistry.iterator()Ljava/util/Iterator;
-KNOWN_GAP	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.IForgeRegistry.tags()Lnet/minecraftforge/registries/tags/ITagManager;
-KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.MissingMappingsEvent.getAllMappings(Lnet/minecraft/resources/ResourceKey;)Ljava/util/List;
-KNOWN_GAP	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.RegisterEvent.getForgeRegistry()Lnet/minecraftforge/registries/IForgeRegistry;
+PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.IForgeRegistry.tags()Lnet/minecraftforge/registries/tags/ITagManager;
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.MissingMappingsEvent.getAllMappings(Lnet/minecraft/resources/ResourceKey;)Ljava/util/List;
+PATCHED	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.RegisterEvent.getForgeRegistry()Lnet/minecraftforge/registries/IForgeRegistry;
 PATCHED	method	2	Mantle-1.20.1-1.11.117.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.ChunkRenderTypeSet.iterator()Ljava/util/Iterator;
 PATCHED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.client.ChunkRenderTypeSet.of([Lnet/minecraft/client/renderer/RenderType;)Lnet/minecraftforge/client/ChunkRenderTypeSet;
 PATCHED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.client.ChunkRenderTypeSet.union([Lnet/minecraftforge/client/ChunkRenderTypeSet;)Lnet/minecraftforge/client/ChunkRenderTypeSet;
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderItemInFrameEvent.<init>(Lnet/minecraft/world/entity/decoration/ItemFrame;Lnet/minecraft/client/renderer/entity/ItemFrameRenderer;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderNameTagEvent.<init>(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/network/chat/Component;Lnet/minecraft/client/renderer/entity/EntityRenderer;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IF)V
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderNameTagEvent.getContent()Lnet/minecraft/network/chat/Component;
-UNMAPPED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderNameTagEvent.getResult()Lnet/minecraftforge/eventbus/api/Event$Result;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderItemInFrameEvent.<init>(Lnet/minecraft/world/entity/decoration/ItemFrame;Lnet/minecraft/client/renderer/entity/ItemFrameRenderer;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderNameTagEvent.<init>(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/network/chat/Component;Lnet/minecraft/client/renderer/entity/EntityRenderer;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;IF)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderNameTagEvent.getContent()Lnet/minecraft/network/chat/Component;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.event.RenderNameTagEvent.getResult()Lnet/minecraftforge/eventbus/api/Event$Result;
 PATCHED	method	2	advgenerators-1.6.0.6-mc1.20.1.jar	net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions.getFlowingTexture(Lnet/minecraft/world/level/material/FluidState;Lnet/minecraft/world/level/BlockAndTintGetter;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/resources/ResourceLocation;
 PATCHED	method	8	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar	net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions.getFlowingTexture(Lnet/minecraftforge/fluids/FluidStack;)Lnet/minecraft/resources/ResourceLocation;
 PATCHED	method	2	advgenerators-1.6.0.6-mc1.20.1.jar	net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions.getOverlayTexture()Lnet/minecraft/resources/ResourceLocation;
@@ -759,27 +759,27 @@ PATCHED	method	2	advgenerators-1.6.0.6-mc1.20.1.jar	net.minecraftforge.client.ex
 PATCHED	method	2	advgenerators-1.6.0.6-mc1.20.1.jar	net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions.modifyFogRender(Lnet/minecraft/client/Camera;Lnet/minecraft/client/renderer/FogRenderer$FogMode;FFFFLcom/mojang/blaze3d/shaders/FogShape;)V
 PATCHED	method	27	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions.of(Lnet/minecraft/world/level/material/Fluid;)Lnet/minecraftforge/client/extensions/common/IClientFluidTypeExtensions;
 PATCHED	method	2	advgenerators-1.6.0.6-mc1.20.1.jar	net.minecraftforge.client.extensions.common.IClientFluidTypeExtensions.renderOverlay(Lnet/minecraft/client/Minecraft;Lcom/mojang/blaze3d/vertex/PoseStack;)V
-UNMAPPED	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.extensions.common.IClientItemExtensions.getFont(Lnet/minecraft/world/item/ItemStack;Lnet/minecraftforge/client/extensions/common/IClientItemExtensions$FontContext;)Lnet/minecraft/client/gui/Font;
-UNMAPPED	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.extensions.common.IClientItemExtensions.of(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraftforge/client/extensions/common/IClientItemExtensions;
-UNMAPPED	field	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.extensions.common.IClientItemExtensions$FontContext.TOOLTIPLnet/minecraftforge/client/extensions/common/IClientItemExtensions$FontContext;
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.extensions.common.IClientMobEffectExtensions.isVisibleInGui(Lnet/minecraft/world/effect/MobEffectInstance;)Z
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.extensions.common.IClientMobEffectExtensions.of(Lnet/minecraft/world/effect/MobEffectInstance;)Lnet/minecraftforge/client/extensions/common/IClientMobEffectExtensions;
+PATCHED	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.extensions.common.IClientItemExtensions.getFont(Lnet/minecraft/world/item/ItemStack;Lnet/minecraftforge/client/extensions/common/IClientItemExtensions$FontContext;)Lnet/minecraft/client/gui/Font;
+PATCHED	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.extensions.common.IClientItemExtensions.of(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraftforge/client/extensions/common/IClientItemExtensions;
+PATCHED	field	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.extensions.common.IClientItemExtensions$FontContext.TOOLTIPLnet/minecraftforge/client/extensions/common/IClientItemExtensions$FontContext;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.extensions.common.IClientMobEffectExtensions.isVisibleInGui(Lnet/minecraft/world/effect/MobEffectInstance;)Z
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.extensions.common.IClientMobEffectExtensions.of(Lnet/minecraft/world/effect/MobEffectInstance;)Lnet/minecraftforge/client/extensions/common/IClientMobEffectExtensions;
 PATCHED	method	2	Mantle-1.20.1-1.11.117.jar; bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.client.ForgeHooksClient.fillNormal([ILnet/minecraft/core/Direction;)V
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.ForgeHooksClient.getArmorModel(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/EquipmentSlot;Lnet/minecraft/client/model/HumanoidModel;)Lnet/minecraft/client/model/Model;
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.ForgeHooksClient.getArmorTexture(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/item/ItemStack;Ljava/lang/String;Lnet/minecraft/world/entity/EquipmentSlot;Ljava/lang/String;)Ljava/lang/String;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.ForgeHooksClient.getArmorTexture(Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/item/ItemStack;Ljava/lang/String;Lnet/minecraft/world/entity/EquipmentSlot;Ljava/lang/String;)Ljava/lang/String;
 PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.ForgeHooksClient.getBlockMaterial(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/client/resources/model/Material;
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.ForgeHooksClient.handleCameraTransforms(Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/resources/model/BakedModel;Lnet/minecraft/world/item/ItemDisplayContext;Z)Lnet/minecraft/client/resources/model/BakedModel;
-UNMAPPED	method	3	Mantle-1.20.1-1.11.117.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.ForgeRenderTypes.get()Lnet/minecraft/client/renderer/RenderType;
-UNMAPPED	field	2	cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.ForgeRenderTypes.ITEM_LAYERED_CUTOUTLnet/minecraftforge/client/ForgeRenderTypes;
-UNMAPPED	field	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.ForgeRenderTypes.ITEM_UNSORTED_TRANSLUCENTLnet/minecraftforge/client/ForgeRenderTypes;
-UNMAPPED	field	5	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.ForgeGui.leftHeightI
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.ForgeGui.setupOverlayRenderState(ZZ)V
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.ForgeGui.shouldDrawSurvivalElements()Z
-UNMAPPED	field	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIRLnet/minecraftforge/client/gui/overlay/VanillaGuiOverlay;
-UNMAPPED	field	2	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.HOTBARLnet/minecraftforge/client/gui/overlay/VanillaGuiOverlay;
-UNMAPPED	field	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.PLAYER_HEALTHLnet/minecraftforge/client/gui/overlay/VanillaGuiOverlay;
-UNMAPPED	method	6	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.type()Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;
-UNMAPPED	method	6	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.client.model.BakedModelWrapper.<init>(Lnet/minecraft/client/resources/model/BakedModel;)V
+PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.ForgeRenderTypes.get()Lnet/minecraft/client/renderer/RenderType;
+PATCHED	field	2	cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.ForgeRenderTypes.ITEM_LAYERED_CUTOUTLnet/minecraftforge/client/ForgeRenderTypes;
+PATCHED	field	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.ForgeRenderTypes.ITEM_UNSORTED_TRANSLUCENTLnet/minecraftforge/client/ForgeRenderTypes;
+PATCHED	field	5	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.ForgeGui.leftHeightI
+KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.ForgeGui.setupOverlayRenderState(ZZ)V
+KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.ForgeGui.shouldDrawSurvivalElements()Z
+PATCHED	field	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.CROSSHAIRLnet/minecraftforge/client/gui/overlay/VanillaGuiOverlay;
+PATCHED	field	2	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.HOTBARLnet/minecraftforge/client/gui/overlay/VanillaGuiOverlay;
+PATCHED	field	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.PLAYER_HEALTHLnet/minecraftforge/client/gui/overlay/VanillaGuiOverlay;
+PATCHED	method	6	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.type()Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;
+PATCHED	method	6	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.client.model.BakedModelWrapper.<init>(Lnet/minecraft/client/resources/model/BakedModel;)V
 PATCHED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.CompositeModel$Baked.builder(Lnet/minecraftforge/client/model/geometry/IGeometryBakingContext;Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;Lnet/minecraft/client/renderer/block/model/ItemOverrides;Lnet/minecraft/client/renderer/block/model/ItemTransforms;)Lnet/minecraftforge/client/model/CompositeModel$Baked$Builder;
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.CompositeModel$Baked.builder(ZZZLnet/minecraft/client/renderer/texture/TextureAtlasSprite;Lnet/minecraft/client/renderer/block/model/ItemOverrides;Lnet/minecraft/client/renderer/block/model/ItemTransforms;)Lnet/minecraftforge/client/model/CompositeModel$Baked$Builder;
 PATCHED	method	10	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.CompositeModel$Baked$Builder.addQuads(Lnet/minecraftforge/client/RenderTypeGroup;Ljava/util/Collection;)Lnet/minecraftforge/client/model/CompositeModel$Baked$Builder;
@@ -787,7 +787,7 @@ PATCHED	method	6	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; c
 PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.CompositeModel$Baked$Builder.setParticle(Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;)Lnet/minecraftforge/client/model/CompositeModel$Baked$Builder;
 PATCHED	method	15	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.client.model.data.ModelDataManager.requestRefresh(Lnet/minecraft/world/level/block/entity/BlockEntity;)V
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.DynamicFluidContainerModel.getLayerRenderTypes(Z)Lnet/minecraftforge/client/RenderTypeGroup;
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.ForgeFaceData.blockLight()I
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.ForgeFaceData.blockLight()I
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.BlockModelBuilder.customLoader(Ljava/util/function/BiFunction;)Lnet/minecraftforge/client/model/generators/CustomLoaderBuilder;
 PATCHED	method	19	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.BlockModelBuilder.renderType(Ljava/lang/String;)Lnet/minecraftforge/client/model/generators/ModelBuilder;
 PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar	net.minecraftforge.client.model.generators.BlockModelBuilder.texture(Ljava/lang/String;Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraftforge/client/model/generators/ModelBuilder;
@@ -838,8 +838,8 @@ PATCHED	method	4	advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar
 PATCHED	method	15	TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar; gendustry-1.20.1-1.0.5.jar	net.minecraftforge.client.model.generators.ConfiguredModel$Builder.modelFile(Lnet/minecraftforge/client/model/generators/ModelFile;)Lnet/minecraftforge/client/model/generators/ConfiguredModel$Builder;
 PATCHED	method	9	TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar	net.minecraftforge.client.model.generators.ConfiguredModel$Builder.rotationX(I)Lnet/minecraftforge/client/model/generators/ConfiguredModel$Builder;
 PATCHED	method	12	TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar	net.minecraftforge.client.model.generators.ConfiguredModel$Builder.rotationY(I)Lnet/minecraftforge/client/model/generators/ConfiguredModel$Builder;
-UNMAPPED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.CustomLoaderBuilder.<init>(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraftforge/client/model/generators/ModelBuilder;Lnet/minecraftforge/common/data/ExistingFileHelper;)V
-UNMAPPED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.CustomLoaderBuilder.toJson(Lcom/google/gson/JsonObject;)Lcom/google/gson/JsonObject;
+PATCHED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.CustomLoaderBuilder.<init>(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraftforge/client/model/generators/ModelBuilder;Lnet/minecraftforge/common/data/ExistingFileHelper;)V
+PATCHED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.CustomLoaderBuilder.toJson(Lcom/google/gson/JsonObject;)Lcom/google/gson/JsonObject;
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.ItemModelBuilder.customLoader(Ljava/util/function/BiFunction;)Lnet/minecraftforge/client/model/generators/CustomLoaderBuilder;
 PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.model.generators.ItemModelBuilder.parent(Lnet/minecraftforge/client/model/generators/ModelFile;)Lnet/minecraftforge/client/model/generators/ModelBuilder;
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.ItemModelBuilder.renderType(Ljava/lang/String;)Lnet/minecraftforge/client/model/generators/ModelBuilder;
@@ -854,15 +854,15 @@ PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.gene
 PATCHED	method	2	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.client.model.generators.ModelFile$ExistingModelFile.<init>(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraftforge/common/data/ExistingFileHelper;)V
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.model.generators.ModelFile$UncheckedModelFile.<init>(Ljava/lang/String;)V
 PATCHED	method	2	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.client.model.generators.ModelFile$UncheckedModelFile.<init>(Lnet/minecraft/resources/ResourceLocation;)V
-UNMAPPED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.MultiPartBlockStateBuilder.part()Lnet/minecraftforge/client/model/generators/ConfiguredModel$Builder;
-UNMAPPED	method	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.MultiPartBlockStateBuilder$PartBuilder.condition(Lnet/minecraft/world/level/block/state/properties/Property;[Ljava/lang/Comparable;)Lnet/minecraftforge/client/model/generators/MultiPartBlockStateBuilder$PartBuilder;
-UNMAPPED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.MultiPartBlockStateBuilder$PartBuilder.end()Lnet/minecraftforge/client/model/generators/MultiPartBlockStateBuilder;
-UNMAPPED	method	4	advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder.forAllStates(Ljava/util/function/Function;)Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder;
-UNMAPPED	method	8	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder.partialState()Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder$PartialBlockstate;
-UNMAPPED	method	7	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder$PartialBlockstate.modelForState()Lnet/minecraftforge/client/model/generators/ConfiguredModel$Builder;
-UNMAPPED	method	1	gendustry-1.20.1-1.0.5.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder$PartialBlockstate.setModels([Lnet/minecraftforge/client/model/generators/ConfiguredModel;)Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder;
-UNMAPPED	method	6	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder$PartialBlockstate.with(Lnet/minecraft/world/level/block/state/properties/Property;Ljava/lang/Comparable;)Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder$PartialBlockstate;
-UNMAPPED	field	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.geometry.BlockGeometryBakingContext.ownerLnet/minecraft/client/renderer/block/model/BlockModel;
+PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.MultiPartBlockStateBuilder.part()Lnet/minecraftforge/client/model/generators/ConfiguredModel$Builder;
+PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.MultiPartBlockStateBuilder$PartBuilder.condition(Lnet/minecraft/world/level/block/state/properties/Property;[Ljava/lang/Comparable;)Lnet/minecraftforge/client/model/generators/MultiPartBlockStateBuilder$PartBuilder;
+PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.MultiPartBlockStateBuilder$PartBuilder.end()Lnet/minecraftforge/client/model/generators/MultiPartBlockStateBuilder;
+PATCHED	method	4	advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder.forAllStates(Ljava/util/function/Function;)Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder;
+PATCHED	method	8	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder.partialState()Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder$PartialBlockstate;
+PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder$PartialBlockstate.modelForState()Lnet/minecraftforge/client/model/generators/ConfiguredModel$Builder;
+PATCHED	method	1	gendustry-1.20.1-1.0.5.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder$PartialBlockstate.setModels([Lnet/minecraftforge/client/model/generators/ConfiguredModel;)Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder;
+PATCHED	method	6	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.generators.VariantBlockStateBuilder$PartialBlockstate.with(Lnet/minecraft/world/level/block/state/properties/Property;Ljava/lang/Comparable;)Lnet/minecraftforge/client/model/generators/VariantBlockStateBuilder$PartialBlockstate;
+PATCHED	field	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.geometry.BlockGeometryBakingContext.ownerLnet/minecraft/client/renderer/block/model/BlockModel;
 PATCHED	method	40	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.IGeometryBakingContext.getMaterial(Ljava/lang/String;)Lnet/minecraft/client/resources/model/Material;
 PATCHED	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.geometry.IGeometryBakingContext.getModelName()Ljava/lang/String;
 PATCHED	method	4	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.geometry.IGeometryBakingContext.getRenderType(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraftforge/client/RenderTypeGroup;
@@ -874,17 +874,17 @@ PATCHED	method	2	Mantle-1.20.1-1.11.117.jar; thermal_dynamics-1.20.1-11.0.1.23.j
 PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.IGeometryBakingContext.isGui3d()Z
 PATCHED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.IGeometryBakingContext.useAmbientOcclusion()Z
 PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.IGeometryBakingContext.useBlockLight()Z
-UNMAPPED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.client.model.geometry.IUnbakedGeometry.getConfigurableComponentNames()Ljava/util/Set;
-UNMAPPED	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.model.geometry.SimpleUnbakedGeometry.<init>()V
+PATCHED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.client.model.geometry.IUnbakedGeometry.getConfigurableComponentNames()Ljava/util/Set;
+PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.model.geometry.SimpleUnbakedGeometry.<init>()V
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.StandaloneGeometryBakingContext.builder(Lnet/minecraftforge/client/model/geometry/IGeometryBakingContext;)Lnet/minecraftforge/client/model/geometry/StandaloneGeometryBakingContext$Builder;
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.StandaloneGeometryBakingContext$Builder.build(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraftforge/client/model/geometry/StandaloneGeometryBakingContext;
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.StandaloneGeometryBakingContext$Builder.withGui3d(Z)Lnet/minecraftforge/client/model/geometry/StandaloneGeometryBakingContext$Builder;
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.StandaloneGeometryBakingContext$Builder.withUseBlockLight(Z)Lnet/minecraftforge/client/model/geometry/StandaloneGeometryBakingContext$Builder;
 PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.geometry.UnbakedGeometryHelper.applyRootTransform(Lnet/minecraft/client/resources/model/ModelState;Lcom/mojang/math/Transformation;)Lnet/minecraftforge/client/model/IQuadTransformer;
-UNMAPPED	method	8	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.UnbakedGeometryHelper.bakeElements(Ljava/util/List;Ljava/util/function/Function;Lnet/minecraft/client/resources/model/ModelState;Lnet/minecraft/resources/ResourceLocation;)Ljava/util/List;
+PATCHED	method	8	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.UnbakedGeometryHelper.bakeElements(Ljava/util/List;Ljava/util/function/Function;Lnet/minecraft/client/resources/model/ModelState;Lnet/minecraft/resources/ResourceLocation;)Ljava/util/List;
 PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.geometry.UnbakedGeometryHelper.composeRootTransformIntoModelState(Lnet/minecraft/client/resources/model/ModelState;Lcom/mojang/math/Transformation;)Lnet/minecraft/client/resources/model/ModelState;
-UNMAPPED	method	4	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.UnbakedGeometryHelper.createUnbakedItemElements(ILnet/minecraft/client/renderer/texture/SpriteContents;)Ljava/util/List;
-UNMAPPED	method	4	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.UnbakedGeometryHelper.createUnbakedItemMaskElements(ILnet/minecraft/client/renderer/texture/SpriteContents;)Ljava/util/List;
+PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.UnbakedGeometryHelper.createUnbakedItemElements(ILnet/minecraft/client/renderer/texture/SpriteContents;)Ljava/util/List;
+PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.geometry.UnbakedGeometryHelper.createUnbakedItemMaskElements(ILnet/minecraft/client/renderer/texture/SpriteContents;)Ljava/util/List;
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.model.IModelBuilder.addCulledFace(Lnet/minecraft/core/Direction;Lnet/minecraft/client/renderer/block/model/BakedQuad;)Lnet/minecraftforge/client/model/IModelBuilder;
 PATCHED	method	13	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.model.IModelBuilder.addUnculledFace(Lnet/minecraft/client/renderer/block/model/BakedQuad;)Lnet/minecraftforge/client/model/IModelBuilder;
 PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.IModelBuilder.build()Lnet/minecraft/client/resources/model/BakedModel;
@@ -901,12 +901,12 @@ PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipe
 PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer.setShade(Z)V
 PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer.setSprite(Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;)V
 PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer.setTintIndex(I)V
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.<init>()V
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.getQuad()Lnet/minecraft/client/renderer/block/model/BakedQuad;
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.setHasAmbientOcclusion(Z)V
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.setShade(Z)V
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.setSprite(Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;)V
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.setTintIndex(I)V
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.<init>()V
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.getQuad()Lnet/minecraft/client/renderer/block/model/BakedQuad;
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.setHasAmbientOcclusion(Z)V
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.setShade(Z)V
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.setSprite(Lnet/minecraft/client/renderer/texture/TextureAtlasSprite;)V
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.QuadBakingVertexConsumer$Buffered.setTintIndex(I)V
 PATCHED	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.model.pipeline.TransformingVertexPipeline.<init>(Lcom/mojang/blaze3d/vertex/VertexConsumer;Lcom/mojang/math/Transformation;)V
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.model.QuadTransformers.applying(Lcom/mojang/math/Transformation;)Lnet/minecraftforge/client/model/IQuadTransformer;
 PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.QuadTransformers.applyingLightmap(I)Lnet/minecraftforge/client/model/IQuadTransformer;
@@ -916,21 +916,21 @@ PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.client.mode
 PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.model.SimpleModelState.<init>(Lcom/mojang/math/Transformation;Z)V
 PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.client.RenderTypeGroup.<init>(Lnet/minecraft/client/renderer/RenderType;Lnet/minecraft/client/renderer/RenderType;)V
 PATCHED	field	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.RenderTypeGroup.EMPTYLnet/minecraftforge/client/RenderTypeGroup;
-UNMAPPED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.BasicItemListing.<init>(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;IIF)V
-UNMAPPED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.brewing.BrewingRecipeRegistry.addRecipe(Lnet/minecraftforge/common/brewing/IBrewingRecipe;)Z
-UNMAPPED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.common.capabilities.Capability.getName()Ljava/lang/String;
-UNMAPPED	method	20	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.capabilities.Capability.orEmpty(Lnet/minecraftforge/common/capabilities/Capability;Lnet/minecraftforge/common/util/LazyOptional;)Lnet/minecraftforge/common/util/LazyOptional;
-UNMAPPED	method	19	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.common.capabilities.CapabilityManager.get(Lnet/minecraftforge/common/capabilities/CapabilityToken;)Lnet/minecraftforge/common/capabilities/Capability;
-UNMAPPED	method	19	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.common.capabilities.CapabilityToken.<init>()V
-UNMAPPED	field	10	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; gendustry-1.20.1-1.0.5.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGYLnet/minecraftforge/common/capabilities/Capability;
-UNMAPPED	field	37	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER_ITEMLnet/minecraftforge/common/capabilities/Capability;
-UNMAPPED	field	44	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; gendustry-1.20.1-1.0.5.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLERLnet/minecraftforge/common/capabilities/Capability;
-UNMAPPED	field	35	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLERLnet/minecraftforge/common/capabilities/Capability;
+PATCHED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.BasicItemListing.<init>(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;IIF)V
+PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.brewing.BrewingRecipeRegistry.addRecipe(Lnet/minecraftforge/common/brewing/IBrewingRecipe;)Z
+PATCHED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.common.capabilities.Capability.getName()Ljava/lang/String;
+PATCHED	method	20	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.capabilities.Capability.orEmpty(Lnet/minecraftforge/common/capabilities/Capability;Lnet/minecraftforge/common/util/LazyOptional;)Lnet/minecraftforge/common/util/LazyOptional;
+PATCHED	method	19	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.common.capabilities.CapabilityManager.get(Lnet/minecraftforge/common/capabilities/CapabilityToken;)Lnet/minecraftforge/common/capabilities/Capability;
+PATCHED	method	19	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.common.capabilities.CapabilityToken.<init>()V
+PATCHED	field	10	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; gendustry-1.20.1-1.0.5.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.capabilities.ForgeCapabilities.ENERGYLnet/minecraftforge/common/capabilities/Capability;
+PATCHED	field	37	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLER_ITEMLnet/minecraftforge/common/capabilities/Capability;
+PATCHED	field	44	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; gendustry-1.20.1-1.0.5.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.common.capabilities.ForgeCapabilities.FLUID_HANDLERLnet/minecraftforge/common/capabilities/Capability;
+PATCHED	field	35	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.capabilities.ForgeCapabilities.ITEM_HANDLERLnet/minecraftforge/common/capabilities/Capability;
 PATCHED	method	21	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.crafting.CompoundIngredient.of([Lnet/minecraft/world/item/crafting/Ingredient;)Lnet/minecraft/world/item/crafting/Ingredient;
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalAdvancement$Builder.<init>()V
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalAdvancement$Builder.addAdvancement(Lnet/minecraft/advancements/Advancement$Builder;)Lnet/minecraftforge/common/crafting/ConditionalAdvancement$Builder;
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalAdvancement$Builder.addCondition(Lnet/minecraftforge/common/crafting/conditions/ICondition;)Lnet/minecraftforge/common/crafting/ConditionalAdvancement$Builder;
-UNMAPPED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalAdvancement$Builder.write()Lcom/google/gson/JsonObject;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalAdvancement$Builder.<init>()V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalAdvancement$Builder.addAdvancement(Lnet/minecraft/advancements/Advancement$Builder;)Lnet/minecraftforge/common/crafting/ConditionalAdvancement$Builder;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalAdvancement$Builder.addCondition(Lnet/minecraftforge/common/crafting/conditions/ICondition;)Lnet/minecraftforge/common/crafting/ConditionalAdvancement$Builder;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalAdvancement$Builder.write()Lcom/google/gson/JsonObject;
 UNMAPPED	method	6	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalRecipe.builder()Lnet/minecraftforge/common/crafting/ConditionalRecipe$Builder;
 UNMAPPED	method	16	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalRecipe$Builder.addCondition(Lnet/minecraftforge/common/crafting/conditions/ICondition;)Lnet/minecraftforge/common/crafting/ConditionalRecipe$Builder;
 UNMAPPED	method	15	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.ConditionalRecipe$Builder.addRecipe(Ljava/util/function/Consumer;)Lnet/minecraftforge/common/crafting/ConditionalRecipe$Builder;
@@ -940,46 +940,46 @@ PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.craf
 PATCHED	method	18	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.conditions.OrCondition.<init>([Lnet/minecraftforge/common/crafting/conditions/ICondition;)V
 PATCHED	method	17	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.DifferenceIngredient.of(Lnet/minecraft/world/item/crafting/Ingredient;Lnet/minecraft/world/item/crafting/Ingredient;)Lnet/minecraftforge/common/crafting/DifferenceIngredient;
 PATCHED	method	16	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.IntersectionIngredient.of([Lnet/minecraft/world/item/crafting/Ingredient;)Lnet/minecraft/world/item/crafting/Ingredient;
-UNMAPPED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.IShapedRecipe.getRecipeHeight()I
-UNMAPPED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.IShapedRecipe.getRecipeWidth()I
+PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.IShapedRecipe.getRecipeHeight()I
+PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.IShapedRecipe.getRecipeWidth()I
 UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.StrictNBTIngredient.<init>(Lnet/minecraft/world/item/ItemStack;)V
 UNMAPPED	field	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.StrictNBTIngredient$Serializer.INSTANCELnet/minecraftforge/common/crafting/StrictNBTIngredient$Serializer;
-UNMAPPED	field	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.VanillaIngredientSerializer.INSTANCELnet/minecraftforge/common/crafting/VanillaIngredientSerializer;
-UNMAPPED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.VanillaIngredientSerializer.parse(Lcom/google/gson/JsonObject;)Lnet/minecraft/world/item/crafting/Ingredient;
+PATCHED	field	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.VanillaIngredientSerializer.INSTANCELnet/minecraftforge/common/crafting/VanillaIngredientSerializer;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.VanillaIngredientSerializer.parse(Lcom/google/gson/JsonObject;)Lnet/minecraft/world/item/crafting/Ingredient;
 PATCHED	method	11	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar; thermal_integration-1.20.1-11.0.1.27.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.common.data.BlockTagsProvider.<init>(Lnet/minecraft/data/PackOutput;Ljava/util/concurrent/CompletableFuture;Ljava/lang/String;Lnet/minecraftforge/common/data/ExistingFileHelper;)V
-UNMAPPED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.data.DatapackBuiltinEntriesProvider.<init>(Lnet/minecraft/data/PackOutput;Ljava/util/concurrent/CompletableFuture;Lnet/minecraft/core/RegistrySetBuilder;Ljava/util/Set;)V
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.DatapackBuiltinEntriesProvider.getRegistryProvider()Ljava/util/concurrent/CompletableFuture;
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.GlobalLootModifierProvider.<init>(Lnet/minecraft/data/PackOutput;Ljava/lang/String;)V
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.SpriteSourceProvider.<init>(Lnet/minecraft/data/PackOutput;Lnet/minecraftforge/common/data/ExistingFileHelper;Ljava/lang/String;)V
-UNMAPPED	method	8	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.SpriteSourceProvider$SourceList.addSource(Lnet/minecraft/client/renderer/texture/atlas/SpriteSource;)Lnet/minecraftforge/common/data/SpriteSourceProvider$SourceList;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.data.DatapackBuiltinEntriesProvider.<init>(Lnet/minecraft/data/PackOutput;Ljava/util/concurrent/CompletableFuture;Lnet/minecraft/core/RegistrySetBuilder;Ljava/util/Set;)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.DatapackBuiltinEntriesProvider.getRegistryProvider()Ljava/util/concurrent/CompletableFuture;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.GlobalLootModifierProvider.<init>(Lnet/minecraft/data/PackOutput;Ljava/lang/String;)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.SpriteSourceProvider.<init>(Lnet/minecraft/data/PackOutput;Lnet/minecraftforge/common/data/ExistingFileHelper;Ljava/lang/String;)V
+PATCHED	method	8	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.SpriteSourceProvider$SourceList.addSource(Lnet/minecraft/client/renderer/texture/atlas/SpriteSource;)Lnet/minecraftforge/common/data/SpriteSourceProvider$SourceList;
 PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.ForgeHooks.getBurnTime(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/crafting/RecipeType;)I
 PATCHED	method	2	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeHooks.getCriticalHit(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/entity/Entity;ZF)Lnet/minecraftforge/event/entity/player/CriticalHitEvent;
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeHooks.getProjectile(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/world/item/ItemStack;
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.ForgeHooks.hasNoElements(Lnet/minecraft/world/item/crafting/Ingredient;)Z
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeHooks.onBlockBreakEvent(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/GameType;Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/core/BlockPos;)I
+KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeHooks.onBlockBreakEvent(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/GameType;Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/core/BlockPos;)I
 PATCHED	method	4	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.ForgeHooks.onCropsGrowPost(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;)V
 PATCHED	method	4	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.ForgeHooks.onCropsGrowPre(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)Z
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeHooks.onInteractEntityAt(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/entity/Entity;Lnet/minecraft/world/phys/Vec3;Lnet/minecraft/world/InteractionHand;)Lnet/minecraft/world/InteractionResult;
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeHooks.onLivingFall(Lnet/minecraft/world/entity/LivingEntity;FF)[F
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeHooks.onRightClickBlock(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraftforge/event/entity/player/PlayerInteractEvent$RightClickBlock;
 PATCHED	method	9	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeHooks.setCraftingPlayer(Lnet/minecraft/world/entity/player/Player;)V
-UNMAPPED	method	11	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeI18n.getPattern(Ljava/lang/String;)Ljava/lang/String;
-UNMAPPED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.IPlantable.getPlant(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;
-UNMAPPED	method	3	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.IPlantable.getPlantType(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Lnet/minecraftforge/common/PlantType;
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.loot.CanToolPerformAction.canToolPerformAction(Lnet/minecraftforge/common/ToolAction;)Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition$Builder;
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.loot.LootTableIdCondition.builder(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraftforge/common/loot/LootTableIdCondition$Builder;
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.loot.LootTableIdCondition$Builder.m_6409_()Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition;
-UNMAPPED	field	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Biomes.IS_SANDYLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Biomes.IS_SNOWYLnet/minecraft/tags/TagKey;
+PATCHED	method	11	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.ForgeI18n.getPattern(Ljava/lang/String;)Ljava/lang/String;
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.IPlantable.getPlant(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Lnet/minecraft/world/level/block/state/BlockState;
+PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.IPlantable.getPlantType(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)Lnet/minecraftforge/common/PlantType;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.loot.CanToolPerformAction.canToolPerformAction(Lnet/minecraftforge/common/ToolAction;)Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition$Builder;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.loot.LootTableIdCondition.builder(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraftforge/common/loot/LootTableIdCondition$Builder;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.loot.LootTableIdCondition$Builder.m_6409_()Lnet/minecraft/world/level/storage/loot/predicates/LootItemCondition;
+PATCHED	field	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Biomes.IS_SANDYLnet/minecraft/tags/TagKey;
+PATCHED	field	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Biomes.IS_SNOWYLnet/minecraft/tags/TagKey;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.FENCE_GATES_WOODENLnet/minecraft/tags/TagKey;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.FENCES_WOODENLnet/minecraft/tags/TagKey;
 PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.FENCESLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASS_COLORLESSLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASS_COLORLESSLnet/minecraft/tags/TagKey;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASS_PANES_COLORLESSLnet/minecraft/tags/TagKey;
 PATCHED	field	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASS_PANESLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASS_SILICALnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASS_TINTEDLnet/minecraft/tags/TagKey;
-UNMAPPED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASSLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASS_SILICALnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASS_TINTEDLnet/minecraft/tags/TagKey;
+PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.GLASSLnet/minecraft/tags/TagKey;
 PATCHED	field	9	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.NEEDS_GOLD_TOOLLnet/minecraft/tags/TagKey;
 PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.NEEDS_NETHERITE_TOOLLnet/minecraft/tags/TagKey;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.ORE_RATES_SINGULARLnet/minecraft/tags/TagKey;
@@ -988,26 +988,26 @@ PATCHED	field	10	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.comm
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.ORES_IN_GROUND_NETHERRACKLnet/minecraft/tags/TagKey;
 PATCHED	field	10	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Blocks.ORES_IN_GROUND_STONELnet/minecraft/tags/TagKey;
 PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Blocks.ORESLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.STAINED_GLASS_PANESLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.STAINED_GLASSLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.STAINED_GLASS_PANESLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.STAINED_GLASSLnet/minecraft/tags/TagKey;
 PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Blocks.STORAGE_BLOCKS_NETHERITELnet/minecraft/tags/TagKey;
 PATCHED	field	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_integration-1.20.1-11.0.1.27.jar	net.minecraftforge.common.Tags$Blocks.STORAGE_BLOCKSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	7	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Fluids.MILKLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ARMORS_BOOTSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ARMORS_CHESTPLATESLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ARMORS_HELMETSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ARMORS_LEGGINGSLnet/minecraft/tags/TagKey;
+PATCHED	field	7	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Fluids.MILKLnet/minecraft/tags/TagKey;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ARMORS_BOOTSLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ARMORS_CHESTPLATESLnet/minecraft/tags/TagKey;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ARMORS_HELMETSLnet/minecraft/tags/TagKey;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ARMORS_LEGGINGSLnet/minecraft/tags/TagKey;
 PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ARMORSLnet/minecraft/tags/TagKey;
 PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.BONESLnet/minecraft/tags/TagKey;
 PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.CHESTS_WOODENLnet/minecraft/tags/TagKey;
-UNMAPPED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.COBBLESTONELnet/minecraft/tags/TagKey;
+PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.COBBLESTONELnet/minecraft/tags/TagKey;
 PATCHED	field	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.CROPS_BEETROOTLnet/minecraft/tags/TagKey;
 PATCHED	field	4	TConstruct-1.20.1-3.12.1.231.jar; thermal_cultivation-1.20.1-11.0.1.24.jar	net.minecraftforge.common.Tags$Items.CROPS_CARROTLnet/minecraft/tags/TagKey;
 PATCHED	field	3	thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.CROPS_POTATOLnet/minecraft/tags/TagKey;
 PATCHED	field	3	thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.CROPS_WHEATLnet/minecraft/tags/TagKey;
 PATCHED	field	1	thermal_cultivation-1.20.1-11.0.1.24.jar	net.minecraftforge.common.Tags$Items.CROPSLnet/minecraft/tags/TagKey;
 PATCHED	field	18	TConstruct-1.20.1-3.12.1.231.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.DUSTS_GLOWSTONELnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.DUSTS_PRISMARINELnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.DUSTS_PRISMARINELnet/minecraft/tags/TagKey;
 PATCHED	field	67	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.Tags$Items.DUSTS_REDSTONELnet/minecraft/tags/TagKey;
 PATCHED	field	5	thermal_foundation-1.20.1-11.0.6.70.jar; thermal_integration-1.20.1-11.0.1.27.jar	net.minecraftforge.common.Tags$Items.DUSTSLnet/minecraft/tags/TagKey;
 PATCHED	field	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.DYES_BLACKLnet/minecraft/tags/TagKey;
@@ -1038,26 +1038,26 @@ PATCHED	field	9	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; th
 PATCHED	field	2	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.GEMS_PRISMARINELnet/minecraft/tags/TagKey;
 PATCHED	field	16	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.GEMS_QUARTZLnet/minecraft/tags/TagKey;
 PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.GEMSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	10	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.GLASS_COLORLESSLnet/minecraft/tags/TagKey;
+PATCHED	field	10	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.GLASS_COLORLESSLnet/minecraft/tags/TagKey;
 PATCHED	field	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.GLASS_PANES_COLORLESSLnet/minecraft/tags/TagKey;
 PATCHED	field	6	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.GLASS_PANESLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.GLASS_SILICALnet/minecraft/tags/TagKey;
-UNMAPPED	field	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.GLASS_TINTEDLnet/minecraft/tags/TagKey;
-UNMAPPED	field	39	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.common.Tags$Items.GLASSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.GRAVELLnet/minecraft/tags/TagKey;
-UNMAPPED	field	26	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.GUNPOWDERLnet/minecraft/tags/TagKey;
-UNMAPPED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.HEADSLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.GLASS_SILICALnet/minecraft/tags/TagKey;
+PATCHED	field	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.GLASS_TINTEDLnet/minecraft/tags/TagKey;
+PATCHED	field	39	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.common.Tags$Items.GLASSLnet/minecraft/tags/TagKey;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.GRAVELLnet/minecraft/tags/TagKey;
+PATCHED	field	26	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.GUNPOWDERLnet/minecraft/tags/TagKey;
+PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.HEADSLnet/minecraft/tags/TagKey;
 PATCHED	field	53	TConstruct-1.20.1-3.12.1.231.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.Tags$Items.INGOTS_COPPERLnet/minecraft/tags/TagKey;
 PATCHED	field	31	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.INGOTS_GOLDLnet/minecraft/tags/TagKey;
 PATCHED	field	49	TConstruct-1.20.1-3.12.1.231.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.Tags$Items.INGOTS_IRONLnet/minecraft/tags/TagKey;
 PATCHED	field	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.INGOTS_NETHERITELnet/minecraft/tags/TagKey;
 PATCHED	field	10	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_integration-1.20.1-11.0.1.27.jar	net.minecraftforge.common.Tags$Items.INGOTSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.LEATHERLnet/minecraft/tags/TagKey;
+PATCHED	field	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.LEATHERLnet/minecraft/tags/TagKey;
 PATCHED	field	4	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.MUSHROOMSLnet/minecraft/tags/TagKey;
 PATCHED	field	4	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.NUGGETS_GOLDLnet/minecraft/tags/TagKey;
 PATCHED	field	9	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.NUGGETS_IRONLnet/minecraft/tags/TagKey;
 PATCHED	field	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_integration-1.20.1-11.0.1.27.jar	net.minecraftforge.common.Tags$Items.NUGGETSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	3	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.OBSIDIANLnet/minecraft/tags/TagKey;
+PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.OBSIDIANLnet/minecraft/tags/TagKey;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ORE_RATES_DENSELnet/minecraft/tags/TagKey;
 PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ORE_RATES_SINGULARLnet/minecraft/tags/TagKey;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.ORE_RATES_SPARSELnet/minecraft/tags/TagKey;
@@ -1070,34 +1070,34 @@ PATCHED	field	5	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0
 PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.RODS_BLAZELnet/minecraft/tags/TagKey;
 PATCHED	field	8	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.RODS_WOODENLnet/minecraft/tags/TagKey;
 PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.RODSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.SAND_COLORLESSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.SAND_REDLnet/minecraft/tags/TagKey;
-UNMAPPED	field	9	thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.SANDLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.SANDSTONELnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.SAND_COLORLESSLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.SAND_REDLnet/minecraft/tags/TagKey;
+PATCHED	field	9	thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.SANDLnet/minecraft/tags/TagKey;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.SANDSTONELnet/minecraft/tags/TagKey;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar; thermal_cultivation-1.20.1-11.0.1.24.jar	net.minecraftforge.common.Tags$Items.SEEDSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.SHEARSLnet/minecraft/tags/TagKey;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.SHEARSLnet/minecraft/tags/TagKey;
 PATCHED	field	16	TConstruct-1.20.1-3.12.1.231.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.Tags$Items.SLIMEBALLSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.STAINED_GLASS_PANESLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.STAINED_GLASSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	4	TConstruct-1.20.1-3.12.1.231.jar; thermal_expansion-1.20.1-11.0.1.29.jar	net.minecraftforge.common.Tags$Items.STONELnet/minecraft/tags/TagKey;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.STAINED_GLASS_PANESLnet/minecraft/tags/TagKey;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.STAINED_GLASSLnet/minecraft/tags/TagKey;
+PATCHED	field	4	TConstruct-1.20.1-3.12.1.231.jar; thermal_expansion-1.20.1-11.0.1.29.jar	net.minecraftforge.common.Tags$Items.STONELnet/minecraft/tags/TagKey;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.STORAGE_BLOCKS_COALLnet/minecraft/tags/TagKey;
 PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.STORAGE_BLOCKS_COPPERLnet/minecraft/tags/TagKey;
 PATCHED	field	1	gendustry-1.20.1-1.0.5.jar	net.minecraftforge.common.Tags$Items.STORAGE_BLOCKS_GOLDLnet/minecraft/tags/TagKey;
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar; thermal_expansion-1.20.1-11.0.1.29.jar	net.minecraftforge.common.Tags$Items.STORAGE_BLOCKS_IRONLnet/minecraft/tags/TagKey;
 PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.STORAGE_BLOCKS_LAPISLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.STORAGE_BLOCKS_QUARTZLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.STORAGE_BLOCKS_QUARTZLnet/minecraft/tags/TagKey;
 PATCHED	field	6	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.common.Tags$Items.STORAGE_BLOCKS_REDSTONELnet/minecraft/tags/TagKey;
 PATCHED	field	5	TConstruct-1.20.1-3.12.1.231.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_integration-1.20.1-11.0.1.27.jar	net.minecraftforge.common.Tags$Items.STORAGE_BLOCKSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	16	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.Tags$Items.STRINGLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_BOWSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_CROSSBOWSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_FISHING_RODSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_SHIELDSLnet/minecraft/tags/TagKey;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_TRIDENTSLnet/minecraft/tags/TagKey;
-UNMAPPED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.byName(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/world/item/Tier;
-UNMAPPED	method	7	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.getName(Lnet/minecraft/world/item/Tier;)Lnet/minecraft/resources/ResourceLocation;
-UNMAPPED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.getSortedTiers()Ljava/util/List;
-UNMAPPED	method	5	TConstruct-1.20.1-3.12.1.231.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.TierSortingRegistry.isCorrectTierForDrops(Lnet/minecraft/world/item/Tier;Lnet/minecraft/world/level/block/state/BlockState;)Z
+PATCHED	field	16	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.Tags$Items.STRINGLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_BOWSLnet/minecraft/tags/TagKey;
+PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_CROSSBOWSLnet/minecraft/tags/TagKey;
+PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_FISHING_RODSLnet/minecraft/tags/TagKey;
+PATCHED	field	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_SHIELDSLnet/minecraft/tags/TagKey;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_TRIDENTSLnet/minecraft/tags/TagKey;
+KNOWN_GAP	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.byName(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/world/item/Tier;
+KNOWN_GAP	method	7	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.getName(Lnet/minecraft/world/item/Tier;)Lnet/minecraft/resources/ResourceLocation;
+KNOWN_GAP	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.getSortedTiers()Ljava/util/List;
+PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.TierSortingRegistry.isCorrectTierForDrops(Lnet/minecraft/world/item/Tier;Lnet/minecraft/world/level/block/state/BlockState;)Z
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.util.BlockSnapshot.create(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;)Lnet/minecraftforge/common/util/BlockSnapshot;
 PATCHED	method	15	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.util.Lazy.get()Ljava/lang/Object;
 PATCHED	method	18	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.util.Lazy.of(Ljava/util/function/Supplier;)Lnet/minecraftforge/common/util/Lazy;
@@ -1110,9 +1110,9 @@ PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.
 PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.world.ForgeBiomeModifiers$AddSpawnsBiomeModifier.<init>(Lnet/minecraft/core/HolderSet;Ljava/util/List;)V
 PATCHED	method	4	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.entity.PartEntity.getParent()Lnet/minecraft/world/entity/Entity;
 UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.ProjectileImpactEvent$ImpactResult.SKIP_ENTITYLnet/minecraftforge/event/entity/ProjectileImpactEvent$ImpactResult;
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.event.ForgeEventFactory.canCreateFluidSource(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)Z
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.event.ForgeEventFactory.canCreateFluidSource(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)Z
 PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.ForgeEventFactory.firePlayerCraftingEvent(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/Container;)V
-UNMAPPED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.ForgeEventFactory.onApplyBonemeal(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/item/ItemStack;)I
+PATCHED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.ForgeEventFactory.onApplyBonemeal(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/item/ItemStack;)I
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.ForgeEventFactory.onArrowLoose(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;IZ)I
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.ForgeEventFactory.onArrowNock(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;Z)Lnet/minecraft/world/InteractionResultHolder;
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.ForgeEventFactory.onBlockPlace(Lnet/minecraft/world/entity/Entity;Lnet/minecraftforge/common/util/BlockSnapshot;Lnet/minecraft/core/Direction;)Z
@@ -1133,11 +1133,11 @@ PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidU
 PATCHED	method	1	thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.fluids.FluidUtil.tryPickUpFluid(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/core/Direction;)Lnet/minecraftforge/fluids/FluidActionResult;
 PATCHED	method	2	thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.fluids.FluidUtil.tryPlaceFluid(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/InteractionHand;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/item/ItemStack;Lnet/minecraftforge/fluids/FluidStack;)Lnet/minecraftforge/fluids/FluidActionResult;
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.loading.FMLLoader.isProduction()Z
-UNMAPPED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModLoader.get()Lnet/minecraftforge/fml/ModLoader;
-UNMAPPED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModLoader.isLoadingStateValid()Z
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModLoader.postEvent(Lnet/minecraftforge/eventbus/api/Event;)V
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModLoader.runEventGenerator(Ljava/util/function/Function;)V
-UNMAPPED	method	4	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.forgespi.language.IModInfo.getDisplayName()Ljava/lang/String;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModLoader.get()Lnet/minecraftforge/fml/ModLoader;
+PATCHED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModLoader.isLoadingStateValid()Z
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModLoader.postEvent(Lnet/minecraftforge/eventbus/api/Event;)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fml.ModLoader.runEventGenerator(Ljava/util/function/Function;)V
+PATCHED	method	4	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.forgespi.language.IModInfo.getDisplayName()Ljava/lang/String;
 PATCHED	method	4	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar	net.minecraftforge.items.ItemHandlerHelper.canItemStacksStack(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemStack;)Z
 PATCHED	method	29	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.items.ItemHandlerHelper.copyStackWithSize(Lnet/minecraft/world/item/ItemStack;I)Lnet/minecraft/world/item/ItemStack;
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.items.ItemHandlerHelper.giveItemToPlayer(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;)V
@@ -1159,16 +1159,16 @@ PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.network.Netwo
 PATCHED	method	6	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.network.NetworkHooks.openScreen(Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/world/MenuProvider;Ljava/util/function/Consumer;)V
 PATCHED	method	9	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.network.NetworkHooks.openScreen(Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/world/MenuProvider;Lnet/minecraft/core/BlockPos;)V
 UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.registries.ForgeRegistry.unfreeze()V
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.registries.GameData.getBlockStateIDMap()Lnet/minecraft/core/IdMapper;
-UNMAPPED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.holdersets.AndHolderSet.<init>(Ljava/util/List;)V
-UNMAPPED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.registries.holdersets.NotHolderSet.<init>(Lnet/minecraft/core/HolderLookup$RegistryLookup;Lnet/minecraft/core/HolderSet;)V
-UNMAPPED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.holdersets.OrHolderSet.<init>(Ljava/util/List;)V
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.MissingMappingsEvent$Mapping.getKey()Lnet/minecraft/resources/ResourceLocation;
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.MissingMappingsEvent$Mapping.remap(Ljava/lang/Object;)V
-UNMAPPED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.IReverseTag.containsTag(Lnet/minecraft/tags/TagKey;)Z
-UNMAPPED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.IReverseTag.getTagKeys()Ljava/util/stream/Stream;
-UNMAPPED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.ITag.stream()Ljava/util/stream/Stream;
-UNMAPPED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.ITagManager.getReverseTag(Ljava/lang/Object;)Ljava/util/Optional;
-UNMAPPED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.ITagManager.getTag(Lnet/minecraft/tags/TagKey;)Lnet/minecraftforge/registries/tags/ITag;
-UNMAPPED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.server.command.ModIdArgument.modIdArgument()Lnet/minecraftforge/server/command/ModIdArgument;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.registries.GameData.getBlockStateIDMap()Lnet/minecraft/core/IdMapper;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.holdersets.AndHolderSet.<init>(Ljava/util/List;)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.registries.holdersets.NotHolderSet.<init>(Lnet/minecraft/core/HolderLookup$RegistryLookup;Lnet/minecraft/core/HolderSet;)V
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.holdersets.OrHolderSet.<init>(Ljava/util/List;)V
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.MissingMappingsEvent$Mapping.getKey()Lnet/minecraft/resources/ResourceLocation;
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.MissingMappingsEvent$Mapping.remap(Ljava/lang/Object;)V
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.IReverseTag.containsTag(Lnet/minecraft/tags/TagKey;)Z
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.IReverseTag.getTagKeys()Ljava/util/stream/Stream;
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.ITag.stream()Ljava/util/stream/Stream;
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.ITagManager.getReverseTag(Ljava/lang/Object;)Ljava/util/Optional;
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.tags.ITagManager.getTag(Lnet/minecraft/tags/TagKey;)Lnet/minecraftforge/registries/tags/ITag;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.server.command.ModIdArgument.modIdArgument()Lnet/minecraftforge/server/command/ModIdArgument;
 PATCHED	method	4	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer()Lnet/minecraft/server/MinecraftServer;
