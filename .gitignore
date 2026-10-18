@@ -12,3 +12,4 @@ run/
 /run/*
 !/run/mods/
 /.idea
+/run/mods/.forgestuck
