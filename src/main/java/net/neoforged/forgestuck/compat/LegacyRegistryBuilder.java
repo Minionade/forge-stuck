@@ -60,6 +60,14 @@ public class LegacyRegistryBuilder<T> {
         return this;
     }
 
+    /**
+     * NeoForge's vanilla-backed registries already reject duplicate registrations, so this Forge setting is their
+     * default behavior rather than a separate builder option.
+     */
+    public LegacyRegistryBuilder<T> disableOverrides() {
+        return this;
+    }
+
     public LegacyRegistryBuilder<T> allowModification() {
         modificationsAllowed = true;
         return this;

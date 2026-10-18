@@ -70,6 +70,16 @@ class RemovedBlockAndRegistryBuilderTest {
         String rb = "net/minecraftforge/registries/RegistryBuilder";
         ClassWriter w = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         w.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/Reg", null, "java/lang/Object", null);
+        var overrides = w.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "disableOverrides",
+                "()Ljava/lang/Object;", null, null);
+        overrides.visitCode();
+        overrides.visitTypeInsn(Opcodes.NEW, rb);
+        overrides.visitInsn(Opcodes.DUP);
+        overrides.visitMethodInsn(Opcodes.INVOKESPECIAL, rb, "<init>", "()V", false);
+        overrides.visitMethodInsn(Opcodes.INVOKEVIRTUAL, rb, "disableOverrides", "()L" + rb + ";", false);
+        overrides.visitInsn(Opcodes.ARETURN);
+        overrides.visitMaxs(0, 0);
+        overrides.visitEnd();
         var m = w.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "build", "()Ljava/lang/Object;", null, null);
         m.visitCode();
         m.visitTypeInsn(Opcodes.NEW, rb);
@@ -83,6 +93,8 @@ class RemovedBlockAndRegistryBuilderTest {
         m.visitEnd();
         w.visitEnd();
         Class<?> type = define("com.ex.Reg", w.toByteArray());
+        assertInstanceOf(net.neoforged.forgestuck.compat.LegacyRegistryBuilder.class,
+                type.getMethod("disableOverrides").invoke(null));
         var ex = assertThrows(java.lang.reflect.InvocationTargetException.class,
                 () -> type.getMethod("build").invoke(null));
         assertInstanceOf(UnsupportedOperationException.class, ex.getCause());

@@ -122,6 +122,7 @@ public final class ForgeOwnerMappings {
                                         + "Lnet/minecraftforge/registries/RegistryBuilder;",
                                 "disableSaving()Lnet/minecraftforge/registries/RegistryBuilder;",
                                 "disableSync()Lnet/minecraftforge/registries/RegistryBuilder;",
+                                "disableOverrides()Lnet/minecraftforge/registries/RegistryBuilder;",
                                 "allowModification()Lnet/minecraftforge/registries/RegistryBuilder;",
                                 "hasTags()Lnet/minecraftforge/registries/RegistryBuilder;",
                                 "create()Lnet/minecraftforge/registries/IForgeRegistry;")))
