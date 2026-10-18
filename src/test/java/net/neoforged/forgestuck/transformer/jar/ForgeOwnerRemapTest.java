@@ -189,6 +189,51 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void inferredGenericListenerUsesWellFormedHelperDescriptor() {
+        String bus = "net/minecraftforge/eventbus/api/IEventBus";
+        String event = "net/minecraftforge/event/AttachCapabilitiesEvent";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/GenericListener", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "register", "(L" + bus + ";)V",
+                null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitLdcInsn(Type.getType("Lnet/minecraft/world/level/Level;"));
+        method.visitInvokeDynamicInsn("accept", "()Ljava/util/function/Consumer;",
+                new org.objectweb.asm.Handle(Opcodes.H_INVOKESTATIC,
+                        "java/lang/invoke/LambdaMetafactory", "metafactory",
+                        "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;"
+                                + "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;"
+                                + "Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)"
+                                + "Ljava/lang/invoke/CallSite;", false),
+                Type.getMethodType("(Ljava/lang/Object;)V"),
+                new org.objectweb.asm.Handle(Opcodes.H_INVOKESTATIC, "com/ex/GenericListener", "onEvent",
+                        "(L" + event + ";)V", false),
+                Type.getMethodType("(L" + event + ";)V"));
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, bus, "addGenericListener",
+                "(Ljava/lang/Class;Ljava/util/function/Consumer;)V", true);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitMethod(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC, "onEvent", "(L" + event + ";)V", null, null)
+                .visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.GenericListener", writer.toByteArray()));
+        MethodInsnNode call = null;
+        for (var insn : node.methods.get(0).instructions) {
+            if (insn instanceof MethodInsnNode methodCall
+                    && methodCall.owner.equals("net/neoforged/forgestuck/compat/LegacyGenericListenerRegistration")) {
+                call = methodCall;
+            }
+        }
+        assertNotNull(call);
+        assertEquals("(Lnet/neoforged/bus/api/IEventBus;Ljava/lang/Class;Ljava/util/function/Consumer;"
+                + "Ljava/lang/Class;)V", call.desc);
+        assertFalse(call.desc.contains(";;"));
+    }
+
+    @Test
     void fluidHandlerAndActionOwnersMapToNeoForge() {
         String oldHandler = "net/minecraftforge/fluids/capability/IFluidHandler";
         String newHandler = "net/neoforged/neoforge/fluids/capability/IFluidHandler";

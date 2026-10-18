@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 public class SrgMemberRemapStep implements ClassTransformStep {
     private static final Logger LOGGER = LoggerFactory.getLogger("forgestuck");
     private static final String TAG = "[Forge Stuck!!]";
+    private static final String INHERITED_RESOURCE_LOCATION_WITH_SUFFIX =
+            "m_266382_(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;";
 
     private final LegacyNameMappings mappings;
 
@@ -116,7 +118,7 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     }
                     boolean own = call.owner.equals(node.name)
                             && ownRenamed.contains("M" + call.name + call.desc + "=" + mapped);
-                    if (own || ownerIsGame(call.owner)) {
+                    if (own || ownerIsGame(call.owner) || isInheritedResourceLocationMethod(call)) {
                         remapped.add(call.name + "->" + mapped);
                         call.name = mapped;
                         modified = true;
@@ -175,6 +177,11 @@ public class SrgMemberRemapStep implements ClassTransformStep {
         ClassWriter writer = new ClassWriter(0);
         node.accept(writer);
         return writer.toByteArray();
+    }
+
+    private static boolean isInheritedResourceLocationMethod(MethodInsnNode call) {
+        return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKEVIRTUAL
+                && (call.name + call.desc).equals(INHERITED_RESOURCE_LOCATION_WITH_SUFFIX);
     }
 
     /**

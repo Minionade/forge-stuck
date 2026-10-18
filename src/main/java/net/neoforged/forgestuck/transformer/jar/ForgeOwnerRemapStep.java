@@ -233,7 +233,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     call.owner = GENERIC_LISTENER_HELPER;
                     call.name = "addGenericListener";
                     call.desc = "(Lnet/neoforged/bus/api/IEventBus;" + GENERIC_LISTENER_DESC.substring(1)
-                            .replace(")V", ";Ljava/lang/Class;)V");
+                            .replace(")V", "Ljava/lang/Class;)V");
                     call.itf = false;
                 }
                 rewritten++;

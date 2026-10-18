@@ -64,6 +64,34 @@ class SrgOwnerAwareMappingTest {
         assertTrue(node.methods.stream().anyMatch(x -> x.name.equals("m_1_")));
     }
 
+    @Test
+    void remapsInheritedResourceLocationWithSuffixOnModSubclassOwner() {
+        String owner = "slimeknights/tconstruct/library/modifiers/ModifierId";
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/ResourceIdCaller", null, "java/lang/Object", null);
+        var method = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "append",
+                "(L" + owner + ";)Lnet/minecraft/resources/ResourceLocation;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitLdcInsn("_pattern");
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, owner, "m_266382_",
+                "(Ljava/lang/String;)Lnet/minecraft/resources/ResourceLocation;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        cw.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("zz.ResourceIdCaller", cw.toByteArray())).accept(node, 0);
+        MethodInsnNode call = null;
+        for (var insn : node.methods.get(0).instructions) {
+            if (insn instanceof MethodInsnNode methodCall) call = methodCall;
+        }
+        assertNotNull(call);
+        assertEquals(owner, call.owner);
+        assertEquals("withSuffix", call.name);
+    }
+
     private static byte[] caller() {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/C", null, "java/lang/Object", null);
