@@ -195,6 +195,18 @@ public final class ForgeOwnerMappings {
                 .add(new Entry("net/minecraftforge/items/IItemHandlerModifiable",
                         "net/neoforged/neoforge/items/IItemHandlerModifiable",
                         Set.of("setStackInSlot(ILnet/minecraft/world/item/ItemStack;)V")))
+                .add(new Entry("net/minecraftforge/items/SlotItemHandler",
+                        "net/neoforged/neoforge/items/SlotItemHandler", Set.of(
+                                "<init>(Lnet/minecraftforge/items/IItemHandler;III)V",
+                                "getItemHandler()Lnet/minecraftforge/items/IItemHandler;",
+                                "initialize(Lnet/minecraft/world/item/ItemStack;)V")))
+                .add(new Entry("net/minecraftforge/client/event/EntityRenderersEvent$AddLayers",
+                        "net/neoforged/neoforge/client/event/EntityRenderersEvent$AddLayers", Set.of(
+                                "getEntityTypes()Ljava/util/Set;",
+                                "getRenderer(Lnet/minecraft/world/entity/EntityType;)"
+                                        + "Lnet/minecraft/client/renderer/entity/EntityRenderer;",
+                                "getEntityModels()Lnet/minecraft/client/model/geom/EntityModelSet;",
+                                "getContext()Lnet/minecraft/client/renderer/entity/EntityRendererProvider$Context;")))
                 .add(new Entry("net/minecraftforge/common/util/INBTSerializable",
                         COMPAT + "LegacyINBTSerializable", Set.of(
                                 "serializeNBT()Lnet/minecraft/nbt/Tag;",

@@ -38,6 +38,8 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/client/model/data/ModelProperty",
             "net/minecraftforge/common/extensions/IForgeBlock",
             "net/minecraftforge/items/IItemHandler", "net/minecraftforge/items/IItemHandlerModifiable",
+            "net/minecraftforge/items/SlotItemHandler",
+            "net/minecraftforge/client/event/EntityRenderersEvent$AddLayers",
             "net/minecraftforge/common/util/INBTSerializable",
             "net/minecraftforge/common/ForgeConfigSpec", "net/minecraftforge/common/ForgeConfigSpec$Builder",
             "net/minecraftforge/common/ForgeConfigSpec$ConfigValue", "net/minecraftforge/common/ForgeConfigSpec$BooleanValue",
