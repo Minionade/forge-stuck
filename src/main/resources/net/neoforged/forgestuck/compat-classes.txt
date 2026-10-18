@@ -83,3 +83,7 @@ LegacySpawnEntity
 LegacyLivingAttack
 LegacyAbstractTreeGrower
 LegacySaplingBlock
+LegacyLivingHurtEvent
+LegacyHurtBridge
+LegacyShearable
+LegacyShearing

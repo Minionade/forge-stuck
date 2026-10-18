@@ -544,3 +544,42 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 | Date | Change |
 | --- | --- |
 | 2026-10-17 | t28: incoming attack event and legacy single-sapling grower adapters; [PR #41](https://github.com/Minionade/forge-stuck/pull/41). |
+
+## t29: LivingHurtEvent and IForgeShearable
+
+- `LivingHurtEvent` maps to a distinct `LegacyLivingHurtEvent`, not the same
+  type as `LivingAttackEvent`. This preserves overloads taking attack and hurt
+  events. The constructor, entity/source access, mutable amount, and cancellation
+  are implemented. `LegacyHurtBridge` relays non-cancelled incoming damage at
+  LOWEST priority, then transfers the amount and cancellation to the native event.
+- Installation is injected once into each transformed `@Mod` entrypoint's static
+  initializer; the bridge's synchronized installer registers only once. This
+  also covers mods that do not call `FMLJavaModLoadingContext.get()`. A provider
+  that never initializes its annotated entrypoint is outside this bootstrap.
+- Timing boundary: NeoForge incoming damage is pre-mitigation and before shield
+  and later damage processing; Forge hurt fired in `actuallyHurt`. Shield and
+  invulnerability behavior and ordering against other LOWEST listeners are not
+  identical. This adapter does not claim an exact reconstruction of Forge phases.
+- References/casts to `IForgeShearable` map to native `IShearable`, allowing legacy
+  tools to recognize native entities. Direct legacy implementers instead inherit
+  `LegacyShearable`, which extends the native interface and preserves the old
+  three-argument `isShearable` and Fortune-bearing `onSheared` methods.
+- Exact old-interface calls and method handles dispatch through `LegacyShearing`;
+  interface-super calls retain the legacy defaults without calling overrides
+  recursively. Native callback bridges are inserted into direct class implementers
+  so inherited native superclass methods cannot bypass their legacy callbacks.
+  Existing native overloads are preserved. Native calls into old callbacks derive
+  Fortune from the tool's enchantments; explicit legacy Fortune values are kept
+  when calling legacy implementations. Native implementations have no Fortune
+  parameter, so their native callback governs behavior.
+- Boundaries: indirect interface implementers with inherited concrete native
+  callbacks may require an additional class-specific bridge. Native tools do not
+  gain automatic block shearing; legacy tools can still call block callbacks.
+  Mixins are not structurally adapted. The old Forge default of shearable=true
+  and an empty drop list is preserved for legacy defaults.
+- Four adapters are included in game-layer relocation; cache version is 29.
+  Compilation and tests were skipped at the user's request.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-17 | t29: distinct hurt relay and bidirectional shearing adapter; [PR #42](https://github.com/Minionade/forge-stuck/pull/42). |
