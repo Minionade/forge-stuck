@@ -505,3 +505,42 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
   in `ExternalJavaToolAction.run` during `mergeMappings` with `NoSuchElementException`
   (the sandbox does not expose the Java process executable path). No compiled JAR
   or passing build is claimed for this patch.
+
+## t28: LivingAttackEvent and AbstractTreeGrower translation
+
+- `LivingAttackEvent` maps to NeoForge `LivingIncomingDamageEvent`: entity/source
+  access and cancellation operate on the real damage event. `getAmount` reads
+  original damage, not another listener's modified amount. `isCancelable` is
+  true and `hasResult` false. The old `(LivingEntity,DamageSource,float)`
+  constructor is adapted by constructing a `DamageContainer` before invoking
+  the new constructor. Timing differs: NeoForge's event fires after initial
+  invulnerability checks; this does not reproduce Forge callbacks for attacks
+  rejected before that point. Calls through the base `Event` owner and method
+  handles to redirected helpers are outside this adaptation.
+- `AbstractTreeGrower` maps to `LegacyAbstractTreeGrower`, preserving the no-arg
+  constructor and named/SRG virtual feature-selection and growth callbacks.
+  The constructor step renames these two exact SRG signatures consistently in
+  declarations, calls and handles, including indirect subclasses and super calls.
+  SRG signatures `m_213888_` and `m_213817_` were checked against MCP
+  1.20.1-20230612.114412 and Mojang's 1.20.1 mappings. Single-sapling growth
+  checks nearby flowers, resolves the configured feature, fires the real
+  NeoForge growth event, places the feature, and restores the sapling on failure.
+- `LegacyAttackAndTreeStep` runs before owner remapping. Classes calling the
+  removed `SaplingBlock(AbstractTreeGrower, Properties)` constructor get a
+  `LegacySaplingBlock` construction path; direct subclasses use it as their
+  superclass. SaplingBlock descriptors/casts elsewhere remain vanilla, and
+  native NeoForge jars remain outside transformation. Legacy saplings keep
+  their original grower callbacks in `advanceTree`; no access transformer opens
+  the final native `TreeGrower` class. The adapter's native-grower constructor
+  preserves mixed constructor use in an affected class.
+- Limits: `AbstractMegaTreeGrower` and removed concrete vanilla grower classes
+  are not covered. Encoding a legacy sapling using the inherited block codec
+  explicitly fails rather than silently encoding the placeholder native grower.
+  A mod-provided overriding codec is unchanged. Mixins are not structurally adapted.
+- All three adapters are listed in `compat-classes.txt` for game-layer relocation.
+  Cache version 28 invalidates prior transformed jars. Compilation and tests
+  were not run, as requested by the user.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-17 | t28: incoming attack event and legacy single-sapling grower adapters; [PR #41](https://github.com/Minionade/forge-stuck/pull/41). |
