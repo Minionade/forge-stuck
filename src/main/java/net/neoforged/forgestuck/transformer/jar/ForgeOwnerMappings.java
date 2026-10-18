@@ -182,6 +182,14 @@ public final class ForgeOwnerMappings {
                                 "serializeNBT(Lnet/minecraft/core/HolderLookup$Provider;)Lnet/minecraft/nbt/Tag;",
                                 "deserializeNBT(Lnet/minecraft/nbt/Tag;)V",
                                 "deserializeNBT(Lnet/minecraft/core/HolderLookup$Provider;Lnet/minecraft/nbt/Tag;)V")))
+                .add(new Entry("net/minecraftforge/energy/IEnergyStorage",
+                        "net/neoforged/neoforge/energy/IEnergyStorage", Set.of(
+                                "receiveEnergy(IZ)I",
+                                "extractEnergy(IZ)I",
+                                "getEnergyStored()I",
+                                "getMaxEnergyStored()I",
+                                "canExtract()Z",
+                                "canReceive()Z")))
                 .add(new Entry(FU + "LazyOptional", COMPAT + "LazyOptional", Set.of(
                         "of(" + nns + ")" + lo,
                         "empty()" + lo,

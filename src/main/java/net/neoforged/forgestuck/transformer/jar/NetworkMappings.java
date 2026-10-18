@@ -29,6 +29,7 @@ final class NetworkMappings {
         String key = "Lnet/minecraft/resources/ResourceKey;";
         String o = "Ljava/lang/Object;";
         String mh = "L" + N + "simple/IndexedMessageCodec$MessageHandler;";
+        String factory = "L" + N + "IContainerFactory;";
         String reg = "ILjava/lang/Class;Ljava/util/function/BiConsumer;Ljava/util/function/Function;"
                 + "Ljava/util/function/BiConsumer;";
         Set<String> dirs = Set.of("PLAY_TO_SERVER" + dir, "PLAY_TO_CLIENT" + dir, "LOGIN_TO_SERVER" + dir,
@@ -37,6 +38,14 @@ final class NetworkMappings {
                 "valueOf(Ljava/lang/String;)" + dir,
                 "buildPacket(Lorg/apache/commons/lang3/tuple/Pair;" + rl + ")L" + N + "ICustomPacket;");
         return List.of(
+                e(N + "IContainerFactory", COMPAT + "LegacyContainerFactory", Set.of(
+                        "create(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/network/FriendlyByteBuf;)"
+                                + "Lnet/minecraft/world/inventory/AbstractContainerMenu;",
+                        "create(ILnet/minecraft/world/entity/player/Inventory;)"
+                                + "Lnet/minecraft/world/inventory/AbstractContainerMenu;")),
+                e("net/minecraftforge/common/extensions/IForgeMenuType",
+                        COMPAT + "LegacyForgeMenuType", Set.of(
+                                "create(" + factory + ")Lnet/minecraft/world/inventory/MenuType;")),
                 e(N + "simple/SimpleChannel", COMPAT + "LegacySimpleChannel", Set.of(
                         "registerMessage(" + reg + ")" + mh,
                         "registerMessage(" + reg + "Ljava/util/Optional;)" + mh,

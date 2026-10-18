@@ -157,6 +157,44 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void energyAndMenuFactoryOwnersAreMappedWithLegacyBufferAdapter() {
+        String oldEnergy = "net/minecraftforge/energy/IEnergyStorage";
+        String newEnergy = "net/neoforged/neoforge/energy/IEnergyStorage";
+        String oldFactory = "net/minecraftforge/network/IContainerFactory";
+        String oldMenuType = "net/minecraftforge/common/extensions/IForgeMenuType";
+        String compatFactory = "net/neoforged/forgestuck/compat/LegacyContainerFactory";
+        String compatMenuType = "net/neoforged/forgestuck/compat/LegacyForgeMenuType";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LegacyMenuAndEnergy", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "create",
+                "(L" + oldFactory + ";)Lnet/minecraft/world/inventory/MenuType;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, oldMenuType, "create",
+                "(L" + oldFactory + ";)Lnet/minecraft/world/inventory/MenuType;", true);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitField(Opcodes.ACC_PUBLIC, "energy", "L" + oldEnergy + ";", null, null).visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.LegacyMenuAndEnergy", writer.toByteArray()));
+        assertEquals(newEnergy, node.fields.get(0).desc.substring(1, node.fields.get(0).desc.length() - 1));
+        assertEquals("(L" + compatFactory + ";)Lnet/minecraft/world/inventory/MenuType;", node.methods.get(0).desc);
+        MethodInsnNode call = (MethodInsnNode) node.methods.get(0).instructions.toArray()[1];
+        assertEquals(compatMenuType, call.owner);
+        assertTrue(call.itf);
+        assertEquals("(L" + compatFactory + ";)Lnet/minecraft/world/inventory/MenuType;", call.desc);
+        assertEquals(Set.of(), ForgeOwnerMappings.defaults().remainingOwners(nodeBytes(node)));
+    }
+
+    private static byte[] nodeBytes(ClassNode node) {
+        org.objectweb.asm.ClassWriter writer = new org.objectweb.asm.ClassWriter(0);
+        node.accept(writer);
+        return writer.toByteArray();
+    }
+
+    @Test
     void classWithoutForgeOwnersIsUnchanged() {
         byte[] in = SrgCompatTest.callerClass("com/ex/Plain", LIVING, "m_1_");
         OwnerRemapReport report = new OwnerRemapReport();
