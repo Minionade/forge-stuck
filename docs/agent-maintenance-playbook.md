@@ -472,3 +472,36 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 | 2026-10-17 | t24: enchantment registry view, ForgeMod, instance subscribers, TextureStitchEvent | PR (see GitHub) |
 | 2026-10-17 | t25: subscriber class annotation, root registry view, NewRegistryEvent, InnerClasses fix | PR (see GitHub) |
 | 2026-10-17 | t26: retyped game field repair, PlantType | PR (see GitHub) |
+
+## t27: sapling growth and legacy spawn message linkage
+
+- `SaplingGrowTreeEvent` maps to the actual NeoForge `BlockGrowFeatureEvent`, so
+  transformed event subscribers receive real growth events. Shared constructor,
+  level/position/feature access and both feature setters are allowlisted.
+  Ordinary calls to `getRandomSource` redirect to `getRandom`; result access
+  redirects through `LegacySaplingGrowth`. `DENY` cancels growth; `ALLOW` and
+  `DEFAULT` clear cancellation. Explicit `ALLOW` is retained in a weak-key map;
+  a native listener's cancellation is exposed as `DENY`. The result enum maps
+  to `LegacyEventResult`; this does not adapt result semantics for other events.
+- `PlayMessages$SpawnEntity` maps to `LegacySpawnEntity`, a receive-side data
+  adapter with Forge's getters and decoder. Rotation bytes and velocity shorts
+  retain their original units. Invalid payload lengths are rejected; decoded
+  additional-data buffers belong to the caller and must be released.
+- Scope: this fixes these missing type references and the listed calls. It does
+  **not** register Forge's spawn transport, implement `NetworkHooks`, or port
+  `EntityType.Builder.setCustomClientFactory`. Spawn `encode`/`handle` remain
+  unsupported and use the existing fail-at-call policy. Unsupported method
+  handles/constructors and mixins retain the existing conservative behavior.
+  Sapling calls through the base `Event` owner are not adapted.
+- All three adapters are included in `compat-classes.txt`, so they are relocated
+  into the game layer. Transformer cache version is 27 to invalidate old output.
+- Runtime tests were left to the user as requested.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-17 | t27: sapling event/result adapter and spawn-message type/data mapping; [PR #40](https://github.com/Minionade/forge-stuck/pull/40). |
+
+- Local `assemble -x test` could not reach Java compilation: NeoForm runtime failed
+  in `ExternalJavaToolAction.run` during `mergeMappings` with `NoSuchElementException`
+  (the sandbox does not expose the Java process executable path). No compiled JAR
+  or passing build is claimed for this patch.

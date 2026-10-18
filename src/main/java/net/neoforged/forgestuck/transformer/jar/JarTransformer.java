@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  */
 public class JarTransformer {
     /** Bump whenever the output of the transformer changes so cached jars are invalidated. */
-    public static final String TRANSFORMER_VERSION = "0";
+    public static final String TRANSFORMER_VERSION = "27";
     public static final String DEFAULT_VERSION = "0.0.0-forgestuck";
     public static final String TARGET_MINECRAFT_RANGE = "[1.21.1,)";
 

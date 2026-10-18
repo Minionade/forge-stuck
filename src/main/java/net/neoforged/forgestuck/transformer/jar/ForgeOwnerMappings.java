@@ -149,6 +149,7 @@ public final class ForgeOwnerMappings {
                 .addAll(NetworkMappings.entries())
                 .addAll(TickMappings.entries())
                 .addAll(GeneratedOwnerTable.entries())
+                .addAll(GrowthAndSpawnMappings.entries())
                 .add(entry(FE + "FMLCommonSetupEvent", "net/neoforged/fml/event/lifecycle/FMLCommonSetupEvent", enqueue()))
                 .add(entry(FE + "FMLClientSetupEvent", "net/neoforged/fml/event/lifecycle/FMLClientSetupEvent", enqueue()))
                 .add(entry(FE + "FMLDedicatedServerSetupEvent",
