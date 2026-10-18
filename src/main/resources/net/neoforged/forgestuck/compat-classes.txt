@@ -74,6 +74,7 @@ LegacyEventChannel$Raw
 LegacyContainerFactory
 LegacyForgeMenuType
 LegacyFluidStack
+LegacyEventBusRegistration
 DatapackRegistryView
 LegacyMessageHandler
 LegacyEnchantmentRegistry

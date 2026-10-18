@@ -38,6 +38,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     private static final String FLUID_STACK = "net/minecraftforge/fluids/FluidStack";
     private static final String FLUID_STACK_TAG_CTOR =
             "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)V";
+    private static final String FLUID_STACK_COPY_CTOR = "(L" + FLUID_STACK + ";I)V";
     private static final String LEGACY_FLUID_STACK = "net/neoforged/forgestuck/compat/LegacyFluidStack";
 
     private final ForgeOwnerMappings mappings;
@@ -117,6 +118,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
 
     /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */
     private static final java.util.Map<String, String> REDIRECTS = java.util.Map.of(
+            "net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V",
+            "net/neoforged/forgestuck/compat/LegacyEventBusRegistration",
             "net/minecraftforge/common/capabilities/RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V",
             "net/neoforged/forgestuck/compat/LegacyCapabilities",
             "net/minecraftforge/event/level/SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;",
@@ -189,18 +192,18 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
 
     private static int rewriteLegacyFluidStackConstructors(String className, ClassNode node) {
         int replaced = 0;
-        String factoryDesc = "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)"
-                + "L" + FLUID_STACK + ";";
         for (MethodNode method : node.methods) {
+            var allocations = new java.util.ArrayDeque<org.objectweb.asm.tree.TypeInsnNode>();
             for (AbstractInsnNode insn : method.instructions.toArray()) {
-                if (!(insn instanceof org.objectweb.asm.tree.TypeInsnNode allocation)
-                        || allocation.getOpcode() != Opcodes.NEW || !FLUID_STACK.equals(allocation.desc)) continue;
-                AbstractInsnNode duplicate = nextMeaningful(insn);
-                if (duplicate == null || duplicate.getOpcode() != Opcodes.DUP) continue;
-                for (AbstractInsnNode candidate = duplicate.getNext(); candidate != null; candidate = candidate.getNext()) {
-                    if (!(candidate instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKESPECIAL
-                            || !FLUID_STACK.equals(call.owner) || !"<init>".equals(call.name)
-                            || !FLUID_STACK_TAG_CTOR.equals(call.desc)) continue;
+                if (insn instanceof org.objectweb.asm.tree.TypeInsnNode allocation
+                        && allocation.getOpcode() == Opcodes.NEW && FLUID_STACK.equals(allocation.desc)) {
+                    allocations.push(allocation);
+                } else if (insn instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKESPECIAL
+                        && FLUID_STACK.equals(call.owner) && "<init>".equals(call.name) && !allocations.isEmpty()) {
+                    var allocation = allocations.pop();
+                    AbstractInsnNode duplicate = nextMeaningful(allocation);
+                    String factoryDesc = fluidStackFactoryDescriptor(call.desc);
+                    if (factoryDesc == null || duplicate == null || duplicate.getOpcode() != Opcodes.DUP) continue;
                     method.instructions.remove(allocation);
                     method.instructions.remove(duplicate);
                     call.setOpcode(Opcodes.INVOKESTATIC);
@@ -209,12 +212,18 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     call.desc = factoryDesc;
                     call.itf = false;
                     replaced++;
-                    LOGGER.debug("{} {} adapts Forge FluidStack NBT constructor", TAG, className);
-                    break;
+                    LOGGER.debug("{} {} adapts Forge FluidStack constructor", TAG, className);
                 }
             }
         }
         return replaced;
+    }
+
+    private static String fluidStackFactoryDescriptor(String constructorDesc) {
+        if (!FLUID_STACK_TAG_CTOR.equals(constructorDesc) && !FLUID_STACK_COPY_CTOR.equals(constructorDesc)) {
+            return null;
+        }
+        return constructorDesc.substring(0, constructorDesc.length() - 1) + "L" + FLUID_STACK + ";";
     }
 
     private static AbstractInsnNode nextMeaningful(AbstractInsnNode insn) {
@@ -270,11 +279,10 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 return value;
             }
             if (FLUID_STACK.equals(handle.getOwner()) && "<init>".equals(handle.getName())
-                    && FLUID_STACK_TAG_CTOR.equals(handle.getDesc())
+                    && fluidStackFactoryDescriptor(handle.getDesc()) != null
                     && handle.getTag() == Opcodes.H_NEWINVOKESPECIAL) {
                 return new Handle(Opcodes.H_INVOKESTATIC, LEGACY_FLUID_STACK, "create",
-                        "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)"
-                                + "L" + FLUID_STACK + ";", false);
+                        fluidStackFactoryDescriptor(handle.getDesc()), false);
             }
             String member = handle.getOwner().replace('/', '.') + "." + handle.getName() + handle.getDesc();
             String caller = className + "." + method.name;

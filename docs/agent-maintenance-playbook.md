@@ -18,6 +18,24 @@ Check the current implementation before applying an older workaround.
 
 ## Architecture map: where to look
 
+### FluidStack constructor triage
+
+`ForgeOwnerRemapStep` adapts both legacy `FluidStack(Fluid, int, CompoundTag)`
+and `FluidStack(FluidStack, int)` allocations and constructor handles through
+`compat.LegacyFluidStack`. The copy overload uses NeoForge's `copyWithAmount`
+to preserve data components without mutating the source stack. Nested
+allocations must be matched to their own constructor before rewriting.
+An unsupported constructor can leave the Forge owner unmapped in that class
+and also block dependent `IFluidHandler` descriptors; inspect the first
+constructor warning rather than treating the later class-not-found as a
+missing dependency. Other unsupported fluid APIs remain explicit failures.
+
+Explicit legacy `IEventBus.register(Object)` calls pass through
+`LegacyEventBusRegistration`: targets without any annotated handlers are
+logged at DEBUG and ignored, as in Forge. Targets with annotated handlers
+(including inherited handlers) still go through NeoForge validation; invalid
+signatures, wrong buses, and static/instance mismatches are not swallowed.
+
 Java implementation lives under
 [`src/main/java/net/neoforged/forgestuck`](../src/main/java/net/neoforged/forgestuck).
 The target versions are declared in [`gradle.properties`](../gradle.properties)
