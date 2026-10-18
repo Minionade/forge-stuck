@@ -1,8 +1,10 @@
 package net.neoforged.forgestuck.compat;
 
-import net.neoforged.fml.loading.FMLEnvironment;
+import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
@@ -29,6 +31,11 @@ final class LegacyTickBridge {
                 new LegacyTickEvent.LevelTickEvent(LegacyTickEvent.Phase.START, e.getLevel(), e::hasTime)));
         bus.addListener(LevelTickEvent.Post.class, e -> bus.post(
                 new LegacyTickEvent.LevelTickEvent(LegacyTickEvent.Phase.END, e.getLevel(), e::hasTime)));
+        bus.addListener(EntityTickEvent.Post.class, e -> {
+            if (e.getEntity() instanceof LivingEntity living) {
+                bus.post(new LegacyLivingTickEvent(living));
+            }
+        });
         if (FMLEnvironment.dist == Dist.CLIENT) LegacyClientTickBridge.install();
     }
 }

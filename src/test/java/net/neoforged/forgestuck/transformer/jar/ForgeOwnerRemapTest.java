@@ -299,6 +299,32 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void legacyLivingTickEventMapsToFunctionalCompatEvent() {
+        String oldEvent = "net/minecraftforge/event/entity/living/LivingEvent$LivingTickEvent";
+        String compatEvent = "net/neoforged/forgestuck/compat/LegacyLivingTickEvent";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LivingTickListener", null, "java/lang/Object", null);
+        writer.visitField(Opcodes.ACC_PRIVATE, "event", "L" + oldEvent + ";", null, null).visitEnd();
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handle",
+                "(L" + oldEvent + ";)Lnet/minecraft/world/entity/LivingEntity;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, oldEvent, "getEntity",
+                "()Lnet/minecraft/world/entity/LivingEntity;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.LivingTickListener", writer.toByteArray()));
+        assertEquals("L" + compatEvent + ";", node.fields.get(0).desc);
+        assertEquals("(L" + compatEvent + ";)Lnet/minecraft/world/entity/LivingEntity;", node.methods.get(0).desc);
+        MethodInsnNode call = (MethodInsnNode) node.methods.get(0).instructions.toArray()[1];
+        assertEquals(compatEvent, call.owner);
+        assertEquals("getEntity", call.name);
+    }
+
+    @Test
     void unsupportedFluidStackCallsDoNotLeaveTheForgeOwnerUnmapped() {
         String oldStack = "net/minecraftforge/fluids/FluidStack";
         String newStack = "net/neoforged/neoforge/fluids/FluidStack";

@@ -28,7 +28,12 @@ final class TickMappings {
                 new ForgeOwnerMappings.Entry(T + "$RenderTickEvent", C + "$RenderTickEvent",
                         with(base, "renderTickTimeF", "<init>(" + phase + "F)V")),
                 new ForgeOwnerMappings.Entry(T + "$LevelTickEvent", C + "$LevelTickEvent",
-                        with(base, "level" + "Lnet/minecraft/world/level/Level;", "haveTime()Z")));
+                        with(base, "level" + "Lnet/minecraft/world/level/Level;", "haveTime()Z")),
+                new ForgeOwnerMappings.Entry("net/minecraftforge/event/entity/living/LivingEvent$LivingTickEvent",
+                        "net/neoforged/forgestuck/compat/LegacyLivingTickEvent", Set.of(
+                        "<init>(Lnet/minecraft/world/entity/LivingEntity;)V",
+                        "getEntity()Lnet/minecraft/world/entity/LivingEntity;",
+                        "getEntity()Lnet/minecraft/world/entity/Entity;")));
     }
 
     private static Set<String> with(Set<String> base, String... more) {

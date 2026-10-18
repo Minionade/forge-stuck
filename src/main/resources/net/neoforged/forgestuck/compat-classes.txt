@@ -52,6 +52,7 @@ LegacyTickEvent$PlayerTickEvent
 LegacyTickEvent$ServerTickEvent
 LegacyTickEvent$ClientTickEvent
 LegacyTickEvent$LevelTickEvent
+LegacyLivingTickEvent
 LegacyTickBridge
 LegacyClientTickBridge
 LegacyBufferBuilders
