@@ -25,6 +25,8 @@ final class TickMappings {
                 new ForgeOwnerMappings.Entry(T + "$ServerTickEvent", C + "$ServerTickEvent",
                         with(base, "haveTime()Z", "getServer()Lnet/minecraft/server/MinecraftServer;")),
                 new ForgeOwnerMappings.Entry(T + "$ClientTickEvent", C + "$ClientTickEvent", base),
+                new ForgeOwnerMappings.Entry(T + "$RenderTickEvent", C + "$RenderTickEvent",
+                        with(base, "renderTickTimeF", "<init>(" + phase + "F)V")),
                 new ForgeOwnerMappings.Entry(T + "$LevelTickEvent", C + "$LevelTickEvent",
                         with(base, "level" + "Lnet/minecraft/world/level/Level;", "haveTime()Z")));
     }

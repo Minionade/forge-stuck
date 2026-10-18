@@ -87,3 +87,6 @@ LegacyLivingHurtEvent
 LegacyHurtBridge
 LegacyShearable
 LegacyShearing
+LegacyTickEvent$RenderTickEvent
+LegacyRuntimeBootstrap
+LegacyForgeSpawnEggItem

@@ -583,3 +583,36 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 | Date | Change |
 | --- | --- |
 | 2026-10-17 | t29: distinct hurt relay and bidirectional shearing adapter; [PR #42](https://github.com/Minionade/forge-stuck/pull/42). |
+
+## t30: render ticks and ForgeSpawnEggItem
+
+- `TickEvent$RenderTickEvent` maps to `LegacyTickEvent.RenderTickEvent`, including
+  `(Phase,float)`, `renderTickTime`, and inherited phase/type/side fields.
+  Client `RenderFrameEvent.Pre/Post` relay to START/END with
+  `DeltaTracker.getGameTimeDeltaPartialTick(false)`. Rendering hooks remain in
+  `LegacyClientTickBridge`, loaded only for the physical client.
+- Transformed mod entrypoints now call `LegacyRuntimeBootstrap.install`, which
+  invokes both existing guarded hurt/tick installers. Render callbacks therefore
+  do not depend on a mod calling `FMLJavaModLoadingContext.get()`. Repeated calls
+  do not register duplicate listeners. The same provider boundary applies: its
+  annotated entrypoint must actually be initialized.
+- `ForgeSpawnEggItem` maps to `LegacyForgeSpawnEggItem`, extending native
+  `DeferredSpawnEggItem`. The supplier/color/properties constructor uses native
+  deferred registration, color handlers and dispenser setup. `fromEntityType`
+  delegates to patched native `SpawnEggItem.byId`, which checks deferred eggs.
+- Legacy `getType(CompoundTag)` reads `EntityTag.id`, resolves the entity registry,
+  and falls back to the supplier for absent, malformed or unknown ids.
+  `spawnsEntity(CompoundTag,EntityType)` uses that lookup. Native `getType(ItemStack)`
+  exposes the ENTITY_DATA component as an EntityTag to preserve dispatch through
+  legacy getType overrides. The getType/spawnsEntity/getColor SRG aliases are
+  supported before the later SRG rename pass (verified with MCP 1.20.1 mappings).
+- Scope: this adapts spawn-egg type lookup, not arbitrary legacy item NBT. Native
+  component handling remains responsible for spawning entity data. Registration
+  follows NeoForge lifecycle timing, and custom dispenser overrides may still
+  use other unsupported APIs.
+- Added all new classes to game-layer relocation; cache version is 30.
+  Compilation and tests were skipped per user instruction.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-17 | t30: client render-tick relay and deferred spawn-egg adapter; committed directly to main at the user’s request. |

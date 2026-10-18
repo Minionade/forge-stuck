@@ -14,7 +14,7 @@ public final class LegacyHurtAndShearingStep implements ClassTransformStep {
     private static final String NATIVE = "net/neoforged/neoforge/common/IShearable";
     private static final String LEGACY = "net/neoforged/forgestuck/compat/LegacyShearable";
     private static final String HELPER = "net/neoforged/forgestuck/compat/LegacyShearing";
-    private static final String BRIDGE = "net/neoforged/forgestuck/compat/LegacyHurtBridge";
+    private static final String BRIDGE = "net/neoforged/forgestuck/compat/LegacyRuntimeBootstrap";
     private static final String PLAYER = "Lnet/minecraft/world/entity/player/Player;";
     private static final String ARGS = "Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;";
     private static final String CHECK = "(" + ARGS + ")Z";

@@ -11,7 +11,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 /**
  * Forge 1.20.1 {@code TickEvent} hierarchy. NeoForge 1.21.1 split ticks into Pre/Post event classes; {@link
  * LegacyTickBridge} re-posts them as these events (Pre = START, Post = END) so legacy handlers keep working.
- * {@code RenderTickEvent} is not provided.
+ * Render ticks are forwarded from client render-frame events.
  */
 public abstract class LegacyTickEvent extends Event {
     public enum Type { LEVEL, SERVER, CLIENT, PLAYER, RENDER }
@@ -57,6 +57,15 @@ public abstract class LegacyTickEvent extends Event {
     public static class ClientTickEvent extends LegacyTickEvent {
         public ClientTickEvent(Phase phase) {
             super(Type.CLIENT, LogicalSide.CLIENT, phase);
+        }
+    }
+
+    public static class RenderTickEvent extends LegacyTickEvent {
+        public final float renderTickTime;
+
+        public RenderTickEvent(Phase phase, float renderTickTime) {
+            super(Type.RENDER, LogicalSide.CLIENT, phase);
+            this.renderTickTime = renderTickTime;
         }
     }
 
