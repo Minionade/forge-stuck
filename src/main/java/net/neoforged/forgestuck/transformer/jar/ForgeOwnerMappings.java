@@ -114,11 +114,11 @@ public final class ForgeOwnerMappings {
                                 "STORAGE_BLOCKS_GOLD", "STORAGE_BLOCKS_IRON", "STORAGE_BLOCKS_LAPIS",
                                 "STORAGE_BLOCKS_REDSTONE", "STORAGE_BLOCKS")))
                 .add(new Entry("net/minecraftforge/common/Tags$Blocks",
-                        "net/neoforged/neoforge/common/Tags$Blocks", tagFields(
-                                "FENCE_GATES_WOODEN", "FENCES_WOODEN", "FENCES", "GLASS_PANES_COLORLESS",
-                                "GLASS_PANES", "NEEDS_GOLD_TOOL", "NEEDS_NETHERITE_TOOL", "ORE_RATES_SINGULAR",
-                                "ORES_GOLD", "ORES_IN_GROUND_DEEPSLATE", "ORES_IN_GROUND_NETHERRACK",
-                                "ORES_IN_GROUND_STONE", "ORES", "STORAGE_BLOCKS_NETHERITE", "STORAGE_BLOCKS")))
+                                "net/neoforged/neoforge/common/Tags$Blocks", tagFields(
+                                        "FENCE_GATES_WOODEN", "FENCES_WOODEN", "FENCES", "GLASS_PANES_COLORLESS",
+                                        "GLASS_PANES", "NEEDS_GOLD_TOOL", "NEEDS_NETHERITE_TOOL", "ORE_RATES_SINGULAR",
+                                        "ORES_GOLD", "ORES_IN_GROUND_DEEPSLATE", "ORES_IN_GROUND_NETHERRACK",
+                                        "ORES_IN_GROUND_STONE", "ORES", "STORAGE_BLOCKS_NETHERITE", "STORAGE_BLOCKS")))
                 .add(entry("net/minecraft/core/particles/ParticleOptions", COMPAT + "LegacyParticleOptions", null))
                 .add(entry("net/minecraft/core/particles/ParticleOptions$Deserializer",
                         COMPAT + "LegacyParticleDeserializer", null))
@@ -428,6 +428,12 @@ public final class ForgeOwnerMappings {
                 .addAll(configAndEnvironment())
                 .addAll(ConditionMappings.entries())
                 .addAll(IngredientMappings.entries())
+                .addAll(ModelGeneratorMappings.entries())
+                .addAll(ClientModelMappings.entries())
+                .addAll(CommonHookMappings.entries())
+                .addAll(FluidUtilityMappings.entries())
+                .addAll(WorldGenerationMappings.entries())
+                .addAll(ItemHandlerMappings.entries())
                 .addAll(ItemAbilityAndFluidMappings.entries())
                 .addAll(KeyConflictMappings.entries())
                 .addAll(NetworkMappings.entries())

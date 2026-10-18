@@ -55,6 +55,8 @@ class FluidStackConstructorTest {
     void legacyTagCallsUseIsolatedMutableCustomDataShim() throws Exception {
         Class<?> transformed = load(tagAccessUser());
         FluidStack stack = new FluidStack(Fluids.WATER, 1000);
+        assertSame(Fluids.WATER,
+                transformed.getMethod("raw", FluidStack.class).invoke(null, stack));
         assertFalse((boolean) transformed.getMethod("has", FluidStack.class).invoke(null, stack));
         assertNull(transformed.getMethod("get", FluidStack.class).invoke(null, stack));
 
@@ -105,6 +107,7 @@ class FluidStackConstructorTest {
     private static byte[] tagAccessUser() {
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/FluidCopy", null, "java/lang/Object", null);
+        addTagCall(writer, "raw", FLUID, "getRawFluid", "()" + FLUID, Opcodes.ARETURN);
         addTagCall(writer, "get", "Lnet/minecraft/nbt/CompoundTag;", "getTag",
                 "()Lnet/minecraft/nbt/CompoundTag;", Opcodes.ARETURN);
         addTagCall(writer, "getOrCreate", "Lnet/minecraft/nbt/CompoundTag;", "getOrCreateTag",

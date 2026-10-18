@@ -28,9 +28,14 @@ class CompatRelocationTest {
             assertTrue(getClass().getClassLoader().getResource(CompatRelocation.FROM + n + ".class") != null, n);
         }
         // anonymous/nested classes of listed top-level classes must be listed too
-        try (Stream<Path> cls = Files.list(Path.of(net.neoforged.forgestuck.compat.UnsupportedForgeApi.class.getResource("UnsupportedForgeApi.class").toURI()).getParent())) {
+        Path compatClasses = Path.of(net.neoforged.forgestuck.compat.UnsupportedForgeApi.class
+                .getProtectionDomain().getCodeSource().getLocation().toURI())
+                .resolve(CompatRelocation.FROM + "UnsupportedForgeApi.class")
+                .getParent();
+        try (Stream<Path> cls = Files.list(compatClasses)) {
             for (Path p : cls.toList()) {
                 String n = p.getFileName().toString().replace(".class", "");
+                if (n.endsWith("Test")) continue;
                 assertTrue(listed.contains(n), "compat-classes.txt misses " + n);
             }
         }

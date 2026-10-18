@@ -2,6 +2,7 @@ package net.neoforged.forgestuck.compat;
 
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.material.Fluid;
 import net.neoforged.neoforge.common.NeoForgeMod;
 import net.neoforged.neoforge.fluids.FluidType;
 
@@ -20,6 +21,16 @@ public final class LegacyForgeMod {
             NeoForgeMod.NAMETAG_DISTANCE.getKey());
     public static final RegistryObject<Attribute> ENTITY_GRAVITY = holder(
             Attributes.GRAVITY.unwrapKey().orElseThrow(() -> new IllegalStateException("Gravity attribute has no key")));
+    public static final RegistryObject<Attribute> BLOCK_REACH = holder(
+            Attributes.BLOCK_INTERACTION_RANGE.unwrapKey().orElseThrow(
+                    () -> new IllegalStateException("Block interaction range attribute has no key")));
+    public static final RegistryObject<Attribute> ENTITY_REACH = holder(
+            Attributes.ENTITY_INTERACTION_RANGE.unwrapKey().orElseThrow(
+                    () -> new IllegalStateException("Entity interaction range attribute has no key")));
+    public static final RegistryObject<Attribute> STEP_HEIGHT_ADDITION = holder(
+            Attributes.STEP_HEIGHT.unwrapKey().orElseThrow(
+                    () -> new IllegalStateException("Step height attribute has no key")));
+    public static final RegistryObject<Fluid> MILK = holder(NeoForgeMod.MILK.getKey());
 
     @SuppressWarnings("unchecked")
     private static <T> RegistryObject<T> holder(net.minecraft.resources.ResourceKey<?> key) {

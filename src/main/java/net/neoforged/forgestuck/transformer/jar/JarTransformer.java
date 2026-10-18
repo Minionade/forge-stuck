@@ -126,12 +126,37 @@ public class JarTransformer {
      * even while {@link #TRANSFORMER_VERSION} stays fixed.
      */
     public String cacheFileName(String sourceSha) {
+        return cacheFileName("mod.jar", sourceSha);
+    }
+
+    public String cacheFileName(String sourceName, String sourceSha) {
         var d = newDigest();
         d.update(codeFingerprint().getBytes(StandardCharsets.UTF_8));
         for (ClassTransformStep s : steps) d.update(s.getClass().getName().getBytes(StandardCharsets.UTF_8));
         d.update((byte) (removeUnknownLoaders ? 1 : 0));
-        return sourceSha + "-t" + TRANSFORMER_VERSION + "-" + java.util.HexFormat.of().formatHex(d.digest(), 0, 6)
-                + ".jar";
+        return transformedBaseName(sourceName) + "-" + sourceSha + "-t" + TRANSFORMER_VERSION + "-"
+                + java.util.HexFormat.of().formatHex(d.digest(), 0, 6) + ".jar";
+    }
+
+    static String transformedBaseName(String sourceName) {
+        String name = sourceName.endsWith(".jar") ? sourceName.substring(0, sourceName.length() - 4) : sourceName;
+        if (name.contains("-UNSTUCK-")) return name;
+        int minecraftVersion = name.indexOf("-1.20.1-");
+        if (minecraftVersion > 0) {
+            return name.substring(0, minecraftVersion) + "-UNSTUCK-" + name.substring(minecraftVersion + 8);
+        }
+        if (name.endsWith("-mc1.20.1")) {
+            String withoutMinecraftVersion = name.substring(0, name.length() - "-mc1.20.1".length());
+            int versionSeparator = withoutMinecraftVersion.indexOf('-');
+            if (versionSeparator > 0) {
+                return withoutMinecraftVersion.substring(0, versionSeparator) + "-UNSTUCK-"
+                        + withoutMinecraftVersion.substring(versionSeparator + 1);
+            }
+        }
+        int versionSeparator = name.indexOf('-');
+        return versionSeparator > 0
+                ? name.substring(0, versionSeparator) + "-UNSTUCK-" + name.substring(versionSeparator + 1)
+                : name + "-UNSTUCK";
     }
 
     private static java.security.MessageDigest newDigest() {
@@ -169,7 +194,7 @@ public class JarTransformer {
         if (bypassNative(source)) return new Result(source, false);
         String jarName = source.getFileName().toString();
         Files.createDirectories(cacheDir);
-        Path target = cacheDir.resolve(cacheFileName(sha256(source)));
+        Path target = cacheDir.resolve(cacheFileName(jarName, sha256(source)));
         if (Files.isRegularFile(target) && Files.size(target) > 0) {
             LOGGER.info("{} cache hit for {} -> {}", TAG, source.getFileName(), target);
             progress.cached(jarName);

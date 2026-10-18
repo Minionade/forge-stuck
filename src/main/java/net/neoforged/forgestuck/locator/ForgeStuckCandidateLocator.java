@@ -35,7 +35,7 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
     public static final String CACHE_DIR_NAME = ".forgestuck";
     private static final String OLD_CACHE_DIR = ".forgestuck/cache";
     private static final java.util.regex.Pattern TRANSFORMED_JAR =
-            java.util.regex.Pattern.compile("[0-9a-f]{64}-t[0-9]+(?:-[0-9a-f]{12})?\\.jar");
+            java.util.regex.Pattern.compile("(?:[0-9a-f]{64}|.+-[0-9a-f]{64})-t[0-9]+(?:-[0-9a-f]{12})?\\.jar");
     private static final java.util.regex.Pattern COMPAT_JAR =
             java.util.regex.Pattern.compile("forgestuck-compat-[0-9a-f]{16}\\.jar");
 

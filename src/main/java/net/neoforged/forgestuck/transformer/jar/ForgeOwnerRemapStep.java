@@ -42,6 +42,13 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     private static final String PICKUP = "net/minecraftforge/event/entity/player/EntityItemPickupEvent";
     private static final String LEGACY_PICKUP = "net/neoforged/forgestuck/compat/LegacyItemPickup";
     private static final String LEGACY_FLUID_STACK = "net/neoforged/forgestuck/compat/LegacyFluidStack";
+    private static final String LEGACY_BURN_TIME_OWNER = "net/minecraftforge/common/ForgeHooks";
+    private static final String LEGACY_BURN_TIME_DESC =
+            "(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/crafting/RecipeType;)I";
+    private static final String ITEM_STACK_EXTENSION =
+            "net/neoforged/neoforge/common/extensions/IItemStackExtension";
+    private static final String BURN_TIME_EXTENSION_DESC =
+            "(Lnet/minecraft/world/item/crafting/RecipeType;)I";
 
     private final ForgeOwnerMappings mappings;
 
@@ -73,6 +80,11 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         boolean mixin = isMixin(node);
         int replaced = mixin ? 0 : rewriteLegacyFluidStackConstructors(className, node);
         if (!mixin) {
+            replaced += rewriteLegacyConditionListConstructors(node);
+            replaced += rewriteEmptyFluidHandlerConstructors(node);
+            replaced += rewriteLegacyItemHandlerHelperCalls(node);
+            replaced += rewriteLegacyBurnTimeCalls(node);
+            replaced += rewriteCustomLoaderBuilderConstructors(node);
             replaced += rewriteLegacyMobEffectModifiers(node);
             replaced += rewriteGenericListenerCalls(node);
             replaced += rewriteByteBufCodecCalls(node);
@@ -106,6 +118,26 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         if (report != null) report.record(counts, mappings, adapted[0]);
         LOGGER.debug("{} remapped Forge owners in {}: {}", TAG, className, counts);
         return writer.toByteArray();
+    }
+
+    private static int rewriteLegacyBurnTimeCalls(ClassNode node) {
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || call.getOpcode() != Opcodes.INVOKESTATIC
+                        || !call.owner.equals(LEGACY_BURN_TIME_OWNER)
+                        || !call.name.equals("getBurnTime")
+                        || !call.desc.equals(LEGACY_BURN_TIME_DESC)) {
+                    continue;
+                }
+                method.instructions.set(call, new MethodInsnNode(
+                        Opcodes.INVOKEINTERFACE, ITEM_STACK_EXTENSION, "getBurnTime",
+                        BURN_TIME_EXTENSION_DESC, true));
+                rewritten++;
+            }
+        }
+        return rewritten;
     }
 
     private static boolean hasLegacyGameApiCalls(byte[] bytes) {
@@ -148,6 +180,8 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             java.util.Map.entry(FLUID_STACK + ".setTag(Lnet/minecraft/nbt/CompoundTag;)V",
                     "net/neoforged/forgestuck/compat/LegacyFluidStack"),
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V", "net/neoforged/forgestuck/compat/LegacyEventBusRegistration"),
+            java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.post(Lnet/minecraftforge/eventbus/api/Event;)Z",
+                    "net/neoforged/forgestuck/compat/LegacyEventBusPost"),
             java.util.Map.entry("net/minecraftforge/registries/RegisterEvent.getForgeRegistry()Lnet/minecraftforge/registries/IForgeRegistry;",
                     "net/neoforged/forgestuck/compat/LegacyRegisterEvent"),
             java.util.Map.entry("net/minecraftforge/common/ForgeConfigSpec.setConfig(Lcom/electronwill/nightconfig/core/CommentedConfig;)V", "net/neoforged/forgestuck/compat/LegacyConfigSpec"),
@@ -255,6 +289,9 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     private static final String GENERIC_LISTENER_OWNER = "net/minecraftforge/eventbus/api/IEventBus";
     private static final String GENERIC_LISTENER_DESC =
             "(Ljava/lang/Class;Ljava/util/function/Consumer;)V";
+    private static final String GENERIC_LISTENER_PRIORITY_DESC =
+            "(Ljava/lang/Class;Lnet/minecraftforge/eventbus/api/EventPriority;"
+                    + "Ljava/util/function/Consumer;)V";
     private static final String GENERIC_LISTENER_HELPER =
             "net/neoforged/forgestuck/compat/LegacyGenericListenerRegistration";
 
@@ -265,23 +302,28 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 if (!(insn instanceof MethodInsnNode call)
                         || !GENERIC_LISTENER_OWNER.equals(call.owner)
                         || !"addGenericListener".equals(call.name)
-                        || !GENERIC_LISTENER_DESC.equals(call.desc)) {
+                        || !(GENERIC_LISTENER_DESC.equals(call.desc)
+                                || GENERIC_LISTENER_PRIORITY_DESC.equals(call.desc))) {
                     continue;
                 }
+                boolean hasPriority = GENERIC_LISTENER_PRIORITY_DESC.equals(call.desc);
                 Type listenerEventType = invokedConsumerEventType(previousMeaningful(call));
                 if (listenerEventType == null) {
                     call.setOpcode(Opcodes.INVOKESTATIC);
                     call.owner = GENERIC_LISTENER_HELPER;
                     call.name = "addGenericListener";
-                    call.desc = "(Lnet/neoforged/bus/api/IEventBus;" + GENERIC_LISTENER_DESC.substring(1);
+                    call.desc = "(Lnet/neoforged/bus/api/IEventBus;"
+                            + (hasPriority ? GENERIC_LISTENER_PRIORITY_DESC : GENERIC_LISTENER_DESC).substring(1);
                     call.itf = false;
                 } else {
                     method.instructions.insertBefore(call, new LdcInsnNode(listenerEventType));
                     call.setOpcode(Opcodes.INVOKESTATIC);
                     call.owner = GENERIC_LISTENER_HELPER;
                     call.name = "addGenericListener";
-                    call.desc = "(Lnet/neoforged/bus/api/IEventBus;" + GENERIC_LISTENER_DESC.substring(1)
-                            .replace(")V", "Ljava/lang/Class;)V");
+                    String descriptor = hasPriority ? GENERIC_LISTENER_PRIORITY_DESC : GENERIC_LISTENER_DESC;
+                    call.desc = "(Lnet/neoforged/bus/api/IEventBus;"
+                            + descriptor.substring(1, descriptor.length() - 2)
+                            + "Ljava/lang/Class;)V";
                     call.itf = false;
                 }
                 rewritten++;
@@ -382,6 +424,100 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         return replaced;
     }
 
+    private static int rewriteEmptyFluidHandlerConstructors(ClassNode node) {
+        String owner = "net/minecraftforge/fluids/capability/templates/EmptyFluidHandler";
+        int replaced = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (!(insn instanceof org.objectweb.asm.tree.TypeInsnNode allocation)
+                        || allocation.getOpcode() != Opcodes.NEW || !owner.equals(allocation.desc)) {
+                    continue;
+                }
+                AbstractInsnNode duplicate = nextMeaningful(allocation);
+                AbstractInsnNode constructor = duplicate == null ? null : nextMeaningful(duplicate);
+                if (duplicate == null || duplicate.getOpcode() != Opcodes.DUP
+                        || !(constructor instanceof MethodInsnNode call)
+                        || call.getOpcode() != Opcodes.INVOKESPECIAL || !owner.equals(call.owner)
+                        || !"<init>".equals(call.name) || !"()V".equals(call.desc)) {
+                    continue;
+                }
+                method.instructions.insertBefore(allocation, new org.objectweb.asm.tree.FieldInsnNode(
+                        Opcodes.GETSTATIC, owner, "INSTANCE", "L" + owner + ";"));
+                method.instructions.remove(allocation);
+                method.instructions.remove(duplicate);
+                method.instructions.remove(call);
+                replaced++;
+            }
+        }
+        return replaced;
+    }
+
+    private static int rewriteLegacyConditionListConstructors(ClassNode node) {
+        String prefix = "net/minecraftforge/common/crafting/conditions/";
+        String descriptor = "([L" + prefix + "ICondition;)V";
+        int replaced = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (!(insn instanceof MethodInsnNode call)
+                        || call.getOpcode() != Opcodes.INVOKESPECIAL || !"<init>".equals(call.name)
+                        || !descriptor.equals(call.desc)
+                        || !(prefix.concat("AndCondition").equals(call.owner)
+                                || prefix.concat("OrCondition").equals(call.owner))) {
+                    continue;
+                }
+                method.instructions.insertBefore(call, new MethodInsnNode(Opcodes.INVOKESTATIC,
+                        "net/neoforged/forgestuck/compat/LegacyConditionArrays", "asList",
+                        descriptor.substring(0, descriptor.length() - 1) + "Ljava/util/List;", false));
+                call.desc = "(Ljava/util/List;)V";
+                replaced++;
+            }
+        }
+        return replaced;
+    }
+
+    private static int rewriteLegacyItemHandlerHelperCalls(ClassNode node) {
+        String owner = "net/minecraftforge/items/ItemHandlerHelper";
+        String helper = "net/neoforged/forgestuck/compat/LegacyItemHandlerHelper";
+        String itemStack = "Lnet/minecraft/world/item/ItemStack;";
+        int replaced = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (!(insn instanceof MethodInsnNode call)
+                        || call.getOpcode() != Opcodes.INVOKESTATIC || !owner.equals(call.owner)
+                        || !(("canItemStacksStack".equals(call.name)
+                                        && ("(" + itemStack + itemStack + ")Z").equals(call.desc))
+                                || ("copyStackWithSize".equals(call.name)
+                                        && ("(" + itemStack + "I)" + itemStack).equals(call.desc)))) {
+                    continue;
+                }
+                call.owner = helper;
+                call.itf = false;
+                replaced++;
+            }
+        }
+        return replaced;
+    }
+
+    private static int rewriteCustomLoaderBuilderConstructors(ClassNode node) {
+        String owner = "net/minecraftforge/client/model/generators/CustomLoaderBuilder";
+        String descriptor = "(Lnet/minecraft/resources/ResourceLocation;"
+                + "Lnet/minecraftforge/client/model/generators/ModelBuilder;"
+                + "Lnet/minecraftforge/common/data/ExistingFileHelper;)V";
+        int replaced = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (!(insn instanceof MethodInsnNode call)
+                        || !owner.equals(call.owner)
+                        || !"<init>".equals(call.name)
+                        || !descriptor.equals(call.desc)) continue;
+                method.instructions.insertBefore(call, new InsnNode(Opcodes.ICONST_1));
+                call.desc = descriptor.substring(0, descriptor.length() - 2) + "Z)V";
+                replaced++;
+            }
+        }
+        return replaced;
+    }
+
     private static String fluidStackFactoryDescriptor(String constructorDesc) {
         if (!FLUID_STACK_TAG_CTOR.equals(constructorDesc) && !FLUID_STACK_COPY_CTOR.equals(constructorDesc)) {
             return null;
@@ -437,6 +573,23 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     private Object replaceUnsupportedHandle(String className, ClassNode node, MethodNode method, Object value,
             OwnerRemapReport report, int helperIndex) {
         if (value instanceof Handle handle) {
+            if (handle.getTag() == Opcodes.H_INVOKESTATIC
+                    && handle.getOwner().equals(LEGACY_BURN_TIME_OWNER)
+                    && handle.getName().equals("getBurnTime")
+                    && handle.getDesc().equals(LEGACY_BURN_TIME_DESC)) {
+                return new Handle(Opcodes.H_INVOKEINTERFACE, ITEM_STACK_EXTENSION, "getBurnTime",
+                        BURN_TIME_EXTENSION_DESC, true);
+            }
+            String redirect = REDIRECTS.get(handle.getOwner() + "." + handle.getName() + handle.getDesc());
+            if (redirect != null && (handle.getTag() == Opcodes.H_INVOKEVIRTUAL
+                    || handle.getTag() == Opcodes.H_INVOKEINTERFACE)) {
+                Type[] arguments = Type.getArgumentTypes(handle.getDesc());
+                Type[] redirectedArguments = new Type[arguments.length + 1];
+                redirectedArguments[0] = Type.getObjectType(handle.getOwner());
+                System.arraycopy(arguments, 0, redirectedArguments, 1, arguments.length);
+                return new Handle(Opcodes.H_INVOKESTATIC, redirect, handle.getName(),
+                        Type.getMethodDescriptor(Type.getReturnType(handle.getDesc()), redirectedArguments), false);
+            }
             ForgeOwnerMappings.Entry e = mappings.get(handle.getOwner());
             if (e == null || e.supports(handle.getName(), handle.getDesc())) {
                 return value;

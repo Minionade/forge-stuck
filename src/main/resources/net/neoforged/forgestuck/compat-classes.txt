@@ -37,6 +37,7 @@ LegacyICapabilityProvider
 LegacyAttachCapabilitiesEvent
 LegacyIGenericEvent
 LegacyGenericEvent
+LegacyConditionArrays
 LegacyEntityDataSerializer
 LegacyEntityTypeBuilder
 LegacyAbstractMegaTreeGrower
@@ -98,13 +99,16 @@ LegacyNetworkEvent
 LegacyNetworkEvent$ClientCustomPayloadEvent
 LegacyNetworkEvent$ServerCustomPayloadEvent
 LegacyCustomPacket
+LegacyNetworkHooks
 LegacyEventChannel
 LegacyEventChannel$Raw
+LegacyEventBusPost
 LegacyContainerFactory
 LegacyForgeMenuType
 LegacyFluidStack
 LegacyEventBusRegistration
 LegacyGenericListenerRegistration
+LegacyItemHandlerHelper
 DatapackRegistryView
 LegacyMessageHandler
 LegacyEnchantmentRegistry

@@ -2,6 +2,7 @@ package net.neoforged.forgestuck.compat;
 
 import java.util.function.Consumer;
 import net.neoforged.bus.api.Event;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.event.entity.EntityEvent;
 import net.neoforged.neoforge.event.level.LevelEvent;
@@ -12,11 +13,16 @@ public final class LegacyGenericListenerRegistration {
 
     public static void addGenericListener(IEventBus bus, Class<?> genericClassFilter, Consumer<?> listener,
             Class<?> eventType) {
+        addGenericListener(bus, genericClassFilter, null, listener, eventType);
+    }
+
+    public static void addGenericListener(IEventBus bus, Class<?> genericClassFilter, EventPriority priority,
+            Consumer<?> listener, Class<?> eventType) {
         java.util.Objects.requireNonNull(bus, "event bus");
         java.util.Objects.requireNonNull(genericClassFilter, "generic class filter");
         java.util.Objects.requireNonNull(listener, "listener");
         Class<? extends Event> typedEvent = eventType.asSubclass(Event.class);
-        register(bus, genericClassFilter, listener, typedEvent);
+        register(bus, genericClassFilter, priority, listener, typedEvent);
     }
 
     public static void addGenericListener(IEventBus bus, Class<?> genericClassFilter, Consumer<?> listener) {
@@ -25,15 +31,20 @@ public final class LegacyGenericListenerRegistration {
                 + "; use a directly declared event lambda so Forge Stuck can translate its event type");
     }
 
-    private static <T extends Event> void register(IEventBus bus, Class<?> genericClassFilter,
+    private static <T extends Event> void register(IEventBus bus, Class<?> genericClassFilter, EventPriority priority,
             Consumer<?> listener, Class<T> eventType) {
         @SuppressWarnings("unchecked")
         Consumer<T> callback = (Consumer<T>) listener;
-        bus.addListener(eventType, event -> {
+        Consumer<T> filtered = event -> {
             if (matches(genericClassFilter, event)) {
                 callback.accept(event);
             }
-        });
+        };
+        if (priority == null) {
+            bus.addListener(eventType, filtered);
+        } else {
+            bus.addListener(priority, eventType, filtered);
+        }
     }
 
     private static boolean matches(Class<?> filter, Event event) {

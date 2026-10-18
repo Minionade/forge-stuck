@@ -5,9 +5,10 @@ import java.util.Set;
 
 /**
  * Forge 1.20.1 crafting conditions. NeoForge kept {@code ICondition}/{@code IContext} (different members), the
- * simple built-ins with identical constructors, and replaced registration with codecs, so serializer/registration
- * go to {@code compat.LegacyConditions}. And/Or (array constructors) and the ingredient parts of CraftingHelper
- * are intentionally unmapped. Members are reflection-checked in {@code ForgeOwnerMappingTargetsTest}.
+ * simple built-ins with compatible constructors, and replaced registration with codecs, so serializer/registration
+ * go to {@code compat.LegacyConditions}. And/Or array constructors are adapted to NeoForge's list-backed conditions;
+ * the ingredient parts of CraftingHelper remain unmapped. Members are reflection-checked in
+ * {@code ForgeOwnerMappingTargetsTest}.
  */
 final class ConditionMappings {
     private ConditionMappings() {}
@@ -41,12 +42,32 @@ final class ConditionMappings {
                         "serialize(" + ic + ")" + json, "serialize([" + ic + ")" + arr)),
                 e(C + "TrueCondition", NC + "TrueCondition", Set.of("INSTANCE" + "L" + C + "TrueCondition;")),
                 e(C + "FalseCondition", NC + "FalseCondition", Set.of("INSTANCE" + "L" + C + "FalseCondition;")),
-                e(C + "NotCondition", NC + "NotCondition", Set.of()),
-                e(C + "ModLoadedCondition", NC + "ModLoadedCondition", Set.of()),
-                e(C + "ItemExistsCondition", NC + "ItemExistsCondition", Set.of()),
+                e(C + "NotCondition", NC + "NotCondition", Set.of("<init>(" + ic + ")V")),
+                e(C + "AndCondition", NC + "AndCondition", Set.of("<init>(Ljava/util/List;)V")),
+                e(C + "OrCondition", NC + "OrCondition", Set.of("<init>(Ljava/util/List;)V")),
+                e(C + "ModLoadedCondition", NC + "ModLoadedCondition",
+                        Set.of("<init>(Ljava/lang/String;)V")),
+                e(C + "ItemExistsCondition", NC + "ItemExistsCondition", Set.of(
+                        "<init>(Ljava/lang/String;)V", "<init>(Ljava/lang/String;Ljava/lang/String;)V",
+                        "<init>(Lnet/minecraft/resources/ResourceLocation;)V")),
                 e("net/minecraftforge/fluids/FluidType", "net/neoforged/neoforge/fluids/FluidType", Set.of(
                         "<init>(Lnet/minecraftforge/fluids/FluidType$Properties;)V", "getLightLevel()I", "getDensity()I",
-                        "getTemperature()I", "getViscosity()I", "getDescriptionId()Ljava/lang/String;")),
+                        "getTemperature()I", "getViscosity()I", "getDescriptionId()Ljava/lang/String;",
+                        "getDescription()Lnet/minecraft/network/chat/Component;",
+                        "getSound(Lnet/minecraftforge/common/SoundAction;)Lnet/minecraft/sounds/SoundEvent;",
+                        "isLighterThanAir()Z",
+                        "getDensity(Lnet/minecraftforge/fluids/FluidStack;)I",
+                        "getDescription(Lnet/minecraftforge/fluids/FluidStack;)Lnet/minecraft/network/chat/Component;",
+                        "getLightLevel(Lnet/minecraftforge/fluids/FluidStack;)I",
+                        "getRarity(Lnet/minecraftforge/fluids/FluidStack;)Lnet/minecraft/world/item/Rarity;",
+                        "getSound(Lnet/minecraftforge/fluids/FluidStack;"
+                                + "Lnet/minecraftforge/common/SoundAction;)Lnet/minecraft/sounds/SoundEvent;",
+                        "getTemperature(Lnet/minecraftforge/fluids/FluidStack;)I",
+                        "getViscosity(Lnet/minecraftforge/fluids/FluidStack;)I",
+                        "isVaporizedOnPlacement(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                                + "Lnet/minecraftforge/fluids/FluidStack;)Z",
+                        "onVaporize(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/Level;"
+                                + "Lnet/minecraft/core/BlockPos;Lnet/minecraftforge/fluids/FluidStack;)V")),
                 e("net/minecraftforge/fluids/FluidType$Properties", "net/neoforged/neoforge/fluids/FluidType$Properties", Set.of(
                         "create()Lnet/minecraftforge/fluids/FluidType$Properties;",
                         "descriptionId(Ljava/lang/String;)Lnet/minecraftforge/fluids/FluidType$Properties;",

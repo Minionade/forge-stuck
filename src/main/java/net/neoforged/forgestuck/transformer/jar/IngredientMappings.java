@@ -13,6 +13,15 @@ final class IngredientMappings {
 
     static List<ForgeOwnerMappings.Entry> entries() {
         return List.of(
+                new ForgeOwnerMappings.Entry(FORGE + "CompoundIngredient",
+                        "net/neoforged/neoforge/common/crafting/CompoundIngredient",
+                        Set.of("of([" + INGREDIENT + ")" + INGREDIENT)),
+                new ForgeOwnerMappings.Entry(FORGE + "DifferenceIngredient",
+                        "net/neoforged/neoforge/common/crafting/DifferenceIngredient",
+                        Set.of("of(" + INGREDIENT + INGREDIENT + ")" + INGREDIENT)),
+                new ForgeOwnerMappings.Entry(FORGE + "IntersectionIngredient",
+                        "net/neoforged/neoforge/common/crafting/IntersectionIngredient",
+                        Set.of("of([" + INGREDIENT + ")" + INGREDIENT)),
                 new ForgeOwnerMappings.Entry(FORGE + "AbstractIngredient",
                         COMPAT + "LegacyAbstractIngredient", Set.of(
                                 "<init>()V",

@@ -302,8 +302,22 @@ class JarTransformerTest {
         Path jar = buildJar(dir, "a.jar", MODS_TOML, "1.0");
         Path out = new JarTransformer(List.of()).transformCached(jar, dir.resolve("cache")).output();
         assertTrue(out.getFileName().toString().contains("-t" + JarTransformer.TRANSFORMER_VERSION + "-"));
-        assertTrue(out.getFileName().toString().matches("[0-9a-f]{64}-t"
+        assertTrue(out.getFileName().toString().matches("a-UNSTUCK-[0-9a-f]{64}-t"
                 + JarTransformer.TRANSFORMER_VERSION + "-[0-9a-f]{12}\\.jar"));
+    }
+
+    @Test
+    void transformedCacheNameIdentifiesOriginalModAndVersion() {
+        assertEquals("cofh_core-UNSTUCK-11.0.2.56",
+                JarTransformer.transformedBaseName("cofh_core-1.20.1-11.0.2.56.jar"));
+        assertEquals("advgenerators-UNSTUCK-1.6.0.6",
+                JarTransformer.transformedBaseName("advgenerators-1.6.0.6-mc1.20.1.jar"));
+        assertEquals("bdlib-UNSTUCK-1.27.0.8",
+                JarTransformer.transformedBaseName("bdlib-1.27.0.8-mc1.20.1.jar"));
+        assertTrue(new JarTransformer(List.of())
+                .cacheFileName("cofh_core-1.20.1-11.0.2.56.jar", "a".repeat(64))
+                .matches("cofh_core-UNSTUCK-11\\.0\\.2\\.56-[0-9a-f]{64}-t"
+                        + JarTransformer.TRANSFORMER_VERSION + "-[0-9a-f]{12}\\.jar"));
     }
 
     @Test
