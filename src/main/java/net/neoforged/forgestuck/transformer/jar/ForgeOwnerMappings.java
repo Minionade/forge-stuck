@@ -176,6 +176,12 @@ public final class ForgeOwnerMappings {
                 .add(new Entry("net/minecraftforge/items/IItemHandlerModifiable",
                         "net/neoforged/neoforge/items/IItemHandlerModifiable",
                         Set.of("setStackInSlot(ILnet/minecraft/world/item/ItemStack;)V")))
+                .add(new Entry("net/minecraftforge/common/util/INBTSerializable",
+                        COMPAT + "LegacyINBTSerializable", Set.of(
+                                "serializeNBT()Lnet/minecraft/nbt/Tag;",
+                                "serializeNBT(Lnet/minecraft/core/HolderLookup$Provider;)Lnet/minecraft/nbt/Tag;",
+                                "deserializeNBT(Lnet/minecraft/nbt/Tag;)V",
+                                "deserializeNBT(Lnet/minecraft/core/HolderLookup$Provider;Lnet/minecraft/nbt/Tag;)V")))
                 .add(new Entry(FU + "LazyOptional", COMPAT + "LazyOptional", Set.of(
                         "of(" + nns + ")" + lo,
                         "empty()" + lo,

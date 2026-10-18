@@ -24,6 +24,7 @@ VanillaRegistryView
 LegacyItemStackShim
 LegacyEnumExtensions
 LegacyDyeableLeatherItem
+LegacyINBTSerializable
 LegacyLootModifierManager
 LegacyEnchantment
 LegacyEnchantmentRarity
