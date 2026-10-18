@@ -33,6 +33,9 @@ final class ConditionMappings {
                         "getJson(" + ic + ")" + json)),
                 e("net/minecraftforge/common/crafting/CraftingHelper", COMPAT + "LegacyConditions", Set.of(
                         "register(" + ser + ")" + ser, "getCondition(" + json + ")" + ic,
+                        "register(Lnet/minecraft/resources/ResourceLocation;"
+                                + "Lnet/minecraftforge/common/crafting/IIngredientSerializer;)"
+                                + "Lnet/minecraftforge/common/crafting/IIngredientSerializer;",
                         "processConditions(" + arr + ctx + ")Z",
                         "processConditions(" + json + "Ljava/lang/String;" + ctx + ")Z",
                         "serialize(" + ic + ")" + json, "serialize([" + ic + ")" + arr)),

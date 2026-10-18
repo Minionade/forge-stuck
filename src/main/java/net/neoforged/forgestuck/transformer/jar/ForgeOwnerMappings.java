@@ -404,6 +404,7 @@ public final class ForgeOwnerMappings {
                 .add("net/minecraftforge/api/distmarker/OnlyIn", "net/neoforged/api/distmarker/OnlyIn")
                 .addAll(configAndEnvironment())
                 .addAll(ConditionMappings.entries())
+                .addAll(IngredientMappings.entries())
                 .addAll(ItemAbilityAndFluidMappings.entries())
                 .addAll(KeyConflictMappings.entries())
                 .addAll(NetworkMappings.entries())

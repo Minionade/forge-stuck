@@ -53,6 +53,11 @@ public final class LegacyConditions {
         return serializer;
     }
 
+    public static <T extends net.minecraft.world.item.crafting.Ingredient> LegacyIngredientSerializer<T> register(
+            ResourceLocation id, LegacyIngredientSerializer<T> serializer) {
+        return LegacyIngredientTypes.register(id, serializer);
+    }
+
     /** Codec instance registered for a legacy condition id; used by generated {@code codec()} bridges. */
     public static MapCodec<? extends ICondition> codecFor(ResourceLocation id) {
         MapCodec<ICondition> codec = CODECS.get(id);

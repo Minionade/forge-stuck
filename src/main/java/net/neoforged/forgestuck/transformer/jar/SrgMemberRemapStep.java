@@ -116,6 +116,18 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                     call.itf = false;
                     modified = true;
                     remapped.add("ItemStack.getTag -> LegacyItemStackShim.getTag");
+                } else if (insn instanceof MethodInsnNode call && isLegacyIngredientArrayMethod(call)) {
+                    boolean items = call.name.equals("m_43908_");
+                    call.setOpcode(org.objectweb.asm.Opcodes.INVOKESTATIC);
+                    call.owner = "net/neoforged/forgestuck/compat/LegacyIngredientBridge";
+                    call.name = items ? "getItems" : "getStackingIds";
+                    call.desc = items
+                            ? "(Lnet/minecraft/world/item/crafting/Ingredient;)[Lnet/minecraft/world/item/ItemStack;"
+                            : "(Lnet/minecraft/world/item/crafting/Ingredient;)Lit/unimi/dsi/fastutil/ints/IntList;";
+                    call.itf = false;
+                    modified = true;
+                    remapped.add("Ingredient." + (items ? "getItems" : "getStackingIds")
+                            + " -> LegacyIngredientBridge");
                 } else if (insn instanceof MethodInsnNode call && LegacyNameMappings.looksLikeSrg(call.name)) {
                     String mapped = mappings.map(call.owner, call.name, call.desc);
                     if (mapped == null) {
@@ -198,6 +210,15 @@ public class SrgMemberRemapStep implements ClassTransformStep {
                 && call.owner.equals("net/minecraft/world/item/ItemStack")
                 && (call.name.equals("m_41783_") || call.name.equals("getTag"))
                 && call.desc.equals("()Lnet/minecraft/nbt/CompoundTag;");
+    }
+
+    private static boolean isLegacyIngredientArrayMethod(MethodInsnNode call) {
+        return call.getOpcode() == org.objectweb.asm.Opcodes.INVOKEVIRTUAL
+                && call.owner.equals("net/minecraft/world/item/crafting/Ingredient")
+                && ((call.name.equals("m_43908_") || call.name.equals("getItems"))
+                        && call.desc.equals("()[Lnet/minecraft/world/item/ItemStack;")
+                    || (call.name.equals("m_43931_") || call.name.equals("getStackingIds"))
+                        && call.desc.equals("()Lit/unimi/dsi/fastutil/ints/IntList;"));
     }
 
     private static boolean isInheritedResourceLocationMethod(MethodInsnNode call) {
