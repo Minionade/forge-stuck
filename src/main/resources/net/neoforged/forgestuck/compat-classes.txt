@@ -26,6 +26,10 @@ LegacyEnumExtensions
 LegacyDyeableLeatherItem
 LegacyArmorMaterial
 LegacyItemPickup
+LegacyRegistryBuilder
+LegacyStemGrownBlock
+LegacySandBlock
+LegacyLootingLevelEvent
 LegacyINBTSerializable
 LegacyLootModifierManager
 LegacyEnchantment

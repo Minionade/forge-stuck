@@ -69,6 +69,9 @@ public final class LegacyNameMappings {
         members.put("m_6082_", "getName");
         members.put("m_6651_", "getToughness");
         members.put("m_6649_", "getKnockbackResistance");
+        // Removed StemGrownBlock abstract methods, now declared by compat.LegacyStemGrownBlock.
+        members.put("m_7161_", "getStem");
+        members.put("m_7810_", "getAttachedStem");
         return new LegacyNameMappings(members, missing);
     }
 

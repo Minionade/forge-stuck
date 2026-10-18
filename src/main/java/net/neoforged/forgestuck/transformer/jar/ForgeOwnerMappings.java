@@ -69,6 +69,40 @@ public final class ForgeOwnerMappings {
         String dr = "L" + R + "DeferredRegister;";
         String ro = "L" + R + "RegistryObject;";
         return new ForgeOwnerMappings()
+                .add(new Entry("net/minecraftforge/registries/RegistryBuilder",
+                        COMPAT + "LegacyRegistryBuilder", Set.of(
+                                "<init>()V",
+                                "setName(Lnet/minecraft/resources/ResourceLocation;)"
+                                        + "Lnet/minecraftforge/registries/RegistryBuilder;",
+                                "setMaxID(I)Lnet/minecraftforge/registries/RegistryBuilder;",
+                                "setDefaultKey(Lnet/minecraft/resources/ResourceLocation;)"
+                                        + "Lnet/minecraftforge/registries/RegistryBuilder;",
+                                "disableSaving()Lnet/minecraftforge/registries/RegistryBuilder;",
+                                "disableSync()Lnet/minecraftforge/registries/RegistryBuilder;",
+                                "allowModification()Lnet/minecraftforge/registries/RegistryBuilder;",
+                                "hasTags()Lnet/minecraftforge/registries/RegistryBuilder;",
+                                "create()Lnet/minecraftforge/registries/IForgeRegistry;")))
+                .add(new Entry("net/minecraft/world/level/block/StemGrownBlock",
+                        COMPAT + "LegacyStemGrownBlock", Set.of(
+                                "<init>(Lnet/minecraft/world/level/block/state/BlockBehaviour$Properties;)V",
+                                "m_7161_()Lnet/minecraft/world/level/block/StemBlock;",
+                                "getStem()Lnet/minecraft/world/level/block/StemBlock;",
+                                "m_7810_()Lnet/minecraft/world/level/block/AttachedStemBlock;",
+                                "getAttachedStem()Lnet/minecraft/world/level/block/AttachedStemBlock;")))
+                .add(new Entry("net/minecraft/world/level/block/SandBlock",
+                        COMPAT + "LegacySandBlock", Set.of(
+                                "<init>(ILnet/minecraft/world/level/block/state/BlockBehaviour$Properties;)V",
+                                "m_6248_(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)I",
+                                "getDustColor(Lnet/minecraft/world/level/block/state/BlockState;"
+                                        + "Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)I")))
+                .add(new Entry("net/minecraftforge/event/entity/living/LootingLevelEvent",
+                        COMPAT + "LegacyLootingLevelEvent", Set.of(
+                                "<init>(Lnet/minecraft/world/entity/LivingEntity;"
+                                        + "Lnet/minecraft/world/damagesource/DamageSource;I)V",
+                                "getEntity()Lnet/minecraft/world/entity/LivingEntity;",
+                                "getDamageSource()Lnet/minecraft/world/damagesource/DamageSource;",
+                                "getLootingLevel()I", "setLootingLevel(I)V")))
                 .add(new Entry("net/minecraft/world/item/ArmorMaterial",
                         COMPAT + "LegacyArmorMaterial", armorMaterialMembers()))
                 .add(new Entry("net/minecraftforge/client/model/data/ModelData",

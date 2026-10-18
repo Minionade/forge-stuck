@@ -39,6 +39,8 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/common/extensions/IForgeBlock",
             "net/minecraftforge/items/IItemHandler", "net/minecraftforge/items/IItemHandlerModifiable",
             "net/minecraftforge/items/SlotItemHandler",
+            "net/minecraftforge/registries/RegistryBuilder", "net/minecraft/world/level/block/StemGrownBlock",
+            "net/minecraft/world/level/block/SandBlock", "net/minecraftforge/event/entity/living/LootingLevelEvent",
             "net/minecraftforge/client/event/EntityRenderersEvent$AddLayers",
             "net/minecraftforge/common/util/INBTSerializable",
             "net/minecraftforge/common/ForgeConfigSpec", "net/minecraftforge/common/ForgeConfigSpec$Builder",
