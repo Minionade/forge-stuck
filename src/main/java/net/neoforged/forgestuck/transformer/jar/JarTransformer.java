@@ -25,6 +25,7 @@ import java.util.Set;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -56,6 +57,10 @@ public class JarTransformer {
     private static final Pattern JIJ_JAR = Pattern.compile("META-INF/jarjar/[^/]+\\.jar");
     private static final String TAG = "[Forge Stuck!!]";
     private static final Pattern SIGNATURE = Pattern.compile("META-INF/[^/]+\\.(SF|RSA|DSA)", Pattern.CASE_INSENSITIVE);
+    private static final String COMPONENT_SERIALIZER = "net/minecraft/network/chat/Component$Serializer";
+    private static final String COMPONENT_SERIALIZER_AT =
+            "\n# Forge Stuck: legacy mods construct Component.Serializer directly\n"
+                    + "public net.minecraft.network.chat.Component$Serializer <init>()V\n";
 
     /**
      * Default for {@link #removeUnknownLoaders}. Unknown custom loaders are preserved (and reported) by default so no
@@ -222,6 +227,7 @@ public class JarTransformer {
             in.stream().forEach(je -> allNames.add(je.getName()));
             ResourceDataRewriteStep resources = new ResourceDataRewriteStep(allNames, resourceReport);
             boolean needsRlAccess = false;
+            boolean needsComponentSerializerAccess = false;
             byte[] existingAt = null;
             Map<String, JarEntry> pendingMixinEntries = new LinkedHashMap<>();
             Map<String, byte[]> pendingMixinData = new LinkedHashMap<>();
@@ -260,6 +266,7 @@ public class JarTransformer {
                     data = stripManifestDigests(data);
                 } else if (name.endsWith(".class")) {
                     needsRlAccess |= LegacyResourceLocationSubclassStep.extendsResourceLocation(data);
+                    needsComponentSerializerAccess |= referencesComponentSerializerConstructor(data);
                     data = applySteps(name, data, ownerReport);
                     mixins.inspectClass(name.substring(0, name.length() - ".class".length()).replace('/', '.'), data);
                 } else if (MixinResourceRewriter.isCandidate(name)) {
@@ -300,12 +307,19 @@ public class JarTransformer {
             if (needsRlAccess) {
                 LOGGER.info("{} {} has ResourceLocation subclass(es); emitting access transformer to open the final class and its constructor", TAG, jarName);
             }
-            if (needsRlAccess || existingAt != null) {
+            if (needsComponentSerializerAccess) {
+                LOGGER.info("{} {} constructs Component.Serializer; opening its constructor for legacy access",
+                        TAG, jarName);
+            }
+            if (needsRlAccess || needsComponentSerializerAccess || existingAt != null) {
                 JarEntry at = new JarEntry(LegacyResourceLocationSubclassStep.AT_PATH);
                 out.putNextEntry(at);
                 if (existingAt != null) out.write(existingAt);
                 if (needsRlAccess) {
                     out.write(LegacyResourceLocationSubclassStep.AT_LINES.getBytes(StandardCharsets.UTF_8));
+                }
+                if (needsComponentSerializerAccess) {
+                    out.write(COMPONENT_SERIALIZER_AT.getBytes(StandardCharsets.UTF_8));
                 }
                 out.closeEntry();
             }
@@ -318,6 +332,27 @@ public class JarTransformer {
             out.write(converted.getBytes(StandardCharsets.UTF_8));
             out.closeEntry();
         }
+    }
+
+    private static boolean referencesComponentSerializerConstructor(byte[] bytes) {
+        boolean[] found = {false};
+        new ClassReader(bytes).accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
+                    String[] exceptions) {
+                return new MethodVisitor(Opcodes.ASM9) {
+                    @Override
+                    public void visitMethodInsn(int opcode, String owner, String methodName, String methodDescriptor,
+                            boolean isInterface) {
+                        if (opcode == Opcodes.INVOKESPECIAL && COMPONENT_SERIALIZER.equals(owner)
+                                && "<init>".equals(methodName) && "()V".equals(methodDescriptor)) {
+                            found[0] = true;
+                        }
+                    }
+                };
+            }
+        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        return found[0];
     }
 
     /** Collects the {@code @Mod} values declared by classes in the source jar. */

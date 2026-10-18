@@ -40,6 +40,23 @@ class ResourceLocationSubclassTest {
         return cw.toByteArray();
     }
 
+    private static byte[] componentSerializerCaller() {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/book/Book", null, "java/lang/Object", null);
+        var method = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "serializer", "()V", null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW, "net/minecraft/network/chat/Component$Serializer");
+        method.visitInsn(Opcodes.DUP);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, "net/minecraft/network/chat/Component$Serializer",
+                "<init>", "()V", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        cw.visitEnd();
+        return cw.toByteArray();
+    }
+
     @Test
     void superConstructorCallsTargetThe121Constructor() {
         byte[] out = new LegacyResourceLocationSubclassStep().apply("zz.id.Id", subclass());
@@ -64,7 +81,7 @@ class ResourceLocationSubclassTest {
     }
 
     @Test
-    void jarGetsAccessTransformerOnlyWhenSubclassPresentAndKeepsExistingOne(@TempDir Path dir) throws Exception {
+    void jarAddsNeededAccessTransformersAndKeepsExistingOne(@TempDir Path dir) throws Exception {
         String toml = "modLoader=\"javafml\"\nloaderVersion=\"[47,)\"\nlicense=\"x\"\n[[mods]]\nmodId=\"zzmod\"\nversion=\"1\"\n";
         Path src = dir.resolve("a.jar");
         try (var out = new JarOutputStream(Files.newOutputStream(src))) {
@@ -74,6 +91,8 @@ class ResourceLocationSubclassTest {
             out.write("public a.B c\n".getBytes(StandardCharsets.UTF_8));
             out.putNextEntry(new JarEntry("zz/id/Id.class"));
             out.write(subclass());
+            out.putNextEntry(new JarEntry("zz/book/Book.class"));
+            out.write(componentSerializerCaller());
             out.closeEntry();
         }
         Path dst = dir.resolve("b.jar");
@@ -83,6 +102,7 @@ class ResourceLocationSubclassTest {
             assertTrue(at.startsWith("public a.B c"), at);
             assertTrue(at.contains("public-f net.minecraft.resources.ResourceLocation\n"), at);
             assertTrue(at.contains("<init>(Ljava/lang/String;Ljava/lang/String;)V"), at);
+            assertTrue(at.contains("public net.minecraft.network.chat.Component$Serializer <init>()V"), at);
         }
     }
 }
