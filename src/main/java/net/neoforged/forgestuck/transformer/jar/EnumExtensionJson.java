@@ -19,6 +19,7 @@ import java.util.Set;
  */
 final class EnumExtensionJson {
     static final String ITEM_DISPLAY_CONTEXT_CTOR = "(ILjava/lang/String;Ljava/lang/String;)V";
+    static final String SPAWN_PLACEMENT_TYPE_CTOR = "(Ljava/lang/String;)V";
 
     private EnumExtensionJson() {}
 
@@ -39,6 +40,11 @@ final class EnumExtensionJson {
     }
 
     static String render(String modId, List<LegacyEnumExtensionPlanner.Entry> entries) {
+        return render(modId, entries, List.of(), false);
+    }
+
+    static String render(String modId, List<LegacyEnumExtensionPlanner.Entry> entries,
+            List<LegacyEnumExtensionPlanner.PlacementEntry> placementEntries, boolean includeUnprefixedPlacements) {
         JsonArray array = new JsonArray();
         Set<String> used = new HashSet<>();
         for (LegacyEnumExtensionPlanner.Entry entry : entries) {
@@ -52,6 +58,19 @@ final class EnumExtensionJson {
             parameters.add(entry.id());
             if (entry.fallback() == null) parameters.add(JsonNull.INSTANCE);
             else parameters.add(entry.fallback());
+            json.add("parameters", parameters);
+            array.add(json);
+        }
+        Set<String> usedPlacementNames = new HashSet<>();
+        for (LegacyEnumExtensionPlanner.PlacementEntry entry : placementEntries) {
+            if (!includeUnprefixedPlacements
+                    && !entry.name().toLowerCase(Locale.ROOT).startsWith(modId.toLowerCase(Locale.ROOT))) continue;
+            JsonObject json = new JsonObject();
+            json.addProperty("enum", LegacyEnumExtensionPlanner.LEGACY_SPAWN_PLACEMENT_TYPE);
+            json.addProperty("name", fieldName(modId, entry.name(), usedPlacementNames));
+            json.addProperty("constructor", SPAWN_PLACEMENT_TYPE_CTOR);
+            JsonArray parameters = new JsonArray();
+            parameters.add(entry.name());
             json.add("parameters", parameters);
             array.add(json);
         }

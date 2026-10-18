@@ -23,6 +23,7 @@ UnsupportedForgeApi
 VanillaRegistryView
 LegacyItemStackShim
 LegacyEnumExtensions
+LegacyDyeableLeatherItem
 LegacyLootModifierManager
 LegacyEnchantment
 LegacyEnchantmentRarity

@@ -31,6 +31,7 @@ class ForgeOwnerMappingTargetsTest {
             "net/minecraftforge/common/util/LazyOptional", "net/minecraftforge/common/util/NonNullConsumer",
             "net/minecraftforge/common/util/NonNullFunction", "net/minecraftforge/common/util/NonNullSupplier",
             "net/minecraftforge/common/util/NonNullPredicate",
+            "net/minecraftforge/common/extensions/IForgeItem", "net/minecraft/world/item/DyeableLeatherItem",
             "net/minecraftforge/common/ForgeConfigSpec", "net/minecraftforge/common/ForgeConfigSpec$Builder",
             "net/minecraftforge/common/ForgeConfigSpec$ConfigValue", "net/minecraftforge/common/ForgeConfigSpec$BooleanValue",
             "net/minecraftforge/common/ForgeConfigSpec$IntValue", "net/minecraftforge/common/ForgeConfigSpec$LongValue",

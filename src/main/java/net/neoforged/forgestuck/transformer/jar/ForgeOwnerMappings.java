@@ -69,6 +69,24 @@ public final class ForgeOwnerMappings {
         String dr = "L" + R + "DeferredRegister;";
         String ro = "L" + R + "RegistryObject;";
         return new ForgeOwnerMappings()
+                .add(new Entry("net/minecraftforge/common/extensions/IForgeItem",
+                        "net/neoforged/neoforge/common/extensions/IItemExtension", Set.of(
+                                "isRepairable(Lnet/minecraft/world/item/ItemStack;)Z",
+                                "getXpRepairRatio(Lnet/minecraft/world/item/ItemStack;)F",
+                                "getMaxStackSize(Lnet/minecraft/world/item/ItemStack;)I",
+                                "getDamage(Lnet/minecraft/world/item/ItemStack;)I",
+                                "getMaxDamage(Lnet/minecraft/world/item/ItemStack;)I",
+                                "isDamaged(Lnet/minecraft/world/item/ItemStack;)Z",
+                                "setDamage(Lnet/minecraft/world/item/ItemStack;I)V")))
+                .add(new Entry("net/minecraft/world/item/DyeableLeatherItem",
+                        COMPAT + "LegacyDyeableLeatherItem", Set.of(
+                                "TAG_COLORLjava/lang/String;",
+                                "TAG_DISPLAYLjava/lang/String;",
+                                "DEFAULT_LEATHER_COLORI",
+                                "hasCustomColor(Lnet/minecraft/world/item/ItemStack;)Z",
+                                "getColor(Lnet/minecraft/world/item/ItemStack;)I",
+                                "clearColor(Lnet/minecraft/world/item/ItemStack;)V",
+                                "setColor(Lnet/minecraft/world/item/ItemStack;I)V")))
                 .add(new Entry(FU + "LazyOptional", COMPAT + "LazyOptional", Set.of(
                         "of(" + nns + ")" + lo,
                         "empty()" + lo,

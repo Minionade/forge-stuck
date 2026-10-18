@@ -15,9 +15,8 @@ import org.objectweb.asm.tree.*;
 
 /**
  * Statically evaluates legacy Forge enum-extension factory calls so that NeoForge 1.21.1 {@code enumextensions.json}
- * entries can be generated. Forge 1.20.1 created {@code ItemDisplayContext} constants by calling
- * {@code ItemDisplayContext.create(String, ResourceLocation, ItemDisplayContext)} at any time; NeoForge only allows
- * constants declared in JSON before the enum class loads.
+ * entries can be generated. Forge 1.20.1 created {@code ItemDisplayContext} and {@code SpawnPlacements.Type}
+ * constants at runtime; NeoForge only allows constants declared in JSON before the enum class loads.
  *
  * <p>The evaluator is a small concrete interpreter over a jar's own bytecode. It executes the {@code <clinit>} and
  * no-argument static methods of every class referring to the enum, following same-jar static calls (with their real
@@ -27,9 +26,14 @@ import org.objectweb.asm.tree.*;
  */
 public final class LegacyEnumExtensionPlanner {
     public static final String ITEM_DISPLAY_CONTEXT = "net/minecraft/world/item/ItemDisplayContext";
+    public static final String SPAWN_PLACEMENT_TYPE = "net/minecraft/world/entity/SpawnPlacements$Type";
+    public static final String LEGACY_SPAWN_PLACEMENT_TYPE =
+            "net/neoforged/forgestuck/gamecompat/LegacySpawnPlacementType";
     static final String CREATE_DESC =
             "(Ljava/lang/String;Lnet/minecraft/resources/ResourceLocation;L" + ITEM_DISPLAY_CONTEXT + ";)L"
                     + ITEM_DISPLAY_CONTEXT + ";";
+    private static final String PLACEMENT_CREATE_DESC =
+            "(Ljava/lang/String;)L" + SPAWN_PLACEMENT_TYPE + ";";
     private static final String RESOURCE_LOCATION = "net/minecraft/resources/ResourceLocation";
     private static final int MAX_STEPS = 50_000;
     private static final int MAX_DEPTH = 8;
@@ -41,8 +45,12 @@ public final class LegacyEnumExtensionPlanner {
         }
     }
 
+    /** A fully evaluated Forge {@code SpawnPlacements.Type.create} call. */
+    public record PlacementEntry(String name) {}
+
     /** Result of planning one jar. */
-    public record Plan(List<Entry> entries, List<String> unresolvedSites) {}
+    public record Plan(List<Entry> entries, List<PlacementEntry> placementEntries, List<String> unresolvedSites,
+            List<String> unresolvedPlacementSites) {}
 
     private static final Object UNKNOWN = new Object() {
         @Override
@@ -76,7 +84,9 @@ public final class LegacyEnumExtensionPlanner {
     private final Map<String, ClassNode> classes = new HashMap<>();
     private final Map<String, Object> statics = new HashMap<>();
     private final Map<String, Entry> entries = new LinkedHashMap<>();
+    private final Map<String, PlacementEntry> placementEntries = new LinkedHashMap<>();
     private final Set<String> resolvedSites = new java.util.HashSet<>();
+    private final Set<String> resolvedPlacementSites = new java.util.HashSet<>();
     private int steps;
 
     private LegacyEnumExtensionPlanner(Function<String, byte[]> classSource) {
@@ -84,17 +94,21 @@ public final class LegacyEnumExtensionPlanner {
     }
 
     /**
-     * @param candidates internal names of the classes that mention {@code ItemDisplayContext}
+     * @param candidates internal names of the classes that mention a supported extensible enum
      * @param classSource loads the original bytes of any class of the same jar by internal name, or {@code null}
      */
     public static Plan plan(List<String> candidates, Function<String, byte[]> classSource) {
         LegacyEnumExtensionPlanner planner = new LegacyEnumExtensionPlanner(classSource);
         List<String> sites = new ArrayList<>();
+        List<String> placementSites = new ArrayList<>();
         for (String candidate : candidates) {
             ClassNode node = planner.load(candidate);
             if (node == null) continue;
             for (MethodNode method : node.methods) {
                 if (callsCreate(method)) sites.add(node.name + "." + method.name + method.desc);
+                if (callsPlacementCreate(method)) {
+                    placementSites.add(node.name + "." + method.name + method.desc);
+                }
             }
         }
         for (String candidate : candidates) {
@@ -117,7 +131,12 @@ public final class LegacyEnumExtensionPlanner {
         for (String site : sites) {
             if (!planner.resolvedSites.contains(site)) unresolved.add(site);
         }
-        return new Plan(List.copyOf(planner.entries.values()), unresolved);
+        List<String> unresolvedPlacements = new ArrayList<>();
+        for (String site : placementSites) {
+            if (!planner.resolvedPlacementSites.contains(site)) unresolvedPlacements.add(site);
+        }
+        return new Plan(List.copyOf(planner.entries.values()), List.copyOf(planner.placementEntries.values()),
+                List.copyOf(unresolved), List.copyOf(unresolvedPlacements));
     }
 
     static boolean callsCreate(MethodNode method) {
@@ -128,9 +147,23 @@ public final class LegacyEnumExtensionPlanner {
         return false;
     }
 
+    static boolean callsPlacementCreate(MethodNode method) {
+        if (method.instructions == null) return false;
+        for (AbstractInsnNode insn : method.instructions) {
+            if (isPlacementCreate(insn)) return true;
+        }
+        return false;
+    }
+
     private static boolean isCreate(AbstractInsnNode insn) {
         return insn instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKESTATIC
                 && call.owner.equals(ITEM_DISPLAY_CONTEXT) && call.name.equals("create") && call.desc.equals(CREATE_DESC);
+    }
+
+    private static boolean isPlacementCreate(AbstractInsnNode insn) {
+        return insn instanceof MethodInsnNode call && call.getOpcode() == Opcodes.INVOKESTATIC
+                && call.owner.equals(SPAWN_PLACEMENT_TYPE) && call.name.equals("create")
+                && call.desc.equals(PLACEMENT_CREATE_DESC);
     }
 
     private ClassNode load(String internalName) {
@@ -278,6 +311,8 @@ public final class LegacyEnumExtensionPlanner {
 
         if (isCreate(call)) {
             record(caller, callerMethod, args);
+        } else if (isPlacementCreate(call)) {
+            recordPlacement(caller, callerMethod, args);
         } else if (call.name.equals("<init>") && call.owner.equals(RESOURCE_LOCATION) && receiver instanceof Pending p) {
             p.value = args.length == 1 ? parseRl(args[0]) : args.length == 2 ? rl(args[0], args[1]) : UNKNOWN;
             return;
@@ -377,5 +412,11 @@ public final class LegacyEnumExtensionPlanner {
         String fallbackName = fallback instanceof EnumRef ref ? ref.name() : null;
         entries.putIfAbsent(rl.toString(), new Entry(keyName, rl.toString(), fallbackName));
         resolvedSites.add(caller.name + "." + callerMethod.name + callerMethod.desc);
+    }
+
+    private void recordPlacement(ClassNode caller, MethodNode callerMethod, Object[] args) {
+        if (args.length != 1 || !(args[0] instanceof String name)) return;
+        placementEntries.putIfAbsent(name, new PlacementEntry(name));
+        resolvedPlacementSites.add(caller.name + "." + callerMethod.name + callerMethod.desc);
     }
 }

@@ -22,7 +22,12 @@ final class SpawnPlacementMappings {
                         "net/neoforged/neoforge/event/entity/RegisterSpawnPlacementsEvent$Operation",
                         enumMembers(EVENT + "$Operation", "AND", "OR", "REPLACE")),
                 new ForgeOwnerMappings.Entry(PLACEMENT, "net/neoforged/forgestuck/compat/LegacySpawnPlacementType",
-                        enumMembers(PLACEMENT, "ON_GROUND", "IN_WATER", "NO_RESTRICTIONS", "IN_LAVA")));
+                        placementMembers()));
+    }
+    private static Set<String> placementMembers() {
+        Set<String> members = enumMembers(PLACEMENT, "ON_GROUND", "IN_WATER", "NO_RESTRICTIONS", "IN_LAVA");
+        members.add("create(Ljava/lang/String;)L" + PLACEMENT + ";");
+        return members;
     }
     private static Set<String> enumMembers(String owner, String... constants) {
         String desc = "L" + owner + ";";

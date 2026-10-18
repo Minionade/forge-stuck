@@ -302,7 +302,8 @@ class JarTransformerTest {
         Path jar = buildJar(dir, "a.jar", MODS_TOML, "1.0");
         Path out = new JarTransformer(List.of()).transformCached(jar, dir.resolve("cache")).output();
         assertTrue(out.getFileName().toString().contains("-t" + JarTransformer.TRANSFORMER_VERSION + "-"));
-        assertTrue(out.getFileName().toString().matches("[0-9a-f]{64}-t0-[0-9a-f]{12}\\.jar"));
+        assertTrue(out.getFileName().toString().matches("[0-9a-f]{64}-t"
+                + JarTransformer.TRANSFORMER_VERSION + "-[0-9a-f]{12}\\.jar"));
     }
 
     @Test
