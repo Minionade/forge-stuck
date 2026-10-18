@@ -387,6 +387,7 @@ public final class ForgeOwnerMappings {
                 .addAll(NetworkMappings.entries())
                 .addAll(TickMappings.entries())
                 .addAll(GeneratedOwnerTable.entries())
+                .addAll(DataMappings.entries())
                 .addAll(GrowthAndSpawnMappings.entries())
                 .addAll(AttackAndTreeMappings.entries())
                 .addAll(HurtAndShearingMappings.entries())
