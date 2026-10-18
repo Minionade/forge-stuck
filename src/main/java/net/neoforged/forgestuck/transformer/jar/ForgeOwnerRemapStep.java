@@ -71,7 +71,10 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         Set<String> uses = new HashSet<>();
         boolean mixin = isMixin(node);
         int replaced = mixin ? 0 : rewriteLegacyFluidStackConstructors(className, node);
-        if (!mixin) replaced += rewriteByteBufCodecCalls(node);
+        if (!mixin) {
+            replaced += rewriteByteBufCodecCalls(node);
+            replaced += rewriteLegacyEntityDataSerializerFactories(node);
+        }
         if (!mixin) replaced += replaceUnsupported(className, node, report);
         if (!mixin) replaced += replaceUnsupportedHandles(className, node, report);
         collectBlocked(className, node, blocked, adapted, uses);
@@ -193,6 +196,13 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     private static final String BUF_READER = "Lnet/minecraft/network/FriendlyByteBuf$Reader;";
     private static final String BUF_ENCODER = "Lnet/minecraft/network/codec/StreamEncoder;";
     private static final String BUF_DECODER = "Lnet/minecraft/network/codec/StreamDecoder;";
+    private static final String ENTITY_DATA_SERIALIZER = "net/minecraft/network/syncher/EntityDataSerializer";
+    private static final String LEGACY_ENTITY_DATA_SERIALIZER =
+            "net/neoforged/forgestuck/compat/LegacyEntityDataSerializer";
+    private static final String LEGACY_WRITER =
+            "Lnet/neoforged/forgestuck/compat/LegacyByteBufWriter;";
+    private static final String LEGACY_READER =
+            "Lnet/neoforged/forgestuck/compat/LegacyByteBufReader;";
 
     /**
      * 1.21's FriendlyByteBuf helpers take StreamEncoder/StreamDecoder where 1.20.1 took Writer/Reader. The compat
@@ -209,6 +219,29 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     call.desc = call.desc.replace(BUF_WRITER, BUF_ENCODER).replace(BUF_READER, BUF_DECODER);
                     replaced++;
                 }
+            }
+        }
+        return replaced;
+    }
+
+    private static int rewriteLegacyEntityDataSerializerFactories(ClassNode node) {
+        int replaced = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode insn : method.instructions.toArray()) {
+                if (!(insn instanceof MethodInsnNode call)
+                        || !ENTITY_DATA_SERIALIZER.equals(call.owner)
+                        || !("m_238095_".equals(call.name) || "simple".equals(call.name)
+                                || "m_238098_".equals(call.name) || "optional".equals(call.name))) {
+                    continue;
+                }
+                String suffix = "m_238098_".equals(call.name) || "optional".equals(call.name)
+                        ? "optional" : "create";
+                if (!call.desc.contains(BUF_WRITER) || !call.desc.contains(BUF_READER)) continue;
+                call.owner = LEGACY_ENTITY_DATA_SERIALIZER;
+                call.name = suffix;
+                call.desc = "(" + LEGACY_WRITER + LEGACY_READER + ")L" + ENTITY_DATA_SERIALIZER + ";";
+                call.itf = false;
+                replaced++;
             }
         }
         return replaced;

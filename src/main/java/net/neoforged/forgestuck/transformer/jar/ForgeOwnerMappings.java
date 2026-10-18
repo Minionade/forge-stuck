@@ -69,6 +69,8 @@ public final class ForgeOwnerMappings {
         String dr = "L" + R + "DeferredRegister;";
         String ro = "L" + R + "RegistryObject;";
         return new ForgeOwnerMappings()
+                .add(new Entry("net/minecraftforge/common/capabilities/ICapabilityProvider",
+                        COMPAT + "LegacyICapabilityProvider", Set.of()))
                 .add(new Entry("net/minecraft/network/FriendlyByteBuf$Writer",
                         COMPAT + "LegacyByteBufWriter", Set.of(
                                 "accept(Ljava/lang/Object;Ljava/lang/Object;)V",
@@ -295,9 +297,9 @@ public final class ForgeOwnerMappings {
                         Set.of("apply(Ljava/lang/Object;)Ljava/lang/Object;")))
                 .add(new Entry(FU + "NonNullSupplier", COMPAT + "NonNullSupplier",
                         Set.of("get()Ljava/lang/Object;")))
-                // Forge's capability API (Capability, CapabilityManager, ICapabilityProvider, ...) is intentionally NOT
-                // mapped: NeoForge's BlockCapability/Capabilities/ICapabilityProvider<O,C,T> have different
-                // semantics, and CapabilityToken does not exist. Classes using them stay unmapped and are reported.
+                // Forge capability lookups have no direct NeoForge equivalent. ICapabilityProvider is mapped to a
+                // link-only marker; its unsupported calls are replaced with explicit fail-at-call stubs.
+                // Capability, CapabilityManager and CapabilityToken remain unmapped.
                 .add(registryObject())
                 .add(entry(R + "IForgeRegistry", COMPAT + "IForgeRegistry", registryMembers()))
                 .add(entry(R + "ForgeRegistries", COMPAT + "ForgeRegistries", forgeRegistriesFields(false)))

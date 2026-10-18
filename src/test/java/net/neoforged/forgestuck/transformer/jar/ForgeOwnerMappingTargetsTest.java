@@ -14,6 +14,8 @@ import org.objectweb.asm.Type;
 /** Guards that every default owner mapping points at a real class and every whitelisted member really exists. */
 class ForgeOwnerMappingTargetsTest {
     private static final List<String> OWNERS = List.of(
+            "net/minecraftforge/common/capabilities/ICapabilityProvider",
+            "net/minecraft/network/FriendlyByteBuf$Writer", "net/minecraft/network/FriendlyByteBuf$Reader",
             "net/minecraftforge/registries/RegistryObject", "net/minecraftforge/registries/DeferredRegister",
             "net/minecraftforge/registries/IForgeRegistry", "net/minecraftforge/registries/ForgeRegistries",
             "net/minecraftforge/registries/ForgeRegistries$Keys", "net/minecraftforge/registries/RegisterEvent",
@@ -86,10 +88,11 @@ class ForgeOwnerMappingTargetsTest {
     }
 
     @Test
-    void capabilityApiIsNotMappedToUnrelatedTypes() {
+    void capabilityProviderUsesLinkOnlyCompatWhileOtherCapabilityTypesRemainUnmapped() {
         ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
-        for (String n : List.of("Capability", "CapabilityManager", "ICapabilityProvider", "ICapabilitySerializable",
-                "CapabilityToken")) {
+        assertEquals("net/neoforged/forgestuck/compat/LegacyICapabilityProvider",
+                mappings.get("net/minecraftforge/common/capabilities/ICapabilityProvider").newOwner());
+        for (String n : List.of("Capability", "CapabilityManager", "ICapabilitySerializable", "CapabilityToken")) {
             assertNull(mappings.get("net/minecraftforge/common/capabilities/" + n), n);
         }
     }

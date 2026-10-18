@@ -28,6 +28,8 @@ LegacyArmorMaterial
 LegacyItemPickup
 LegacyByteBufWriter
 LegacyByteBufReader
+LegacyICapabilityProvider
+LegacyEntityDataSerializer
 LegacyAbstractMegaTreeGrower
 LegacyRegistryBuilder
 LegacyStemGrownBlock
