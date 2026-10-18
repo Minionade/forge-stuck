@@ -616,3 +616,36 @@ Mantle uses `IConditionSerializer`, `ICondition`, `ICondition$IContext` (its own
 | Date | Change |
 | --- | --- |
 | 2026-10-17 | t30: client render-tick relay and deferred spawn-egg adapter; committed directly to main at the user’s request. |
+
+## t31: abstract RenderLivingEvent subscriptions and FinalizeSpawn
+
+- Legacy annotated handlers taking the exact RenderLivingEvent base type are
+  kept callable but lose their SubscribeEvent marker. Two generated public
+  forwarding handlers subscribe to Pre/Post and call the original method.
+  Static/instance dispatch, event priority, and receiveCanceled are preserved;
+  existing Pre/Post handlers are not changed. This runs after the existing
+  automatic-instance-subscriber cleanup, preserving its Scala safeguards.
+- Legacy IEventBus.addListener overloads with Consumer or explicit Class route
+  through a registration helper. Only the RenderLivingEvent base type splits
+  into two concrete subscriptions; other types retain native behavior. Inferred
+  consumers use the same TypeResolver as NeoForge Bus 8.0. The same Consumer
+  object is used for both registrations so native unregister remains applicable.
+  Type-erased consumers keep native inference failures. Other abstract event
+  types are deliberately not broadened into arbitrary subclass registrations.
+- Verified render getters and constructors are allowlisted on base/Pre/Post.
+  Ordinary cancellation queries through the base type use Pre's native state;
+  Post is not cancellable and setCanceled on it throws. Mixins and arbitrary
+  method handles to those inherited cancellation helpers are not adapted.
+- `MobSpawnEvent$FinalizeSpawn` maps to native `FinalizeSpawnEvent`, with entity,
+  level/position, difficulty, spawn type/group data, event cancellation and
+  spawn cancellation supported. Existing broken-InnerClasses cleanup handles
+  the nested-to-top-level rename. The old constructor, spawnTag API and
+  BaseSpawner-returning getSpawner are not falsely mapped: NeoForge changed
+  those shapes. Unsupported calls retain existing fail-at-call behavior;
+  unsupported constructors/method handles remain conservatively blocked.
+- New helpers are listed for game-layer relocation; cache version is 31.
+  Compilation and tests were skipped by request. Delivered directly to main.
+
+| Date | Change |
+| --- | --- |
+| 2026-10-18 | t31: concrete render listener registration and FinalizeSpawn mapping; direct-to-main update. |

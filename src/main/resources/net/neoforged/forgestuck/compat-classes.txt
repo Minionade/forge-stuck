@@ -90,3 +90,5 @@ LegacyShearing
 LegacyTickEvent$RenderTickEvent
 LegacyRuntimeBootstrap
 LegacyForgeSpawnEggItem
+LegacyRenderLivingAccess
+LegacyRenderListenerRegistration
