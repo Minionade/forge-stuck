@@ -103,7 +103,7 @@ public class JarTransformer {
 
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
-        return new JarTransformer(List.of(new LegacySpawnPlacementStep(), new LegacyHurtAndShearingStep(), new LegacyAttackAndTreeStep(), new LegacyInstanceSubscriberStep(), new LegacyRenderLivingListenerStep(), new LegacyConditionCodecStep(), new LegacyResourceLocationSubclassStep(), new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new LegacyParticleTypeRewriteStep(), new LegacyTreeDecoratorTypeRewriteStep(), new LegacyEnchantmentSubclassStep(), new LegacyBufferBuilderRewriteStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(),
+        return new JarTransformer(List.of(new LegacySpawnPlacementStep(), new LegacyHurtAndShearingStep(), new LegacyAttackAndTreeStep(), new LegacyInstanceSubscriberStep(), new LegacyRenderLivingListenerStep(), new LegacyConditionCodecStep(), new LegacyResourceLocationSubclassStep(), new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new LegacyParticleTypeRewriteStep(), new LegacyTreeDecoratorTypeRewriteStep(), new LegacyEnchantmentSubclassStep(), new LegacyBufferBuilderRewriteStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(), new ForestryFeatureApiRemapStep(),
                 new ResourceLocationClassTransformStep(), new SrgMemberRemapStep(), new LegacyIngredientRewriteStep(),
                 new GameFieldRepairStep(), new LegacyGameTestGuardStep()));
     }
@@ -221,6 +221,34 @@ public class JarTransformer {
         LOGGER.info("{} transformed jar created: {} ({} ms)", TAG, target, millis);
         progress.transformed(jarName, millis);
         return new Result(target, false);
+    }
+
+    /** Scans legacy method declarations across candidate jars before rewriting cross-mod superclass calls. */
+    public void scanLegacyHierarchy(List<Path> sources) throws IOException {
+        List<SrgMemberRemapStep> remappers = steps.stream()
+                .filter(SrgMemberRemapStep.class::isInstance)
+                .map(SrgMemberRemapStep.class::cast)
+                .toList();
+        if (remappers.isEmpty()) return;
+        for (Path source : sources) {
+            if (!LegacyJarDetector.isLegacyCandidate(source)) continue;
+            try (JarFile jar = new JarFile(source.toFile())) {
+                Enumeration<JarEntry> entries = jar.entries();
+                while (entries.hasMoreElements()) {
+                    JarEntry entry = entries.nextElement();
+                    if (entry.isDirectory() || !entry.getName().endsWith(".class")) continue;
+                    byte[] bytes;
+                    try (InputStream input = jar.getInputStream(entry)) {
+                        bytes = input.readAllBytes();
+                    }
+                    String className = entry.getName()
+                            .substring(0, entry.getName().length() - ".class".length()).replace('/', '.');
+                    for (SrgMemberRemapStep remapper : remappers) {
+                        remapper.scan(className, bytes, null);
+                    }
+                }
+            }
+        }
     }
 
     /** Reports progress of {@link #transformCached}; returns this transformer. */

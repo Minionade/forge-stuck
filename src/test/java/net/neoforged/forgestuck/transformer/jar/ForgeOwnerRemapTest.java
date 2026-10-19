@@ -56,6 +56,124 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void particleProviderLambdaKeepsVanillaParticleOptionsSamType() {
+        String particleOptions = "net/minecraft/core/particles/ParticleOptions";
+        String particleProvider = "net/minecraft/client/particle/ParticleProvider";
+        String simpleParticleType = "net/minecraft/core/particles/SimpleParticleType";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/ParticleProviderFactory", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "provider",
+                "()L" + particleProvider + ";", null, null);
+        method.visitCode();
+        method.visitInvokeDynamicInsn("createParticle", "()L" + particleProvider + ";",
+                new org.objectweb.asm.Handle(Opcodes.H_INVOKESTATIC,
+                        "java/lang/invoke/LambdaMetafactory", "metafactory",
+                        "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;"
+                                + "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;"
+                                + "Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)"
+                                + "Ljava/lang/invoke/CallSite;", false),
+                Type.getMethodType("(L" + particleOptions + ";)Ljava/lang/Object;"),
+                new org.objectweb.asm.Handle(Opcodes.H_INVOKESTATIC, "com/ex/ParticleProviderFactory",
+                        "makeParticle", "(L" + simpleParticleType + ";)Ljava/lang/Object;", false),
+                Type.getMethodType("(L" + simpleParticleType + ";)Ljava/lang/Object;"));
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply(
+                "com.ex.ParticleProviderFactory", writer.toByteArray()));
+        var indy = java.util.Arrays.stream(node.methods.get(0).instructions.toArray())
+                .filter(org.objectweb.asm.tree.InvokeDynamicInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.InvokeDynamicInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        Type samType = (Type) indy.bsmArgs[0];
+        assertEquals("Lnet/minecraft/core/particles/ParticleOptions;",
+                samType.getArgumentTypes()[0].getDescriptor());
+        assertEquals("L" + simpleParticleType + ";",
+                ((Type) indy.bsmArgs[2]).getArgumentTypes()[0].getDescriptor());
+    }
+
+    @Test
+    void remappedForgeLazyCallsUseClassInvocationReferences() {
+        String oldLazy = "net/minecraftforge/common/util/Lazy";
+        String newLazy = "net/neoforged/neoforge/common/util/Lazy";
+        String factory = "(Ljava/util/function/Supplier;)L" + oldLazy + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/LazyCaller", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "probe", "()V", null, null);
+        method.visitCode();
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, oldLazy, "of", factory, true);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, oldLazy, "get", "()Ljava/lang/Object;", true);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(1, 0);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "factoryHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new org.objectweb.asm.Handle(
+                Opcodes.H_INVOKESTATIC, oldLazy, "of", factory, true));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(1, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.LazyCaller", writer.toByteArray()));
+        var calls = java.util.Arrays.stream(node.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertEquals(Opcodes.INVOKESTATIC, calls.get(0).getOpcode());
+        assertEquals(newLazy, calls.get(0).owner);
+        assertFalse(calls.get(0).itf);
+        assertEquals(Opcodes.INVOKEVIRTUAL, calls.get(1).getOpcode());
+        assertEquals(newLazy, calls.get(1).owner);
+        assertFalse(calls.get(1).itf);
+        var handle = (org.objectweb.asm.Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                node.methods.get(1).instructions.getFirst()).cst;
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals(newLazy, handle.getOwner());
+        assertFalse(handle.isInterface());
+    }
+
+    @Test
+    void remapsForgeDynamicBakedModelToNeoForgeApi() {
+        String oldModel = "net/minecraftforge/client/model/IDynamicBakedModel";
+        String newModel = "net/neoforged/neoforge/client/model/IDynamicBakedModel";
+        String getQuads = "(Lnet/minecraft/world/level/block/state/BlockState;"
+                + "Lnet/minecraft/core/Direction;Lnet/minecraft/util/RandomSource;)"
+                + "Ljava/util/List;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/DynamicModel", null,
+                "java/lang/Object", new String[]{oldModel});
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "quads",
+                "(L" + oldModel + ";)Ljava/util/List;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, oldModel, "getQuads", getQuads, true);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = parse(new ForgeOwnerRemapStep().apply("com.ex.DynamicModel", writer.toByteArray()));
+        assertArrayEquals(new String[]{newModel}, node.interfaces.toArray(String[]::new));
+        var call = java.util.Arrays.stream(node.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .filter(insn -> insn.name.equals("getQuads")).findFirst().orElseThrow();
+        assertEquals(newModel, call.owner);
+        assertEquals(getQuads, call.desc);
+        assertTrue(call.itf);
+    }
+
+    @Test
     void legacyBrewingRecipeRegistrationUsesNeoForgeCompatibilityQueue() {
         String owner = "net/minecraftforge/common/brewing/BrewingRecipeRegistry";
         String recipe = "net/minecraftforge/common/brewing/IBrewingRecipe";
@@ -469,6 +587,7 @@ class ForgeOwnerRemapTest {
         assertEquals("(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/effect/MobEffectInstance;"
                 + "Lnet/neoforged/neoforge/common/EffectCure;)V", call.desc);
         assertEquals(Opcodes.ACONST_NULL, instructions.get(instructions.indexOf(call) - 1).getOpcode());
+        assertEquals(5, transformed.methods.get(0).maxStack);
         assertTrue(ForgeOwnerMappings.defaults().remainingOwners(transformedBytes).isEmpty());
     }
 
@@ -1155,6 +1274,36 @@ class ForgeOwnerRemapTest {
     }
 
     @Test
+    void quadConsumerWithOutputCallbackMapsToLegacyAdapterConstructor() {
+        String legacy = "net/minecraftforge/client/model/pipeline/QuadBakingVertexConsumer";
+        String consumer = "java/util/function/Consumer";
+        String adapter = "net/neoforged/forgestuck/compat/LegacyQuadBakingVertexConsumer$Adapter";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/QuadConsumerCompat", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "create",
+                "(L" + consumer + ";)L" + legacy + ";", null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW, legacy);
+        method.visitInsn(Opcodes.DUP);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, legacy, "<init>",
+                "(L" + consumer + ";)V", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new ForgeOwnerRemapStep().apply(
+                "com.ex.QuadConsumerCompat", writer.toByteArray()));
+        MethodInsnNode constructor = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(adapter, constructor.owner);
+        assertEquals("(L" + consumer + ";)V", constructor.desc);
+    }
+
+    @Test
     void overlayIdentityAccessorRedirectsToLegacyTokenAdapter() {
         String owner = "net/minecraftforge/client/event/RenderGuiOverlayEvent$Post";
         ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
@@ -1479,6 +1628,7 @@ class ForgeOwnerRemapTest {
         assertNotNull(call);
         assertEquals("(Lnet/neoforged/bus/api/IEventBus;Ljava/lang/Class;Ljava/util/function/Consumer;"
                 + "Ljava/lang/Class;)V", call.desc);
+        assertTrue(node.methods.get(0).maxStack >= 4);
     }
 
     @Test
@@ -1527,6 +1677,7 @@ class ForgeOwnerRemapTest {
         assertEquals("(Lnet/neoforged/bus/api/IEventBus;Ljava/lang/Class;Lnet/neoforged/bus/api/EventPriority;"
                 + "Ljava/util/function/Consumer;Ljava/lang/Class;)V", call.desc);
         assertFalse(call.desc.contains(";;"));
+        assertTrue(node.methods.get(0).maxStack >= 5);
     }
 
     @Test

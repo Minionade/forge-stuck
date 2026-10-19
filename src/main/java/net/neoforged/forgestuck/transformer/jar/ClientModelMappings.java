@@ -56,7 +56,11 @@ final class ClientModelMappings {
                         "applyingLightmap(I)" + TRANSFORMER,
                         "empty()" + TRANSFORMER,
                         "settingEmissivity(I)" + TRANSFORMER)),
-                entry("model/pipeline/QuadBakingVertexConsumer", Set.of(
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/client/model/pipeline/QuadBakingVertexConsumer",
+                        "net/neoforged/forgestuck/compat/LegacyQuadBakingVertexConsumer$Adapter",
+                        Set.of(
+                        "<init>(Ljava/util/function/Consumer;)V",
                         "setDirection(Lnet/minecraft/core/Direction;)V",
                         "setHasAmbientOcclusion(Z)V",
                         "setShade(Z)V",

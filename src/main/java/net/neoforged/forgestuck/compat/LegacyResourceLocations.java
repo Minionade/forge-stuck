@@ -15,6 +15,12 @@ public final class LegacyResourceLocations {
         return ResourceLocation.parse(id).getPath();
     }
 
+    public static String[] split(String id, char separator) {
+        int index = id.indexOf(separator);
+        if (index <= 0) return new String[] {ResourceLocation.DEFAULT_NAMESPACE, id};
+        return new String[] {id.substring(0, index), id.substring(index + 1)};
+    }
+
     /** Legacy {@code ResourceLocation(String,String)} validated both parts; the 1.21 private constructor does not. */
     public static void validate(String namespace, String path) {
         ResourceLocation.fromNamespaceAndPath(namespace, path);

@@ -8,5 +8,8 @@ public final class LegacyRuntimeBootstrap {
         LegacyHurtBridge.install();
         // The existing installer guards duplicate registration and loads client hooks only on Dist.CLIENT.
         LegacyTickBridge.install();
+        var modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+        LegacyToolStackItemPredicateAdapter.install(modEventBus);
+        LegacyLootFunctionRegistration.install(modEventBus);
     }
 }

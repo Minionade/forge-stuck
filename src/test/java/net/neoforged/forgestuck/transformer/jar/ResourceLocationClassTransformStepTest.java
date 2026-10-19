@@ -5,9 +5,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
@@ -67,6 +69,40 @@ class ResourceLocationClassTransformStepTest {
         assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
         assertEquals("parse", call.name);
         assertEquals("(Ljava/lang/String;)L" + RL + ";", call.desc);
+    }
+
+    @Test
+    void rewritesResourceLocationConstructorMethodReference() {
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/example/ResourceLocationReference", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "factory",
+                "()Ljava/util/function/Function;", null, null);
+        method.visitCode();
+        method.visitInvokeDynamicInsn("apply", "()Ljava/util/function/Function;",
+                new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory",
+                        "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;"
+                                + "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;"
+                                + "Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;", false),
+                org.objectweb.asm.Type.getMethodType("(Ljava/lang/Object;)Ljava/lang/Object;"),
+                new Handle(Opcodes.H_NEWINVOKESPECIAL, RL, "<init>", "(Ljava/lang/String;)V", false),
+                org.objectweb.asm.Type.getMethodType("(Ljava/lang/String;)L" + RL + ";"));
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(step.apply("com.example.ResourceLocationReference", writer.toByteArray()))
+                .accept(transformed, 0);
+        InvokeDynamicInsnNode indy = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(InvokeDynamicInsnNode.class::isInstance)
+                .map(InvokeDynamicInsnNode.class::cast).findFirst().orElseThrow();
+        Handle implementation = (Handle) indy.bsmArgs[1];
+        assertEquals(Opcodes.H_INVOKESTATIC, implementation.getTag());
+        assertEquals(RL, implementation.getOwner());
+        assertEquals("parse", implementation.getName());
+        assertEquals("(Ljava/lang/String;)L" + RL + ";", implementation.getDesc());
     }
 
     @Test

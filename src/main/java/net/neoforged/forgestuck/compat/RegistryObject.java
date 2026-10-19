@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Stream;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
@@ -17,8 +18,19 @@ import net.neoforged.neoforge.registries.DeferredHolder;
  * overloads that DeferredHolder does not provide.
  */
 public class RegistryObject<T> extends DeferredHolder<T, T> {
+    private final Supplier<T> value;
+    private final BooleanSupplier bound;
+
     protected RegistryObject(ResourceKey<T> key) {
         super(key);
+        this.value = null;
+        this.bound = null;
+    }
+
+    private RegistryObject(ResourceKey<T> key, Supplier<T> value, BooleanSupplier bound) {
+        super(key);
+        this.value = value;
+        this.bound = bound;
     }
 
     public static <T, U extends T> RegistryObject<U> create(ResourceLocation name,
@@ -33,6 +45,10 @@ public class RegistryObject<T> extends DeferredHolder<T, T> {
 
     public static <T, U extends T> RegistryObject<U> create(ResourceLocation name, IForgeRegistry<T> registry) {
         return new RegistryObject<>(castKey(ResourceKey.create(registry.getRegistryKey(), name)));
+    }
+
+    public static <T, U extends T> RegistryObject<U> wrap(DeferredHolder<T, U> holder) {
+        return new RegistryObject<>(castKey(holder.getKey()), holder::get, holder::isBound);
     }
 
     @SuppressWarnings("unchecked")
@@ -73,11 +89,26 @@ public class RegistryObject<T> extends DeferredHolder<T, T> {
         return isPresent() ? Optional.of(this) : Optional.empty();
     }
 
+    @Override
+    public T value() {
+        return value == null ? super.value() : value.get();
+    }
+
+    @Override
+    public Optional<T> asOptional() {
+        return isBound() ? Optional.of(value()) : Optional.empty();
+    }
+
+    @Override
+    public boolean isBound() {
+        return bound == null ? super.isBound() : bound.getAsBoolean();
+    }
+
     /** Parity with Forge: {@code get()} on an unregistered object throws a NullPointerException with this message. */
     @Override
     public T get() {
         try {
-            return super.get();
+            return value == null ? super.get() : value.get();
         } catch (NullPointerException e) {
             throw new NullPointerException("Registry Object not present: " + getId());
         }

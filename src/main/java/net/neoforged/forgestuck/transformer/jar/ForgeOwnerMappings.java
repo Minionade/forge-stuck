@@ -87,6 +87,7 @@ public final class ForgeOwnerMappings {
         String dr = "L" + R + "DeferredRegister;";
         String ro = "L" + R + "RegistryObject;";
         ForgeOwnerMappings mappings = new ForgeOwnerMappings()
+                .add("net/minecraft/world/entity/MobType", COMPAT + "LegacyMobType")
                 .add(new Entry("net/minecraftforge/eventbus/api/IGenericEvent",
                         COMPAT + "LegacyIGenericEvent", Set.of(
                                 "getGenericType()Ljava/lang/reflect/Type;")))
@@ -142,6 +143,8 @@ public final class ForgeOwnerMappings {
                                 "get()Lnet/minecraft/client/renderer/RenderType;")))
                 .add(new Entry("net/minecraftforge/client/model/ForgeFaceData",
                         "net/neoforged/neoforge/client/model/ExtraFaceData", Set.of("blockLight()I")))
+                .add("net/minecraftforge/client/model/IDynamicBakedModel",
+                        "net/neoforged/neoforge/client/model/IDynamicBakedModel")
                 .add(new Entry("net/minecraftforge/common/ForgeI18n", COMPAT + "LegacyForgeI18n", Set.of(
                         "getPattern(Ljava/lang/String;)Ljava/lang/String;")))
                 .add(new Entry("net/minecraftforge/forgespi/language/IModInfo",

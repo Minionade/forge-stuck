@@ -6,6 +6,8 @@ import java.util.WeakHashMap;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.component.CustomData;
 
 /**
@@ -63,6 +65,10 @@ public final class LegacyItemStackShim {
         CustomData fresh = CustomData.of(tag);
         stack.set(DataComponents.CUSTOM_DATA, fresh);
         OWNED.put(stack, fresh);
+    }
+
+    public static FoodProperties getFoodProperties(Item item) {
+        return item.components().get(DataComponents.FOOD);
     }
 
     private static CustomData owned(ItemStack stack, CustomData current) {

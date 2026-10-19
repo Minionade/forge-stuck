@@ -47,8 +47,13 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             "(Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/crafting/RecipeType;)I";
     private static final String ITEM_STACK_EXTENSION =
             "net/neoforged/neoforge/common/extensions/IItemStackExtension";
+    private static final String LEGACY_LAZY = "net/minecraftforge/common/util/Lazy";
     private static final String BURN_TIME_EXTENSION_DESC =
             "(Lnet/minecraft/world/item/crafting/RecipeType;)I";
+    private static final String LEGACY_PARTICLE_OPTIONS =
+            "net/neoforged/forgestuck/compat/LegacyParticleOptions";
+    private static final String PARTICLE_OPTIONS = "net/minecraft/core/particles/ParticleOptions";
+    private static final String PARTICLE_PROVIDER = "net/minecraft/client/particle/ParticleProvider";
 
     private final ForgeOwnerMappings mappings;
 
@@ -92,6 +97,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             replaced += rewriteGenericListenerCalls(node);
             replaced += rewriteByteBufCodecCalls(node);
             replaced += rewriteLegacyEntityDataSerializerFactories(node);
+            replaced += rewriteLegacyLazyInvocationKinds(node);
         }
 
         if (!mixin) replaced += replaceUnsupported(className, node, report);
@@ -120,6 +126,97 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         if (counts.isEmpty() && replaced == 0) return bytes;
         if (report != null) report.record(counts, mappings, adapted[0]);
         LOGGER.debug("{} remapped Forge owners in {}: {}", TAG, className, counts);
+        return restoreParticleProviderSamParameter(writer.toByteArray());
+    }
+
+    private static int rewriteLegacyLazyInvocationKinds(ClassNode node) {
+        String factoryDesc = "(Ljava/util/function/Supplier;)L" + LEGACY_LAZY + ";";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (instruction instanceof MethodInsnNode call && LEGACY_LAZY.equals(call.owner)) {
+                    if (call.getOpcode() == Opcodes.INVOKESTATIC
+                            && call.name.equals("of")
+                            && call.desc.equals(factoryDesc)
+                            && call.itf) {
+                        call.itf = false;
+                        rewritten++;
+                    } else if (call.getOpcode() == Opcodes.INVOKEINTERFACE
+                            && call.name.equals("get")
+                            && call.desc.equals("()Ljava/lang/Object;")) {
+                        call.setOpcode(Opcodes.INVOKEVIRTUAL);
+                        call.itf = false;
+                        rewritten++;
+                    }
+                } else if (instruction instanceof InvokeDynamicInsnNode indy) {
+                    for (int i = 0; i < indy.bsmArgs.length; i++) {
+                        if (indy.bsmArgs[i] instanceof Handle handle) {
+                            Handle replacement = rewriteLegacyLazyHandle(handle, factoryDesc);
+                            if (replacement != null) {
+                                indy.bsmArgs[i] = replacement;
+                                rewritten++;
+                            }
+                        }
+                    }
+                } else if (instruction instanceof LdcInsnNode ldc && ldc.cst instanceof Handle handle) {
+                    Handle replacement = rewriteLegacyLazyHandle(handle, factoryDesc);
+                    if (replacement != null) {
+                        ldc.cst = replacement;
+                        rewritten++;
+                    }
+                }
+            }
+        }
+        return rewritten;
+    }
+
+    private static Handle rewriteLegacyLazyHandle(Handle handle, String factoryDesc) {
+        if (!LEGACY_LAZY.equals(handle.getOwner())) return null;
+        if (handle.getTag() == Opcodes.H_INVOKESTATIC
+                && handle.getName().equals("of")
+                && handle.getDesc().equals(factoryDesc)
+                && handle.isInterface()) {
+            return new Handle(Opcodes.H_INVOKESTATIC, LEGACY_LAZY, "of", factoryDesc, false);
+        }
+        if (handle.getTag() == Opcodes.H_INVOKEINTERFACE
+                && handle.getName().equals("get")
+                && handle.getDesc().equals("()Ljava/lang/Object;")) {
+            return new Handle(Opcodes.H_INVOKEVIRTUAL, LEGACY_LAZY, "get",
+                    "()Ljava/lang/Object;", false);
+        }
+        return null;
+    }
+
+    private static byte[] restoreParticleProviderSamParameter(byte[] bytes) {
+        ClassNode node = new ClassNode();
+        new ClassReader(bytes).accept(node, 0);
+        boolean modified = false;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof InvokeDynamicInsnNode indy)
+                        || indy.bsmArgs == null
+                        || indy.bsmArgs.length == 0
+                        || !indy.bsm.getOwner().equals("java/lang/invoke/LambdaMetafactory")
+                        || !(indy.bsmArgs[0] instanceof Type samType)
+                        || Type.getReturnType(indy.desc).getSort() != Type.OBJECT
+                        || !PARTICLE_PROVIDER.equals(Type.getReturnType(indy.desc).getInternalName())) {
+                    continue;
+                }
+                Type[] arguments = samType.getArgumentTypes();
+                if (arguments.length == 0
+                        || arguments[0].getSort() != Type.OBJECT
+                        || !LEGACY_PARTICLE_OPTIONS.equals(arguments[0].getInternalName())) {
+                    continue;
+                }
+                arguments[0] = Type.getObjectType(PARTICLE_OPTIONS);
+                indy.bsmArgs[0] = Type.getMethodType(
+                        Type.getMethodDescriptor(samType.getReturnType(), arguments));
+                modified = true;
+            }
+        }
+        if (!modified) return bytes;
+        ClassWriter writer = new ClassWriter(0);
+        node.accept(writer);
         return writer.toByteArray();
     }
 
@@ -508,6 +605,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                             + descriptor.substring(1, descriptor.length() - 2)
                             + "Ljava/lang/Class;)V";
                     call.itf = false;
+                    method.maxStack = Math.max(method.maxStack, hasPriority ? 5 : 4);
                 }
                 rewritten++;
             }
@@ -674,6 +772,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                         || !constructor.equals(call.desc)) continue;
                 method.instructions.insertBefore(call, new InsnNode(Opcodes.ACONST_NULL));
                 call.desc = targetConstructor;
+                method.maxStack++;
                 rewritten++;
             }
         }
