@@ -22,4 +22,5 @@ public interface ClassTransformStep {
      * collect jar-wide facts so all classes of one jar are rewritten consistently.
      */
     default void scan(String className, byte[] bytes, OwnerRemapReport report) {}
+
 }

@@ -35,6 +35,14 @@ public final class LegacyDeferredRegister<T> {
         this.datapack = datapack;
     }
 
+    public static <T> LegacyDeferredRegister<T> wrap(DeferredRegister<T> delegate) {
+        return new LegacyDeferredRegister<>(delegate);
+    }
+
+    public static <T> LegacyDeferredRegister<T> wrapNullable(DeferredRegister<T> delegate) {
+        return delegate == null ? null : wrap(delegate);
+    }
+
     public static <B> LegacyDeferredRegister<B> create(IForgeRegistry<B> registry, String modid) {
         return new LegacyDeferredRegister<>(DeferredRegister.create(registry.getRegistryKey(), modid),
                 registry instanceof DatapackRegistryView<?> view ? view : null);
@@ -61,8 +69,7 @@ public final class LegacyDeferredRegister<T> {
 
     @SuppressWarnings("unchecked")
     private <I extends T> RegistryObject<I> track(String name, net.neoforged.neoforge.registries.DeferredHolder<T, I> holder) {
-        RegistryObject<I> object = (RegistryObject<I>) RegistryObject.create(holder.getId(), delegate.getRegistryKey(),
-                delegate.getNamespace());
+        RegistryObject<I> object = RegistryObject.wrap(holder);
         entries.put(holder.getId(), object);
         return object;
     }

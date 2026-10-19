@@ -2,10 +2,13 @@ package net.neoforged.forgestuck.transformer.jar;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FrameNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
@@ -35,6 +38,22 @@ public class ResourceLocationClassTransformStep implements ClassTransformStep {
                         && RL.equals(call.owner) && "<init>".equals(call.name)
                         && (CTOR_ONE.equals(call.desc) || CTOR_TWO.equals(call.desc))) {
                     modified |= rewrite(method, call);
+                } else if (insn instanceof InvokeDynamicInsnNode indy) {
+                    for (int i = 0; i < indy.bsmArgs.length; i++) {
+                        if (indy.bsmArgs[i] instanceof Handle handle) {
+                            Handle replacement = rewriteConstructorHandle(handle);
+                            if (replacement != null) {
+                                indy.bsmArgs[i] = replacement;
+                                modified = true;
+                            }
+                        }
+                    }
+                } else if (insn instanceof LdcInsnNode ldc && ldc.cst instanceof Handle handle) {
+                    Handle replacement = rewriteConstructorHandle(handle);
+                    if (replacement != null) {
+                        ldc.cst = replacement;
+                        modified = true;
+                    }
                 }
             }
         }
@@ -73,5 +92,19 @@ public class ResourceLocationClassTransformStep implements ClassTransformStep {
                 one ? "parse" : "fromNamespaceAndPath",
                 one ? "(Ljava/lang/String;)" + RL_DESC : "(Ljava/lang/String;Ljava/lang/String;)" + RL_DESC, false));
         return true;
+    }
+
+    private static Handle rewriteConstructorHandle(Handle handle) {
+        if (handle.getTag() != Opcodes.H_NEWINVOKESPECIAL
+                || !RL.equals(handle.getOwner())
+                || !"<init>".equals(handle.getName())) {
+            return null;
+        }
+        boolean one = CTOR_ONE.equals(handle.getDesc());
+        if (!one && !CTOR_TWO.equals(handle.getDesc())) return null;
+        return new Handle(Opcodes.H_INVOKESTATIC, RL, one ? "parse" : "fromNamespaceAndPath",
+                one ? "(Ljava/lang/String;)" + RL_DESC
+                        : "(Ljava/lang/String;Ljava/lang/String;)" + RL_DESC,
+                false);
     }
 }

@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Proxy;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
@@ -23,6 +24,11 @@ public final class LegacyEnchantmentRegistry {
     private LegacyEnchantmentRegistry() {}
 
     public static final Registry<Enchantment> ENCHANTMENT = create(LegacyEnchantmentRegistry::currentAccess);
+
+    public static boolean contains(Set<?> allowed, Object enchantment) {
+        if (!(enchantment instanceof Enchantment value)) return allowed.contains(enchantment);
+        return ENCHANTMENT.getResourceKey(value).map(allowed::contains).orElse(false);
+    }
 
     @SuppressWarnings("unchecked")
     static Registry<Enchantment> create(Supplier<Optional<RegistryAccess>> access) {

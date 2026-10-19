@@ -94,7 +94,11 @@ public class ForgeStuckCandidateLocator implements IModFileCandidateLocator {
         transformer.withProgress(progress);
         progress.begin();
         try {
+            transformer.scanLegacyHierarchy(jars);
             processJars(context, pipeline, jars, transformer, cacheDir, progress, activeCacheFiles);
+        } catch (IOException e) {
+            LOGGER.error("{} failed to scan legacy superclass declarations; refusing to transform candidates: {}",
+                    TAG, e.toString(), e);
         } finally {
             progress.end();
             LOGGER.info("{} done: {} transformed ({} ms), {} cached", TAG, progress.transformedCount(),
