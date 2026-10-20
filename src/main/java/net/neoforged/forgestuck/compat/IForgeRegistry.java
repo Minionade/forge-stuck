@@ -24,6 +24,14 @@ public interface IForgeRegistry<V> extends Iterable<V> {
 
     V getValue(ResourceLocation key);
 
+    default int getId(V value) {
+        throw new UnsupportedOperationException("Registry " + getRegistryName() + " does not expose numeric IDs");
+    }
+
+    default V byId(int id) {
+        throw new UnsupportedOperationException("Registry " + getRegistryName() + " does not expose numeric IDs");
+    }
+
     ResourceLocation getKey(V value);
 
     Optional<ResourceKey<V>> getResourceKey(V value);

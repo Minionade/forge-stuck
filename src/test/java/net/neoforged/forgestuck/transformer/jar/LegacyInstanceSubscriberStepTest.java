@@ -2,7 +2,6 @@ package net.neoforged.forgestuck.transformer.jar;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -52,9 +51,11 @@ class LegacyInstanceSubscriberStepTest {
     }
 
     @Test
-    void instanceOnlyModuleClassLosesTheClassAnnotationAndRegistersOnARealBus() throws Exception {
+    void scalaModuleInstanceHandlerGetsAStaticBridgeForAutomaticRegistration() {
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
         cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/Mod$", null, "java/lang/Object", null);
+        cw.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
+                "MODULE$", "Lcom/ex/Mod$;", null, null).visitEnd();
         cw.visitAnnotation("Lnet/neoforged/fml/common/EventBusSubscriber;", true).visitEnd();
         var m = cw.visitMethod(Opcodes.ACC_PUBLIC, "on", "(Lnet/neoforged/bus/api/Event;)V", null, null);
         m.visitAnnotation("Lnet/neoforged/bus/api/SubscribeEvent;", true).visitEnd();
@@ -64,23 +65,50 @@ class LegacyInstanceSubscriberStepTest {
         m.visitEnd();
         cw.visitEnd();
         byte[] in = cw.toByteArray();
-        var bus = net.neoforged.bus.api.BusBuilder.builder().build();
-        Class<?> before = define(in);
-        assertThrows(IllegalArgumentException.class, () -> bus.register(before));
-
         byte[] out = new LegacyInstanceSubscriberStep().apply("com.ex.Mod$", in);
         ClassNode n = new ClassNode();
         new ClassReader(out).accept(n, 0);
-        assertTrue(n.visibleAnnotations == null || n.visibleAnnotations.isEmpty());
-        assertEquals("", annotated(out));
+        assertTrue(n.visibleAnnotations != null && n.visibleAnnotations.stream()
+                .anyMatch(annotation -> annotation.desc.equals("Lnet/neoforged/fml/common/EventBusSubscriber;")));
+        assertEquals("forgestuck$event$on$0", annotated(out));
+        var bridge = n.methods.stream().filter(method -> method.name.equals("forgestuck$event$on$0")
+                && (method.access & Opcodes.ACC_STATIC) != 0).findFirst().orElseThrow();
+        assertTrue(bridge.visibleAnnotations.stream()
+                .anyMatch(annotation -> annotation.desc.equals("Lnet/neoforged/bus/api/SubscribeEvent;")));
         assertSame(out, new LegacyInstanceSubscriberStep().apply("com.ex.Mod$", out), "idempotent");
     }
 
-    private static Class<?> define(byte[] bytes) {
-        return new ClassLoader(LegacyInstanceSubscriberStepTest.class.getClassLoader()) {
-            Class<?> def() {
-                return defineClass(null, bytes, 0, bytes.length);
-            }
-        }.def();
+    @Test
+    void scalaModuleDoesNotDuplicateItsStaticCompanionHandlers() {
+        ClassWriter companionWriter = new ClassWriter(0);
+        companionWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/Mod", null, "java/lang/Object", null);
+        companionWriter.visitAnnotation("Lnet/neoforged/fml/common/EventBusSubscriber;", true).visitEnd();
+        var staticHandler = companionWriter.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "on",
+                "(Ljava/lang/Object;)V", null, null);
+        staticHandler.visitAnnotation("Lnet/neoforged/bus/api/SubscribeEvent;", true).visitEnd();
+        staticHandler.visitEnd();
+        companionWriter.visitEnd();
+
+        ClassWriter moduleWriter = new ClassWriter(0);
+        moduleWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "com/ex/Mod$", null, "java/lang/Object", null);
+        moduleWriter.visitField(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC | Opcodes.ACC_FINAL,
+                "MODULE$", "Lcom/ex/Mod$;", null, null).visitEnd();
+        moduleWriter.visitAnnotation("Lnet/neoforged/fml/common/EventBusSubscriber;", true).visitEnd();
+        var instanceHandler = moduleWriter.visitMethod(Opcodes.ACC_PUBLIC, "on", "(Ljava/lang/Object;)V", null, null);
+        instanceHandler.visitAnnotation("Lnet/neoforged/bus/api/SubscribeEvent;", true).visitEnd();
+        instanceHandler.visitEnd();
+        moduleWriter.visitEnd();
+
+        LegacyInstanceSubscriberStep step = new LegacyInstanceSubscriberStep();
+        step.scan("com.ex.Mod", companionWriter.toByteArray(), null);
+        byte[] transformed = step.apply("com.ex.Mod$", moduleWriter.toByteArray());
+        ClassNode node = new ClassNode();
+        new ClassReader(transformed).accept(node, 0);
+
+        assertTrue(node.visibleAnnotations == null || node.visibleAnnotations.stream()
+                .noneMatch(annotation -> annotation.desc.equals("Lnet/neoforged/fml/common/Mod$EventBusSubscriber;")
+                        || annotation.desc.equals("Lnet/neoforged/fml/common/EventBusSubscriber;")));
+        assertTrue(node.methods.stream().noneMatch(method -> method.name.startsWith("forgestuck$event$")));
     }
+
 }

@@ -2,7 +2,7 @@ package net.neoforged.forgestuck.transformer.jar;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Proxy;
@@ -12,7 +12,9 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.neoforged.forgestuck.compat.LegacyEnchantmentRegistry;
+import net.neoforged.forgestuck.testsupport.TestBootstrap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.objectweb.asm.ClassWriter;
@@ -20,12 +22,24 @@ import org.objectweb.asm.Opcodes;
 
 class LegacyEnchantmentRegistryTest {
     @Test
-    void keyNeedsNoAccessAndLookupsFailPerCallWithoutServer() {
+    void keyAndVanillaLookupsWorkWithoutWorldRegistryAccess() {
+        TestBootstrap.init();
         Registry<?> r = LegacyEnchantmentRegistry.ENCHANTMENT;
         assertEquals(Registries.ENCHANTMENT, r.key());
-        var ex = assertThrows(UnsupportedOperationException.class,
-                () -> r.containsKey(ResourceLocation.withDefaultNamespace("sharpness")));
-        assertTrue(ex.getMessage().contains("RegistryAccess"), ex.getMessage());
+        ResourceLocation sharpness = ResourceLocation.withDefaultNamespace("sharpness");
+        assertTrue(r.containsKey(sharpness));
+        assertTrue(r.get(sharpness) != null);
+        assertFalse(r.containsKey(ResourceLocation.withDefaultNamespace("not_a_vanilla_enchantment")));
+    }
+
+    @Test
+    void createsEnchantmentInstancesWithRegisteredHolders() {
+        TestBootstrap.init();
+        var enchantment = LegacyEnchantmentRegistry.ENCHANTMENT
+                .get(ResourceLocation.withDefaultNamespace("sharpness"));
+        EnchantmentInstance instance = LegacyEnchantmentRegistry.createInstance(enchantment, 3);
+        assertSame(enchantment, instance.enchantment.value());
+        assertEquals(3, instance.level);
     }
 
     @Test

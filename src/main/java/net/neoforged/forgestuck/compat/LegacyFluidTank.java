@@ -7,6 +7,10 @@ import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 public final class LegacyFluidTank {
     private LegacyFluidTank() {}
 
+    public static void setFluid(FluidTank tank, FluidStack fluid) {
+        tank.setFluid(fluid == null ? FluidStack.EMPTY : fluid);
+    }
+
     public static FluidTank readFromNBT(FluidTank tank, CompoundTag nbt) {
         if (nbt.contains("Fluid", CompoundTag.TAG_COMPOUND)) {
             tank.setFluid(LegacyFluidStack.loadFluidStackFromNBT(nbt.getCompound("Fluid")));

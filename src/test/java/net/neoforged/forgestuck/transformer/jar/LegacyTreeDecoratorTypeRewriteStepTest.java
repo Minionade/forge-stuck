@@ -1,5 +1,6 @@
 package net.neoforged.forgestuck.transformer.jar;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Arrays;
@@ -13,7 +14,7 @@ import org.objectweb.asm.tree.MethodInsnNode;
 
 class LegacyTreeDecoratorTypeRewriteStepTest {
     @Test
-    void wrapsLegacyCodecInNamedMapCodecField() {
+    void adaptsLegacyCodecToMapCodecWithoutChangingItsDataShape() {
         String type = "net/minecraft/world/level/levelgen/feature/treedecorators/TreeDecoratorType";
         ClassWriter writer = new ClassWriter(0);
         writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyDecoratorType", null, type, null);
@@ -33,13 +34,18 @@ class LegacyTreeDecoratorTypeRewriteStepTest {
         ClassNode node = new ClassNode();
         new ClassReader(transformed).accept(node, 0);
         var instructions = node.methods.get(0).instructions.toArray();
-        assertEquals("data", Arrays.stream(instructions).filter(LdcInsnNode.class::isInstance)
-                .map(LdcInsnNode.class::cast).findFirst().orElseThrow().cst);
+        var conversion = Arrays.stream(instructions).filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).filter(method -> method.name.equals("assumeMapUnsafe"))
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, conversion.getOpcode());
+        assertEquals("com/mojang/serialization/MapCodec", conversion.owner);
+        assertEquals("(Lcom/mojang/serialization/Codec;)Lcom/mojang/serialization/MapCodec;", conversion.desc);
         var call = Arrays.stream(instructions).filter(MethodInsnNode.class::isInstance)
                 .map(MethodInsnNode.class::cast).filter(method -> method.name.equals("<init>"))
                 .findFirst().orElseThrow();
         assertEquals("(Lcom/mojang/serialization/MapCodec;)V", call.desc);
-        assertEquals(3, node.methods.get(0).maxStack);
+        assertFalse(Arrays.stream(instructions).anyMatch(LdcInsnNode.class::isInstance));
+        assertEquals(2, node.methods.get(0).maxStack);
     }
 
     @Test
@@ -73,11 +79,11 @@ class LegacyTreeDecoratorTypeRewriteStepTest {
         ClassNode node = new ClassNode();
         new ClassReader(new LegacyTreeDecoratorTypeRewriteStep().apply("sample.LegacyDecoratorType",
                 writer.toByteArray())).accept(node, 0);
-        assertEquals(4, node.methods.get(1).maxStack);
+        assertEquals(3, node.methods.get(1).maxStack);
     }
 
     @Test
-    void wrapsLegacyRootPlacerCodecInNamedMapCodecField() {
+    void adaptsLegacyRootPlacerCodecToMapCodecWithoutChangingItsDataShape() {
         String type = "net/minecraft/world/level/levelgen/feature/rootplacers/RootPlacerType";
         ClassWriter writer = new ClassWriter(0);
         writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyRootPlacerType", null, type, null);
@@ -96,12 +102,17 @@ class LegacyTreeDecoratorTypeRewriteStepTest {
         new ClassReader(new LegacyTreeDecoratorTypeRewriteStep().apply("sample.LegacyRootPlacerType",
                 writer.toByteArray())).accept(node, 0);
         var instructions = node.methods.get(0).instructions.toArray();
-        assertEquals("data", Arrays.stream(instructions).filter(LdcInsnNode.class::isInstance)
-                .map(LdcInsnNode.class::cast).findFirst().orElseThrow().cst);
+        var conversion = Arrays.stream(instructions).filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).filter(method -> method.name.equals("assumeMapUnsafe"))
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, conversion.getOpcode());
+        assertEquals("com/mojang/serialization/MapCodec", conversion.owner);
+        assertEquals("(Lcom/mojang/serialization/Codec;)Lcom/mojang/serialization/MapCodec;", conversion.desc);
         var call = Arrays.stream(instructions).filter(MethodInsnNode.class::isInstance)
                 .map(MethodInsnNode.class::cast).filter(method -> method.name.equals("<init>"))
                 .findFirst().orElseThrow();
         assertEquals("(Lcom/mojang/serialization/MapCodec;)V", call.desc);
-        assertEquals(3, node.methods.get(0).maxStack);
+        assertFalse(Arrays.stream(instructions).anyMatch(LdcInsnNode.class::isInstance));
+        assertEquals(2, node.methods.get(0).maxStack);
     }
 }

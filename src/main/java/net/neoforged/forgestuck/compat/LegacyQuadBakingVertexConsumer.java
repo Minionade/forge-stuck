@@ -18,12 +18,14 @@ public final class LegacyQuadBakingVertexConsumer {
 
         @Override
         public com.mojang.blaze3d.vertex.VertexConsumer addVertex(float x, float y, float z) {
-            super.addVertex(x, y, z);
+            return super.addVertex(x, y, z);
+        }
+
+        public void endLegacyVertex() {
             if (++vertices == 4) {
                 output.accept(bakeQuad());
                 vertices = 0;
             }
-            return this;
         }
     }
 

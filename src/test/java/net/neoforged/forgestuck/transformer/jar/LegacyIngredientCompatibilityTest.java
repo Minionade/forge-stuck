@@ -1,10 +1,17 @@
 package net.neoforged.forgestuck.transformer.jar;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonObject;
 import java.util.Arrays;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.CustomData;
+import net.neoforged.forgestuck.compat.LegacyStrictNBTIngredient;
 import org.junit.jupiter.api.Test;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -28,6 +35,41 @@ class LegacyIngredientCompatibilityTest {
         ForgeOwnerMappings mappings = ForgeOwnerMappings.defaults();
         assertNotNull(mappings.get("net/minecraftforge/common/crafting/AbstractIngredient"));
         assertNotNull(mappings.get(LEGACY_SERIALIZER));
+        assertNotNull(mappings.get("net/minecraftforge/common/crafting/StrictNBTIngredient"));
+        assertNotNull(mappings.get("net/minecraftforge/common/crafting/StrictNBTIngredient$Serializer"));
+    }
+
+    @Test
+    void strictNbtIngredientMatchesItemAndExactComponents() {
+        ItemStack expected = new ItemStack(Items.STONE);
+        CompoundTag tag = new CompoundTag();
+        tag.putString("marker", "expected");
+        expected.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        LegacyStrictNBTIngredient ingredient = new LegacyStrictNBTIngredient(expected);
+
+        assertTrue(ingredient.test(expected.copyWithCount(4)));
+        assertFalse(ingredient.test(new ItemStack(Items.STONE)));
+        ItemStack changed = expected.copy();
+        CompoundTag changedTag = new CompoundTag();
+        changedTag.putString("marker", "different");
+        changed.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, CustomData.of(changedTag));
+        assertFalse(ingredient.test(changed));
+    }
+
+    @Test
+    void strictNbtSerializerPreservesLegacyItemAndNbtJson() {
+        JsonObject json = new JsonObject();
+        json.addProperty("item", "minecraft:stone");
+        json.addProperty("nbt", "{marker:\"expected\"}");
+
+        var parsed = LegacyStrictNBTIngredient.Serializer.INSTANCE.parse(json);
+        assertNotNull(parsed.getCustomIngredient());
+        var expected = new ItemStack(Items.STONE);
+        CompoundTag tag = new CompoundTag();
+        tag.putString("marker", "expected");
+        expected.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        assertTrue(parsed.test(expected));
+        assertFalse(parsed.test(new ItemStack(Items.STONE)));
     }
 
     @Test
@@ -78,6 +120,34 @@ class LegacyIngredientCompatibilityTest {
                 .filter(call -> call.owner.equals("net/neoforged/forgestuck/compat/LegacyIngredientBridge"))
                 .findFirst().orElseThrow();
         assertEquals(Opcodes.INVOKESTATIC, bridge.getOpcode());
+        assertEquals("asVanilla", bridge.name);
+        assertEquals("(Ljava/lang/Object;)L" + INGREDIENT + ";", bridge.desc);
+    }
+
+    @Test
+    void wrapsCountIngredientsBeforeReturningVanillaIngredient() {
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "cofh/lib/util/recipes/RecipeJsonUtils", null,
+                "java/lang/Object", null);
+        var parse = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "parseIngredient",
+                "()L" + INGREDIENT + ";", null, null);
+        parse.visitCode();
+        parse.visitTypeInsn(Opcodes.NEW, "cofh/lib/util/crafting/IngredientWithCount");
+        parse.visitInsn(Opcodes.DUP);
+        parse.visitMethodInsn(Opcodes.INVOKESPECIAL, "cofh/lib/util/crafting/IngredientWithCount", "<init>",
+                "()V", false);
+        parse.visitInsn(Opcodes.ARETURN);
+        parse.visitMaxs(0, 0);
+        parse.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = parse(new LegacyIngredientRewriteStep()
+                .apply("cofh.lib.util.recipes.RecipeJsonUtils", writer.toByteArray()));
+        MethodInsnNode bridge = Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .filter(call -> call.owner.equals("net/neoforged/forgestuck/compat/LegacyIngredientBridge"))
+                .findFirst().orElseThrow();
+        assertEquals("net/neoforged/forgestuck/compat/LegacyIngredientBridge", bridge.owner);
         assertEquals("asVanilla", bridge.name);
         assertEquals("(Ljava/lang/Object;)L" + INGREDIENT + ";", bridge.desc);
     }

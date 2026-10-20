@@ -26,8 +26,10 @@ public final class ForgeOwnerMappings {
 
     private final Map<String, Entry> entries = new LinkedHashMap<>();
     private final Map<FieldKey, String> fieldAliases = new java.util.HashMap<>();
+    private final Map<MemberKey, String> memberAliases = new java.util.HashMap<>();
 
     private record FieldKey(String owner, String name, String descriptor) {}
+    private record MemberKey(String owner, String name, String descriptor) {}
 
     public ForgeOwnerMappings() {}
 
@@ -54,6 +56,11 @@ public final class ForgeOwnerMappings {
         return this;
     }
 
+    ForgeOwnerMappings addMemberAlias(String owner, String oldName, String descriptor, String newName) {
+        memberAliases.put(new MemberKey(owner, oldName, descriptor), newName);
+        return this;
+    }
+
     public Entry get(String owner) {
         return entries.get(owner);
     }
@@ -61,11 +68,16 @@ public final class ForgeOwnerMappings {
     boolean supportsMember(String owner, String name, String descriptor) {
         Entry entry = entries.get(owner);
         return entry != null && (entry.supports(name, descriptor)
-                || fieldAliases.containsKey(new FieldKey(owner, name, descriptor)));
+                || fieldAliases.containsKey(new FieldKey(owner, name, descriptor))
+                || memberAliases.containsKey(new MemberKey(owner, name, descriptor)));
     }
 
     String mappedFieldName(String owner, String name, String descriptor) {
         return fieldAliases.getOrDefault(new FieldKey(owner, name, descriptor), name);
+    }
+
+    String mappedMemberName(String owner, String name, String descriptor) {
+        return memberAliases.get(new MemberKey(owner, name, descriptor));
     }
 
     public boolean isEmpty() {
@@ -88,6 +100,21 @@ public final class ForgeOwnerMappings {
         String ro = "L" + R + "RegistryObject;";
         ForgeOwnerMappings mappings = new ForgeOwnerMappings()
                 .add("net/minecraft/world/entity/MobType", COMPAT + "LegacyMobType")
+                .add(new Entry("net/minecraft/world/item/ItemStack$TooltipPart",
+                        COMPAT + "LegacyItemStackTooltipPart", Set.of(
+                                "ENCHANTMENTSLnet/minecraft/world/item/ItemStack$TooltipPart;",
+                                "MODIFIERSLnet/minecraft/world/item/ItemStack$TooltipPart;",
+                                "UNBREAKABLELnet/minecraft/world/item/ItemStack$TooltipPart;",
+                                "CAN_DESTROYLnet/minecraft/world/item/ItemStack$TooltipPart;",
+                                "CAN_PLACELnet/minecraft/world/item/ItemStack$TooltipPart;",
+                                "ADDITIONALLnet/minecraft/world/item/ItemStack$TooltipPart;",
+                                "DYELnet/minecraft/world/item/ItemStack$TooltipPart;",
+                                "UPGRADESLnet/minecraft/world/item/ItemStack$TooltipPart;",
+                                "STORED_ENCHANTMENTSLnet/minecraft/world/item/ItemStack$TooltipPart;",
+                                "m_41809_()I")))
+                .add("net/minecraft/commands/CommandRuntimeException", COMPAT + "LegacyCommandRuntimeException")
+                .add("net/minecraftforge/common/util/FakePlayer",
+                        "net/neoforged/neoforge/common/util/FakePlayer")
                 .add(new Entry("net/minecraftforge/eventbus/api/IGenericEvent",
                         COMPAT + "LegacyIGenericEvent", Set.of(
                                 "getGenericType()Ljava/lang/reflect/Type;")))
@@ -171,7 +198,14 @@ public final class ForgeOwnerMappings {
                                         + "Lnet/minecraft/world/level/storage/loot/LootContext;)"
                                         + "Lit/unimi/dsi/fastutil/objects/ObjectArrayList;")))
                 .add(new Entry("net/minecraftforge/common/capabilities/ICapabilityProvider",
-                        COMPAT + "LegacyICapabilityProvider", Set.of()))
+                        COMPAT + "LegacyICapabilityProvider", Set.of(
+                                "getCapability(Lnet/minecraftforge/common/capabilities/Capability;)"
+                                        + "Lnet/minecraftforge/common/util/LazyOptional;",
+                                "getCapability(Lnet/minecraftforge/common/capabilities/Capability;"
+                                        + "Lnet/minecraft/core/Direction;)"
+                                        + "Lnet/minecraftforge/common/util/LazyOptional;")))
+                .add(entry("net/minecraftforge/common/capabilities/ICapabilitySerializable",
+                        COMPAT + "LegacyICapabilitySerializable", null))
                 .add(new Entry("net/minecraftforge/common/capabilities/Capability",
                         COMPAT + "LegacyCapability", Set.of(
                                 "getName()Ljava/lang/String;",
@@ -197,7 +231,9 @@ public final class ForgeOwnerMappings {
                                 "getPlantType(Lnet/minecraft/world/level/BlockGetter;Lnet/minecraft/core/BlockPos;)"
                                         + "Lnet/minecraftforge/common/PlantType;")))
                 .add(new Entry("net/minecraftforge/common/crafting/IShapedRecipe",
-                        "net/minecraft/world/item/crafting/ShapedRecipe", Set.of()))
+                        COMPAT + "LegacyIShapedRecipe", Set.of(
+                                "getRecipeWidth()I",
+                                "getRecipeHeight()I")))
                 .add(new Entry("net/minecraftforge/common/crafting/VanillaIngredientSerializer",
                         COMPAT + "LegacyVanillaIngredientSerializer", Set.of(
                                 "INSTANCELnet/minecraftforge/common/crafting/VanillaIngredientSerializer;",
@@ -456,9 +492,8 @@ public final class ForgeOwnerMappings {
                         Set.of("apply(Ljava/lang/Object;)Ljava/lang/Object;")))
                 .add(new Entry(FU + "NonNullSupplier", COMPAT + "NonNullSupplier",
                         Set.of("get()Ljava/lang/Object;")))
-                // Forge capability lookups have no direct NeoForge equivalent. ICapabilityProvider is mapped to a
-                // link-only marker; its unsupported calls are replaced with explicit fail-at-call stubs.
-                // Capability, CapabilityManager and CapabilityToken remain unmapped.
+                // Player-scoped Forge entity providers are adapted by LegacyCapabilities; other provider lookup
+                // shapes remain explicit failures. Capability wrappers preserve token identity.
                 .add(registryObject())
                 .add(entry(R + "IForgeRegistry", COMPAT + "IForgeRegistry", registryMembers()))
                 .addAll(TagMappings.entries())
@@ -467,6 +502,7 @@ public final class ForgeOwnerMappings {
                 .add(entry(R + "DeferredRegister", COMPAT + "LegacyDeferredRegister", Set.of(
                         "create(Lnet/minecraftforge/registries/IForgeRegistry;Ljava/lang/String;)" + dr,
                         "create(Lnet/minecraft/resources/ResourceKey;Ljava/lang/String;)" + dr,
+                        "createOptional(Lnet/minecraft/resources/ResourceKey;Ljava/lang/String;)" + dr,
                         "create(Lnet/minecraft/resources/ResourceLocation;Ljava/lang/String;)" + dr,
                         "register(Ljava/lang/String;Ljava/util/function/Supplier;)" + ro,
                         "register(Lnet/minecraftforge/eventbus/api/IEventBus;)V",
@@ -533,6 +569,9 @@ public final class ForgeOwnerMappings {
                         "net/neoforged/fml/event/lifecycle/FMLDedicatedServerSetupEvent", enqueue()));
 
         String tagKey = "Lnet/minecraft/tags/TagKey;";
+        String dyeableItem = "net/minecraft/world/item/DyeableLeatherItem";
+        mappings.addMemberAlias(dyeableItem, "m_41121_", "(Lnet/minecraft/world/item/ItemStack;)I", "getColor")
+                .addMemberAlias(dyeableItem, "m_41115_", "(Lnet/minecraft/world/item/ItemStack;I)V", "setColor");
         mappings.add(entry("net/minecraftforge/common/Tags$Fluids", "net/neoforged/neoforge/common/Tags$Fluids",
                         tagFields("MILK")))
                 .add(entry("net/minecraftforge/common/Tags$Biomes", "net/neoforged/neoforge/common/Tags$Biomes",

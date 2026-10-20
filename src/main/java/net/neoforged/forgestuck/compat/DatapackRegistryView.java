@@ -4,22 +4,33 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 
 /**
  * {@link IForgeRegistry} for a registry that is a datapack registry in 1.21.1 (for example enchantments): only the
- * key is known, because contents need a {@code RegistryAccess}. Every lookup throws
- * {@link UnsupportedOperationException} naming the registry, so holding the field (static init) links while the
- * call that needs contents fails. Registering through a {@code DeferredRegister} created from it yields a local,
- * unregistered object (see {@code LocalRegistryObject}).
+ * key is intrinsically available. When a lookup supplier is provided it resolves current contents lazily; otherwise,
+ * lookups throw {@link UnsupportedOperationException} naming the registry. Registering through a
+ * {@code DeferredRegister} created from it yields a local, unregistered object (see {@code LocalRegistryObject}).
  */
 final class DatapackRegistryView<V> implements IForgeRegistry<V> {
     private final ResourceKey<? extends Registry<V>> key;
+    private final Supplier<Registry<V>> registry;
 
     DatapackRegistryView(ResourceKey<? extends Registry<V>> key) {
+        this(key, null);
+    }
+
+    DatapackRegistryView(ResourceKey<? extends Registry<V>> key, Supplier<Registry<V>> registry) {
         this.key = key;
+        this.registry = registry;
+    }
+
+    private Registry<V> registry(String operation) {
+        if (registry == null) throw unsupported(operation);
+        return registry.get();
     }
 
     private UnsupportedOperationException unsupported(String what) {
@@ -39,42 +50,57 @@ final class DatapackRegistryView<V> implements IForgeRegistry<V> {
 
     @Override
     public boolean containsKey(ResourceLocation id) {
-        throw unsupported("containsKey");
+        return registry("containsKey").containsKey(id);
     }
 
     @Override
     public boolean containsValue(V value) {
-        throw unsupported("containsValue");
+        return registry("containsValue").getResourceKey(value).isPresent();
     }
 
     @Override
     public V getValue(ResourceLocation id) {
-        throw unsupported("getValue");
+        return registry("getValue").get(id);
+    }
+
+    @Override
+    public int getId(V value) {
+        return registry("getId").getId(value);
+    }
+
+    @Override
+    public V byId(int id) {
+        return registry("byId").byId(id);
     }
 
     @Override
     public ResourceLocation getKey(V value) {
-        throw unsupported("getKey");
+        return registry("getKey").getKey(value);
     }
 
     @Override
     public Optional<ResourceKey<V>> getResourceKey(V value) {
-        throw unsupported("getResourceKey");
+        return registry("getResourceKey").getResourceKey(value);
     }
 
     @Override
     public Set<ResourceLocation> getKeys() {
-        throw unsupported("getKeys");
+        return registry("getKeys").keySet();
     }
 
     @Override
     public Collection<V> getValues() {
-        throw unsupported("getValues");
+        return registry("getValues").stream().toList();
     }
 
     @Override
     public Set<Map.Entry<ResourceKey<V>, V>> getEntries() {
-        throw unsupported("getEntries");
+        return registry("getEntries").entrySet();
+    }
+
+    @Override
+    public LegacyTagManager<V> tags() {
+        return LegacyTagManager.create(registry("tags"));
     }
 
     UnsupportedOperationException registrationUnsupported(String name) {

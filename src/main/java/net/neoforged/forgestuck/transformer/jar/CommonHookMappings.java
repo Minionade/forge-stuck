@@ -58,7 +58,14 @@ final class CommonHookMappings {
                         "net/neoforged/neoforge/event/entity/living/MobEffectEvent$Applicable",
                         Set.of(
                                 "getEffectInstance()Lnet/minecraft/world/effect/MobEffectInstance;",
-                                "getEntity()Lnet/minecraft/world/entity/LivingEntity;")),
+                                "getEntity()Lnet/minecraft/world/entity/LivingEntity;",
+                                "isCanceled()Z", "setCanceled(Z)V")),
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/event/entity/living/MobEffectEvent$Added",
+                        "net/neoforged/neoforge/event/entity/living/MobEffectEvent$Added",
+                        Set.of("getEffectInstance()Lnet/minecraft/world/effect/MobEffectInstance;",
+                                "getEntity()Lnet/minecraft/world/entity/LivingEntity;",
+                                "isCanceled()Z")),
                 new ForgeOwnerMappings.Entry(
                         "net/minecraftforge/network/NetworkHooks",
                         "net/neoforged/forgestuck/compat/LegacyNetworkHooks",

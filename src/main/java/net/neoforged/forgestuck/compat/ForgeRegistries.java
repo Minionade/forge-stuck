@@ -1,5 +1,6 @@
 package net.neoforged.forgestuck.compat;
 
+import java.util.List;
 import java.util.function.Supplier;
 import net.minecraft.commands.synchronization.ArgumentTypeInfo;
 import net.minecraft.core.Registry;
@@ -30,8 +31,9 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 
 /**
  * Stand-in for Forge 1.20.1's {@code ForgeRegistries}, backed by static registries where possible. {@code ENCHANTMENTS}
- * is a {@link DatapackRegistryView}, while {@code DISPLAY_CONTEXTS} views enum extensions rather than a runtime
- * registry. Other legacy fields without a 1.21.1 equivalent (e.g. {@code BIOMES}) remain absent.
+ * views the active datapack registry when available and vanilla enchantments before a world exists, while
+ * {@code DISPLAY_CONTEXTS} views enum extensions rather than a runtime registry. Other legacy fields without a 1.21.1
+ * equivalent (e.g. {@code BIOMES}) remain absent.
  */
 public final class ForgeRegistries {
     private ForgeRegistries() {}
@@ -55,8 +57,9 @@ public final class ForgeRegistries {
     public static final IForgeRegistry<VillagerProfession> VILLAGER_PROFESSIONS = of(Registries.VILLAGER_PROFESSION);
     public static final IForgeRegistry<PoiType> POI_TYPES = of(Registries.POINT_OF_INTEREST_TYPE);
     public static final IForgeRegistry<Feature<?>> FEATURES = of(Registries.FEATURE);
-    /** Datapack registry in 1.21.1: only the key is available; lookups and registration fail at the call. */
-    public static final IForgeRegistry<Enchantment> ENCHANTMENTS = new DatapackRegistryView<>(Registries.ENCHANTMENT);
+    /** Datapack registry in 1.21.1: lookups use the active access, or vanilla contents during menu-time preview. */
+    public static final IForgeRegistry<Enchantment> ENCHANTMENTS =
+            new DatapackRegistryView<>(Registries.ENCHANTMENT, () -> LegacyEnchantmentRegistry.ENCHANTMENT);
 
     public static final IForgeRegistry<EntityDataSerializer<?>> ENTITY_DATA_SERIALIZERS =
             of(NeoForgeRegistries.Keys.ENTITY_DATA_SERIALIZERS);
@@ -67,6 +70,17 @@ public final class ForgeRegistries {
 
     private static <V> IForgeRegistry<V> of(ResourceKey<? extends Registry<V>> key) {
         return new VanillaRegistryView<>(key);
+    }
+
+    static IForgeRegistry<?> byName(net.minecraft.resources.ResourceLocation name) {
+        return List.of(BLOCKS, FLUIDS, ITEMS, MOB_EFFECTS, POTIONS, ATTRIBUTES, STAT_TYPES, SOUND_EVENTS,
+                        PARTICLE_TYPES, BLOCK_ENTITY_TYPES, ENTITY_TYPES, MENU_TYPES, RECIPE_TYPES,
+                        RECIPE_SERIALIZERS, COMMAND_ARGUMENT_TYPES, VILLAGER_PROFESSIONS, POI_TYPES, FEATURES,
+                        ENCHANTMENTS, ENTITY_DATA_SERIALIZERS, FLUID_TYPES.get(), DISPLAY_CONTEXTS.get())
+                .stream()
+                .filter(registry -> registry.getRegistryName().equals(name))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Unknown Forge registry " + name));
     }
 
     /** Stand-in for {@code ForgeRegistries.Keys}: the registry keys themselves. */

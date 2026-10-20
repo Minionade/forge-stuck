@@ -7,13 +7,14 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.material.Fluid;
 import net.minecraft.world.level.material.Fluids;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.minecraft.world.item.component.CustomData;
 
-/** Adapts Forge's NBT-bearing and copy FluidStack constructors to NeoForge's data-component representation. */
+/** Adapts Forge's FluidStack constructors, packet methods, and legacy NBT to NeoForge's data-component APIs. */
 public final class LegacyFluidStack {
     private static final Map<FluidStack, CustomData> OWNED = Collections.synchronizedMap(new WeakHashMap<>());
 
@@ -64,6 +65,27 @@ public final class LegacyFluidStack {
             stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag.copy()));
         }
         return stack;
+    }
+
+    public static FluidStack readFromPacket(FriendlyByteBuf buffer) {
+        Fluid fluid = LegacyFriendlyByteBuf.readRegistryId(buffer);
+        int amount = buffer.readVarInt();
+        CompoundTag tag = buffer.readNbt();
+        FluidStack stack = new FluidStack(fluid, amount);
+        if (tag != null) {
+            setTag(stack, tag);
+        }
+        return stack;
+    }
+
+    public static void writeToPacket(FluidStack stack, FriendlyByteBuf buffer) {
+        LegacyFriendlyByteBuf.writeRegistryId(buffer, ForgeRegistries.FLUIDS, stack.getFluid());
+        buffer.writeVarInt(stack.getAmount());
+        buffer.writeNbt(getTag(stack));
+    }
+
+    public static void writeToPacket(FriendlyByteBuf buffer, FluidStack stack) {
+        writeToPacket(stack, buffer);
     }
 
     public static FluidStack loadFluidStackFromNBT(CompoundTag nbt) {

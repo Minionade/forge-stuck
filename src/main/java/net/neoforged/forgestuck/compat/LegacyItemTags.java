@@ -12,7 +12,7 @@ public final class LegacyItemTags {
     public static final TagKey<Item> ARMORS_LEGGINGS = ItemTags.LEG_ARMOR;
     public static final TagKey<Item> HEADS = ItemTags.SKULLS;
     public static final TagKey<Item> DUSTS_PRISMARINE =
-            ItemTags.create(ResourceLocation.fromNamespaceAndPath("forge", "dusts/prismarine"));
+            ItemTags.create(ResourceLocation.fromNamespaceAndPath("c", "dusts/prismarine"));
     public static final TagKey<Item> STAINED_GLASS =
             ItemTags.create(ResourceLocation.fromNamespaceAndPath("forge", "stained_glass"));
     public static final TagKey<Item> STAINED_GLASS_PANES =

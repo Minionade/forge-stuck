@@ -53,6 +53,38 @@ class ResourceLocationSubclassTest {
         method.visitInsn(Opcodes.RETURN);
         method.visitMaxs(0, 0);
         method.visitEnd();
+        method = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "faceBakery",
+                "()Lnet/minecraft/client/renderer/block/model/FaceBakery;", null, null);
+        method.visitCode();
+        method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/client/renderer/block/model/BlockModel",
+                "FACE_BAKERY", "Lnet/minecraft/client/renderer/block/model/FaceBakery;");
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        cw.visitEnd();
+        return cw.toByteArray();
+    }
+
+    private static byte[] blockElementFaceTextureCaller() {
+        ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        cw.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "zz/model/FaceReader", null, "java/lang/Object", null);
+        var method = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "read",
+                "(Lnet/minecraft/client/renderer/block/model/BlockElementFace;)V", null, null);
+        method.visitCode();
+        String owner = "net/minecraft/client/renderer/block/model/BlockElementFace";
+        for (String[] field : new String[][] {
+            {"texture", "Ljava/lang/String;"},
+            {"uv", "Lnet/minecraft/client/renderer/block/model/BlockFaceUV;"},
+            {"cullForDirection", "Lnet/minecraft/core/Direction;"},
+            {"tintIndex", "I"}
+        }) {
+            method.visitVarInsn(Opcodes.ALOAD, 0);
+            method.visitFieldInsn(Opcodes.GETFIELD, owner, field[0], field[1]);
+            method.visitInsn(Opcodes.POP);
+        }
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
         cw.visitEnd();
         return cw.toByteArray();
     }
@@ -88,11 +120,16 @@ class ResourceLocationSubclassTest {
             out.putNextEntry(new JarEntry("META-INF/mods.toml"));
             out.write(toml.getBytes(StandardCharsets.UTF_8));
             out.putNextEntry(new JarEntry("META-INF/accesstransformer.cfg"));
-            out.write("public a.B c\n".getBytes(StandardCharsets.UTF_8));
+            out.write(("public a.B c\n"
+                    + "public net.minecraft.client.renderer.block.model.FaceBakery "
+                    + "m_111592_(Lorg/joml/Vector3f;Lorg/joml/Vector3f;)[F # setupShape\n")
+                    .getBytes(StandardCharsets.UTF_8));
             out.putNextEntry(new JarEntry("zz/id/Id.class"));
             out.write(subclass());
             out.putNextEntry(new JarEntry("zz/book/Book.class"));
             out.write(componentSerializerCaller());
+            out.putNextEntry(new JarEntry("zz/model/FaceReader.class"));
+            out.write(blockElementFaceTextureCaller());
             out.closeEntry();
         }
         Path dst = dir.resolve("b.jar");
@@ -100,9 +137,16 @@ class ResourceLocationSubclassTest {
         try (JarFile jar = new JarFile(dst.toFile())) {
             String at = new String(jar.getInputStream(jar.getJarEntry("META-INF/accesstransformer.cfg")).readAllBytes(), StandardCharsets.UTF_8);
             assertTrue(at.startsWith("public a.B c"), at);
+            assertTrue(at.contains("public net.minecraft.client.renderer.block.model.FaceBakery "
+                    + "setupShape(Lorg/joml/Vector3f;Lorg/joml/Vector3f;)[F # setupShape"), at);
             assertTrue(at.contains("public-f net.minecraft.resources.ResourceLocation\n"), at);
             assertTrue(at.contains("<init>(Ljava/lang/String;Ljava/lang/String;)V"), at);
             assertTrue(at.contains("public net.minecraft.network.chat.Component$Serializer <init>()V"), at);
+            assertTrue(at.contains("public net.minecraft.client.renderer.block.model.BlockElementFace texture"), at);
+            assertTrue(at.contains("public net.minecraft.client.renderer.block.model.BlockElementFace uv"), at);
+            assertTrue(at.contains("public net.minecraft.client.renderer.block.model.BlockElementFace cullForDirection"), at);
+            assertTrue(at.contains("public net.minecraft.client.renderer.block.model.BlockElementFace tintIndex"), at);
+            assertTrue(at.contains("public net.minecraft.client.renderer.block.model.BlockModel FACE_BAKERY"), at);
         }
     }
 }

@@ -22,6 +22,7 @@ import java.util.TreeSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Matcher;
 import org.objectweb.asm.AnnotationVisitor;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassVisitor;
@@ -61,6 +62,8 @@ public class JarTransformer {
     private static final String COMPONENT_SERIALIZER_AT =
             "\n# Forge Stuck: legacy mods construct Component.Serializer directly\n"
                     + "public net.minecraft.network.chat.Component$Serializer <init>()V\n";
+    private static final String BLOCK_ELEMENT_FACE = "net/minecraft/client/renderer/block/model/BlockElementFace";
+    private static final String BLOCK_MODEL = "net/minecraft/client/renderer/block/model/BlockModel";
 
     /**
      * Default for {@link #removeUnknownLoaders}. Unknown custom loaders are preserved (and reported) by default so no
@@ -77,6 +80,8 @@ public class JarTransformer {
             "forge:empty", "neoforge:empty");
 
     private static final Pattern MODEL_JSON = Pattern.compile("assets/[^/]+/models/.+\\.json");
+    private static final Pattern LEGACY_FOG_DISTANCE = Pattern.compile(
+            "fog_distance\\(\\s*ModelViewMat\\s*,\\s*([^,]+?)\\s*,\\s*FogShape\\s*\\)");
 
     /** Result of a cached transformation; a native bypass returns the source with {@code cacheHit=false}. */
     public record Result(Path output, boolean cacheHit) {}
@@ -103,8 +108,12 @@ public class JarTransformer {
 
     /** Transformer with the default step list. */
     public static JarTransformer withDefaultSteps() {
-        return new JarTransformer(List.of(new LegacySpawnPlacementStep(), new LegacyHurtAndShearingStep(), new LegacyAttackAndTreeStep(), new LegacyInstanceSubscriberStep(), new LegacyRenderLivingListenerStep(), new LegacyConditionCodecStep(), new LegacyResourceLocationSubclassStep(), new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new LegacyParticleTypeRewriteStep(), new LegacyTreeDecoratorTypeRewriteStep(), new LegacyEnchantmentSubclassStep(), new LegacyBufferBuilderRewriteStep(), new ForgeClassTransformStep(), new ForgeOwnerRemapStep(), new ForestryFeatureApiRemapStep(),
-                new ResourceLocationClassTransformStep(), new SrgMemberRemapStep(), new LegacyIngredientRewriteStep(),
+        return new JarTransformer(List.of(new LegacySpawnPlacementStep(), new LegacyHurtAndShearingStep(), new LegacyAttackAndTreeStep(), new LegacyInstanceSubscriberStep(), new LegacyLifecycleGuardStep(), new LegacyRenderLivingListenerStep(), new LegacyConditionCodecStep(), new LegacyResourceLocationSubclassStep(), new LegacyEnumCreateRewriteStep(), new LegacyLootTypeRewriteStep(), new LegacyParticleTypeRewriteStep(), new LegacyTreeDecoratorTypeRewriteStep(), new LegacyEnchantmentSubclassStep(), new LegacyBufferBuilderRewriteStep(), new ForgeClassTransformStep(), new LegacyEntitySpawnPacketStep(), new LegacyProjectileImpactResultStep(), new ForgeOwnerRemapStep(), new LegacyServerConfigGuardStep(), new ForestryFeatureApiRemapStep(),
+                new LegacyJeiApiRemapStep(), new ResourceLocationClassTransformStep(),
+                new LegacySimpleCraftingRecipeStep(),
+                new SrgMemberRemapStep(), new LegacyLootSerializerBridgeStep(),
+                new LegacyTranslatableComponentStep(), new LegacyRecipeSerializerCodecStep(),
+                new LegacyIngredientRewriteStep(),
                 new GameFieldRepairStep(), new LegacyGameTestGuardStep()));
     }
 
@@ -282,6 +291,8 @@ public class JarTransformer {
             ResourceDataRewriteStep resources = new ResourceDataRewriteStep(allNames, resourceReport);
             boolean needsRlAccess = false;
             boolean needsComponentSerializerAccess = false;
+            Set<String> blockElementFaceFields = new TreeSet<>();
+            boolean needsBlockModelFaceBakeryAccess = false;
             byte[] existingAt = null;
             Map<String, JarEntry> pendingMixinEntries = new LinkedHashMap<>();
             Map<String, byte[]> pendingMixinData = new LinkedHashMap<>();
@@ -308,7 +319,7 @@ public class JarTransformer {
                     continue;
                 }
                 if (name.equals(LegacyResourceLocationSubclassStep.AT_PATH)) {
-                    existingAt = data;
+                    existingAt = remapAccessTransformer(data);
                     continue;
                 }
                 if (JIJ_JAR.matcher(name).matches()) {
@@ -322,13 +333,19 @@ public class JarTransformer {
                     needsRlAccess |= LegacyResourceLocationSubclassStep.extendsResourceLocation(data);
                     needsComponentSerializerAccess |= referencesComponentSerializerConstructor(data);
                     data = applySteps(name, data, ownerReport);
-                    mixins.inspectClass(name.substring(0, name.length() - ".class".length()).replace('/', '.'), data);
+                    if (isClassFile(data)) {
+                        blockElementFaceFields.addAll(referencedBlockElementFaceFields(data));
+                        needsBlockModelFaceBakeryAccess |= referencesBlockModelFaceBakery(data);
+                        mixins.inspectClass(name.substring(0, name.length() - ".class".length()).replace('/', '.'), data);
+                    }
                 } else if (MixinResourceRewriter.isCandidate(name)) {
                     pendingMixinEntries.put(name, entry);
                     pendingMixinData.put(name, data);
                     continue;
                 } else if (MODEL_JSON.matcher(name).matches()) {
                     data = rewriteModelLoader(name, data, rewritten, removed);
+                } else if (name.endsWith(".vsh")) {
+                    data = rewriteLegacyFogDistance(name, data);
                 } else if (name.startsWith("data/") && name.endsWith(".json")) {
                     data = resources.content(name, data);
                 }
@@ -365,7 +382,9 @@ public class JarTransformer {
                 LOGGER.info("{} {} constructs Component.Serializer; opening its constructor for legacy access",
                         TAG, jarName);
             }
-            if (needsRlAccess || needsComponentSerializerAccess || existingAt != null) {
+            if (needsRlAccess || needsComponentSerializerAccess || !blockElementFaceFields.isEmpty()
+                    || needsBlockModelFaceBakeryAccess
+                    || existingAt != null) {
                 JarEntry at = new JarEntry(LegacyResourceLocationSubclassStep.AT_PATH);
                 out.putNextEntry(at);
                 if (existingAt != null) out.write(existingAt);
@@ -374,6 +393,20 @@ public class JarTransformer {
                 }
                 if (needsComponentSerializerAccess) {
                     out.write(COMPONENT_SERIALIZER_AT.getBytes(StandardCharsets.UTF_8));
+                }
+                for (String field : blockElementFaceFields) {
+                    String access = "public net.minecraft.client.renderer.block.model.BlockElementFace " + field;
+                    if (!hasAccessTransformerEntry(existingAt, access)) {
+                        out.write(("\n# Forge Stuck: legacy model code accesses BlockElementFace fields\n"
+                                + access + "\n").getBytes(StandardCharsets.UTF_8));
+                    }
+                }
+                if (needsBlockModelFaceBakeryAccess
+                        && !hasAccessTransformerEntry(existingAt,
+                                "public net.minecraft.client.renderer.block.model.BlockModel FACE_BAKERY")) {
+                    out.write(("\n# Forge Stuck: legacy model code accesses BlockModel.FACE_BAKERY\n"
+                            + "public net.minecraft.client.renderer.block.model.BlockModel FACE_BAKERY\n")
+                            .getBytes(StandardCharsets.UTF_8));
                 }
                 out.closeEntry();
             }
@@ -407,6 +440,78 @@ public class JarTransformer {
             }
         }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
         return found[0];
+    }
+
+    private static Set<String> referencedBlockElementFaceFields(byte[] bytes) {
+        Set<String> fields = new TreeSet<>();
+        new org.objectweb.asm.ClassReader(bytes).accept(new org.objectweb.asm.ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public org.objectweb.asm.MethodVisitor visitMethod(
+                    int access, String name, String descriptor, String signature, String[] exceptions) {
+                return new org.objectweb.asm.MethodVisitor(Opcodes.ASM9) {
+                    @Override
+                    public void visitFieldInsn(int opcode, String owner, String fieldName, String fieldDescriptor) {
+                        if (BLOCK_ELEMENT_FACE.equals(owner)) fields.add(fieldName);
+                    }
+                };
+            }
+        }, org.objectweb.asm.ClassReader.SKIP_DEBUG | org.objectweb.asm.ClassReader.SKIP_FRAMES);
+        return fields;
+    }
+
+    private static boolean isClassFile(byte[] bytes) {
+        return bytes.length >= 4
+                && (bytes[0] & 0xff) == 0xca
+                && (bytes[1] & 0xff) == 0xfe
+                && (bytes[2] & 0xff) == 0xba
+                && (bytes[3] & 0xff) == 0xbe;
+    }
+
+    private static boolean referencesBlockModelFaceBakery(byte[] bytes) {
+        final boolean[] found = {false};
+        new ClassReader(bytes).accept(new ClassVisitor(Opcodes.ASM9) {
+            @Override
+            public MethodVisitor visitMethod(int access, String name, String descriptor, String signature,
+                    String[] exceptions) {
+                return new MethodVisitor(Opcodes.ASM9) {
+                    @Override
+                    public void visitFieldInsn(int opcode, String owner, String fieldName, String fieldDescriptor) {
+                        if (BLOCK_MODEL.equals(owner) && "FACE_BAKERY".equals(fieldName)) found[0] = true;
+                    }
+                };
+            }
+        }, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        return found[0];
+    }
+
+    private static boolean hasAccessTransformerEntry(byte[] accessTransformer, String entry) {
+        if (accessTransformer == null) return false;
+        String field = entry.substring(entry.lastIndexOf(' ') + 1);
+        return new String(accessTransformer, StandardCharsets.UTF_8).lines().anyMatch(line -> {
+            String normalized = line.trim();
+            return normalized.equals(entry)
+                    || normalized.startsWith("public") && normalized.contains("BlockElementFace " + field);
+        });
+    }
+
+    private byte[] remapAccessTransformer(byte[] accessTransformer) {
+        String[] lines = new String(accessTransformer, StandardCharsets.UTF_8).split("\\R", -1);
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            int comment = line.indexOf('#');
+            String code = comment >= 0 ? line.substring(0, comment) : line;
+            String[] parts = code.trim().split("\\s+");
+            if (parts.length < 3) continue;
+            String member = parts[2];
+            int descriptorStart = member.indexOf('(');
+            String memberName = descriptorStart >= 0 ? member.substring(0, descriptorStart) : member;
+            String descriptor = descriptorStart >= 0 ? member.substring(descriptorStart) : "";
+            String mapped = mappings.map(parts[1].replace('.', '/'), memberName, descriptor);
+            if (mapped == null) continue;
+            int memberStart = line.indexOf(member);
+            lines[i] = line.substring(0, memberStart) + mapped + descriptor + line.substring(memberStart + member.length());
+        }
+        return String.join("\n", lines).getBytes(StandardCharsets.UTF_8);
     }
 
     /** Collects the {@code @Mod} values declared by classes in the source jar. */
@@ -625,6 +730,23 @@ public class JarTransformer {
             LOGGER.debug("{} could not parse model JSON {}, leaving it unchanged: {}", TAG, name, e.toString());
             return data;
         }
+    }
+
+    private static byte[] rewriteLegacyFogDistance(String name, byte[] data) {
+        String source = new String(data, StandardCharsets.UTF_8);
+        Matcher matcher = LEGACY_FOG_DISTANCE.matcher(source);
+        StringBuffer rewritten = new StringBuffer();
+        boolean changed = false;
+        while (matcher.find()) {
+            String position = matcher.group(1).trim();
+            String replacement = "fog_distance((ModelViewMat * vec4(" + position + ", 1.0)).xyz, FogShape)";
+            matcher.appendReplacement(rewritten, Matcher.quoteReplacement(replacement));
+            changed = true;
+        }
+        if (!changed) return data;
+        matcher.appendTail(rewritten);
+        LOGGER.info("{} rewrote legacy fog_distance shader call in {}", TAG, name);
+        return rewritten.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     private static void putEntry(JarOutputStream out, JarEntry original, String name, byte[] data) throws IOException {

@@ -14,6 +14,10 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 public final class LegacyConfigSpec {
     private LegacyConfigSpec() {}
 
+    public static boolean isLoaded(ModConfigSpec spec) {
+        return spec != null && spec.isLoaded();
+    }
+
     public static void setConfig(ModConfigSpec spec, CommentedConfig config) {
         Objects.requireNonNull(spec, "spec");
         Objects.requireNonNull(config, "config");

@@ -118,8 +118,11 @@ final class ClientModelMappings {
                         "composeRootTransformIntoModelState(Lnet/minecraft/client/resources/model/ModelState;"
                                 + "Lcom/mojang/math/Transformation;)"
                                 + "Lnet/minecraft/client/resources/model/ModelState;")),
-                entry("model/pipeline/TransformingVertexPipeline", Set.of(
-                        "<init>(Lcom/mojang/blaze3d/vertex/VertexConsumer;Lcom/mojang/math/Transformation;)V")),
+                new ForgeOwnerMappings.Entry(
+                        "net/minecraftforge/client/model/pipeline/TransformingVertexPipeline",
+                        "net/neoforged/forgestuck/compat/LegacyTransformingVertexPipeline",
+                        Set.of("<init>(Lcom/mojang/blaze3d/vertex/VertexConsumer;"
+                                + "Lcom/mojang/math/Transformation;)V")),
                 entry("model/SimpleModelState", Set.of(
                         "<init>(Lcom/mojang/math/Transformation;)V",
                         "<init>(Lcom/mojang/math/Transformation;Z)V")),

@@ -1,17 +1,55 @@
 package net.neoforged.forgestuck.compat;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
+import com.mojang.serialization.JsonOps;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.common.crafting.ICustomIngredient;
 
-/** Runtime conversion helpers for legacy ingredient serializer return values. */
+/** Adapts legacy ingredient JSON/network calls and serializer results to the 1.21.1 ingredient APIs. */
 public final class LegacyIngredientBridge {
     private LegacyIngredientBridge() {}
+
+    public static Ingredient fromJson(JsonElement json) {
+        return Ingredient.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow(JsonSyntaxException::new);
+    }
+
+    public static Ingredient fromJson(JsonElement json, boolean allowEmpty) {
+        if (json.isJsonArray() && json.getAsJsonArray().isEmpty()) {
+            if (allowEmpty) {
+                return Ingredient.EMPTY;
+            }
+            throw new JsonSyntaxException("Item array cannot be empty, at least one item must be defined");
+        }
+        return fromJson(json);
+    }
+
+    public static JsonElement toJson(Ingredient ingredient) {
+        return Ingredient.CODEC.encodeStart(JsonOps.INSTANCE, ingredient).getOrThrow(IllegalArgumentException::new);
+    }
+
+    public static void toNetwork(Ingredient ingredient, FriendlyByteBuf buffer) {
+        Ingredient.CONTENTS_STREAM_CODEC.encode(registryBuffer(buffer), ingredient);
+    }
+
+    public static Ingredient fromNetwork(FriendlyByteBuf buffer) {
+        return Ingredient.CONTENTS_STREAM_CODEC.decode(registryBuffer(buffer));
+    }
+
+    private static RegistryFriendlyByteBuf registryBuffer(FriendlyByteBuf buffer) {
+        if (buffer instanceof RegistryFriendlyByteBuf registryBuffer) {
+            return registryBuffer;
+        }
+        throw new IllegalArgumentException("Legacy ingredient serialization requires a registry-friendly buffer");
+    }
 
     public static Ingredient asVanilla(Object value) {
         if (value instanceof ICustomIngredient custom) {
@@ -66,5 +104,9 @@ public final class LegacyIngredientBridge {
             ids.add(ItemStack.hashItemAndComponents(stack));
         }
         return ids;
+    }
+
+    public static boolean isVanilla(Ingredient ingredient) {
+        return !ingredient.isCustom();
     }
 }

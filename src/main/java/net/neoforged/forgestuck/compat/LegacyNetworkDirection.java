@@ -31,7 +31,7 @@ public enum LegacyNetworkDirection {
             throw new UnsupportedOperationException("NetworkDirection." + this + ".buildPacket: LOGIN-phase packets have no NeoForge payload equivalent");
         }
         LegacyEventChannel.Raw raw = LegacyEventChannel.raw(channel, data.getLeft());
-        return new LegacyCustomPacket(this == PLAY_TO_CLIENT ? raw.toVanillaClientbound() : raw.toVanillaServerbound());
+        return LegacyCustomPacket.wrap(this == PLAY_TO_CLIENT ? raw.toVanillaClientbound() : raw.toVanillaServerbound());
     }
 
     boolean isLogin() {

@@ -23,6 +23,10 @@ public abstract class LegacyAbstractIngredient implements ICustomIngredient {
         this.constructorItems = null;
     }
 
+    protected LegacyAbstractIngredient(ItemStack stack) {
+        this.constructorItems = new ItemStack[] {stack};
+    }
+
     protected LegacyAbstractIngredient(Stream<?> values) {
         this.constructorItems = values.flatMap(LegacyAbstractIngredient::valueItems).toArray(ItemStack[]::new);
     }

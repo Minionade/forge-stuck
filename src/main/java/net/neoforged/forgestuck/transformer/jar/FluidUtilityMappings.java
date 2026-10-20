@@ -37,6 +37,7 @@ final class FluidUtilityMappings {
                                 + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/item/ItemStack;" + STACK + ")"
                                 + RESULT)),
                 entry("fluids/capability/templates/EmptyFluidHandler", Set.of(
+                        "<init>()V",
                         "INSTANCELnet/minecraftforge/fluids/capability/templates/EmptyFluidHandler;")),
                 entry("fluids/capability/wrappers/FluidBucketWrapper", Set.of(
                         "<init>(Lnet/minecraft/world/item/ItemStack;)V")));

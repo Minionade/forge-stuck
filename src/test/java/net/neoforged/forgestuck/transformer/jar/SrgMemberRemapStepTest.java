@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -12,13 +13,2905 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
+import org.objectweb.asm.tree.IntInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.TypeInsnNode;
+import org.objectweb.asm.tree.VarInsnNode;
 
 class SrgMemberRemapStepTest {
+    @Test
+    void remapsLegacyMatrixVertexCallToAddVertex() {
+        String vertexConsumer = "com/mojang/blaze3d/vertex/VertexConsumer";
+        String matrix4f = "org/joml/Matrix4f";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyVertexCall", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC, "vertex",
+                "(L" + vertexConsumer + ";L" + matrix4f + ";FFF)L" + vertexConsumer + ";",
+                null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.FLOAD, 3);
+        method.visitVarInsn(Opcodes.FLOAD, 4);
+        method.visitVarInsn(Opcodes.FLOAD, 5);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, vertexConsumer, "m_252986_",
+                "(L" + matrix4f + ";FFF)L" + vertexConsumer + ";", true);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 6);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyVertexCall", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("addVertex", call.name);
+        assertEquals("(L" + matrix4f + ";FFF)L" + vertexConsumer + ";", call.desc);
+    }
+
+    @Test
+    void remapsLegacyPotionEffectLookupToCompatibilityShim() {
+        String potionUtils = "net/minecraft/world/item/alchemy/PotionUtils";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyPotionEffects", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "effects",
+                "(L" + compoundTag + ";)Ljava/util/List;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, potionUtils, "m_43566_",
+                "(L" + compoundTag + ";)Ljava/util/List;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyPotionEffects", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyPotion", call.owner);
+        assertEquals("getAllEffects", call.name);
+        assertEquals("(L" + compoundTag + ";)Ljava/util/List;", call.desc);
+    }
+
+    @Test
+    void remapsLegacyPotionItemColorLookupToCompatibilityShim() {
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyPotionColor", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "color",
+                "(L" + itemStack + ";)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC,
+                "net/minecraft/world/item/alchemy/PotionUtils", "m_43575_",
+                "(L" + itemStack + ";)I", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyPotionColor", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyPotion", call.owner);
+        assertEquals("getColor", call.name);
+        assertEquals("(L" + itemStack + ";)I", call.desc);
+    }
+
+    @Test
+    void remapsLegacyCustomPotionEffectLookupToCompatibilityShim() {
+        String potionUtils = "net/minecraft/world/item/alchemy/PotionUtils";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyCustomPotionEffects", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "effects",
+                "(L" + compoundTag + ";)Ljava/util/List;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, potionUtils, "m_43573_",
+                "(L" + compoundTag + ";)Ljava/util/List;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyCustomPotionEffects", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyPotion", call.owner);
+        assertEquals("getCustomEffects", call.name);
+        assertEquals("(L" + compoundTag + ";)Ljava/util/List;", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyRecipeContainerMatchCalls() {
+        String recipe = "slimeknights/tconstruct/library/recipe/melting/IMeltingRecipe";
+        String container = "net/minecraft/world/Container";
+        String level = "net/minecraft/world/level/Level";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyRecipeMatch", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "matches",
+                "(L" + recipe + ";L" + container + ";L" + level + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, recipe, "m_5818_",
+                "(L" + container + ";L" + level + ";)Z", true);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 3);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyRecipeMatch", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", call.owner);
+        assertEquals("matchesLegacy", call.name);
+        assertEquals("(Lnet/minecraft/world/item/crafting/Recipe;L" + container + ";L" + level + ";)Z",
+                call.desc);
+    }
+
+    @Test
+    void restoresParticleOptionsParameterForLevelAccessorCalls() {
+        String levelAccessor = "net/minecraft/world/level/LevelAccessor";
+        String legacyParticle = "net/neoforged/forgestuck/gamecompat/LegacyParticleOptions";
+        String particleOptions = "net/minecraft/core/particles/ParticleOptions";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyParticleCall_m_12345_", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "spawn",
+                "(L" + levelAccessor + ";L" + legacyParticle + ";)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitInsn(Opcodes.DCONST_0);
+        method.visitInsn(Opcodes.DCONST_0);
+        method.visitInsn(Opcodes.DCONST_0);
+        method.visitInsn(Opcodes.DCONST_0);
+        method.visitInsn(Opcodes.DCONST_0);
+        method.visitInsn(Opcodes.DCONST_0);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, levelAccessor, "m_7106_",
+                "(L" + legacyParticle + ";DDDDDD)V", true);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyParticleCall_m_12345_", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(levelAccessor, call.owner);
+        assertEquals("addParticle", call.name);
+        assertEquals("(L" + particleOptions + ";DDDDDD)V", call.desc);
+    }
+
+    @Test
+    void redirectsLegacyLiquidBlockFluidAccessorToCompatibilityShim() {
+        String liquidBlock = "net/minecraft/world/level/block/LiquidBlock";
+        String flowingFluid = "net/minecraft/world/level/material/FlowingFluid";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyLiquidBlock_m_12345_", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "getFluid",
+                "(L" + liquidBlock + ";)L" + flowingFluid + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, liquidBlock, "getFluid",
+                "()L" + flowingFluid + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyLiquidBlock_m_12345_", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyLiquidBlock", call.owner);
+        assertEquals("getFluid", call.name);
+        assertEquals("(L" + liquidBlock + ";)L" + flowingFluid + ";", call.desc);
+    }
+
+    @Test
+    void rewritesLegacyPotionNameCallToRegistryAwareShim() {
+        String potion = "net/minecraft/world/item/alchemy/Potion";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyPotionName", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "name",
+                "(L" + potion + ";Ljava/lang/String;)Ljava/lang/String;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, potion, "m_43492_",
+                "(Ljava/lang/String;)Ljava/lang/String;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyPotionName", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyPotion", call.owner);
+        assertEquals("getName", call.name);
+        assertEquals("(L" + potion + ";Ljava/lang/String;)Ljava/lang/String;", call.desc);
+    }
+
+    @Test
+    void remapsLegacyItemStackSameTagsComparisonToComponents() {
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyStackComparison", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "same",
+                "(L" + itemStack + ";L" + itemStack + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, itemStack, "m_150942_",
+                "(L" + itemStack + ";L" + itemStack + ";)Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyStackComparison", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals(itemStack, call.owner);
+        assertEquals("isSameItemSameComponents", call.name);
+        assertEquals("(L" + itemStack + ";L" + itemStack + ";)Z", call.desc);
+    }
+
+    @Test
+    void resendsTConstructStructureBeforeOpeningHeatingMenu() {
+        String blockEntity = "slimeknights/tconstruct/smeltery/block/entity/controller/HeatingStructureBlockEntity";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, blockEntity, null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_7208_",
+                "(ILnet/minecraft/world/entity/player/Inventory;Lnet/minecraft/world/entity/player/Player;)"
+                        + "Lnet/minecraft/world/inventory/AbstractContainerMenu;",
+                null, null);
+        method.visitCode();
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 4);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(blockEntity.replace('/', '.'), writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyTConstructStructureSync", call.owner);
+        assertEquals("resendStructure", call.name);
+        assertEquals("(Ljava/lang/Object;)V", call.desc);
+    }
+
+    @Test
+    void bridgesLegacyBlockEntityNbtHooksToRegistryAwareHooks() {
+        String blockEntity = "net/minecraft/world/level/block/entity/BlockEntity";
+        String legacySuperclass = "cofh/core/common/block/entity/BlockEntityCoFH";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        String legacyDesc = "(L" + compoundTag + ";)V";
+        String providerDesc = "(L" + compoundTag + ";Lnet/minecraft/core/HolderLookup$Provider;)V";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "slimeknights/mantle/block/entity/MantleBlockEntity",
+                null, blockEntity, null);
+        var legacySaveMethod = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_183515_", legacyDesc, null, null);
+        legacySaveMethod.visitCode();
+        legacySaveMethod.visitVarInsn(Opcodes.ALOAD, 0);
+        legacySaveMethod.visitVarInsn(Opcodes.ALOAD, 1);
+        legacySaveMethod.visitMethodInsn(Opcodes.INVOKESPECIAL, legacySuperclass, "m_183515_", legacyDesc, false);
+        legacySaveMethod.visitInsn(Opcodes.RETURN);
+        legacySaveMethod.visitMaxs(0, 2);
+        legacySaveMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "slimeknights.mantle.block.entity.MantleBlockEntity", writer.toByteArray()))
+                .accept(transformed, 0);
+
+        for (String[] hook : new String[][] {
+                {"m_142466_", "loadAdditional"},
+                {"m_183515_", "saveAdditional"}
+        }) {
+            MethodNode bridge = transformed.methods.stream()
+                    .filter(method -> method.name.equals(hook[1]) && method.desc.equals(providerDesc))
+                    .findFirst().orElseThrow();
+            MethodInsnNode legacyCall = java.util.Arrays.stream(bridge.instructions.toArray())
+                    .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                    .filter(call -> call.owner.equals("slimeknights/mantle/block/entity/MantleBlockEntity"))
+                    .findFirst().orElseThrow();
+            assertEquals(Opcodes.INVOKESPECIAL, legacyCall.getOpcode());
+            assertEquals(hook[0], legacyCall.name);
+            assertEquals(legacyDesc, legacyCall.desc);
+            assertTrue(java.util.Arrays.stream(bridge.instructions.toArray())
+                    .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                    .anyMatch(call -> call.owner.equals(
+                            "net/neoforged/forgestuck/compat/LegacyItemStackShim")
+                            && call.name.equals("pushRegistryProvider")));
+            assertTrue(java.util.Arrays.stream(bridge.instructions.toArray())
+                    .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                    .anyMatch(call -> call.owner.equals(
+                            "net/neoforged/forgestuck/compat/LegacyItemStackShim")
+                            && call.name.equals("restoreRegistryProvider")));
+        }
+        MethodNode legacySave = transformed.methods.stream()
+                .filter(method -> method.name.equals("m_183515_") && method.desc.equals(legacyDesc))
+                .findFirst().orElseThrow();
+        MethodInsnNode superSave = java.util.Arrays.stream(legacySave.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .filter(call -> call.owner.equals(legacySuperclass))
+                .findFirst().orElseThrow();
+        assertEquals("saveAdditional", superSave.name);
+        assertEquals(providerDesc, superSave.desc);
+        assertTrue(java.util.Arrays.stream(legacySave.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .anyMatch(call -> call.owner.equals(
+                        "net/neoforged/forgestuck/compat/LegacyItemStackShim")
+                        && call.name.equals("getRegistryProvider")));
+        assertTrue(legacySave.maxStack >= 3);
+        assertTrue(transformed.methods.stream().anyMatch(candidate ->
+                candidate.name.equals("m_142466_") && candidate.desc.equals(legacyDesc)
+                        && (candidate.access & Opcodes.ACC_SYNTHETIC) != 0));
+    }
+
+    @Test
+    void rewritesLegacyItemStackNbtSaveAndParseCalls() {
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyItemStackNbt", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "roundTrip",
+                "(L" + itemStack + ";L" + compoundTag + ";)L" + itemStack + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, itemStack, "m_41739_",
+                "(L" + compoundTag + ";)L" + compoundTag + ";", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, itemStack, "m_41712_",
+                "(L" + compoundTag + ";)L" + itemStack + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyItemStackNbt", writer.toByteArray()))
+                .accept(transformed, 0);
+        List<MethodInsnNode> calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().allMatch(call -> call.getOpcode() == Opcodes.INVOKESTATIC
+                && call.owner.equals("net/neoforged/forgestuck/compat/LegacyItemStackShim")));
+        assertEquals("save", calls.get(0).name);
+        assertEquals("(L" + itemStack + ";L" + compoundTag + ";)L" + compoundTag + ";", calls.get(0).desc);
+        assertEquals("parse", calls.get(1).name);
+        assertEquals("(L" + compoundTag + ";)L" + itemStack + ";", calls.get(1).desc);
+    }
+
+    @Test
+    void rewritesTConstructJeiItemAndDyeCalls() {
+        String item = "net/minecraft/world/item/Item";
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        String dyeColor = "net/minecraft/world/item/DyeColor";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/TConstructJeiCalls", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "run",
+                "(L" + item + ";L" + itemStack + ";L" + dyeColor + ";)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, item, "m_41459_", "()I", false);
+        method.visitVarInsn(Opcodes.ISTORE, 3);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, "net/minecraft/world/item/BlockItem", "m_186336_",
+                "(L" + itemStack + ";)Lnet/minecraft/nbt/CompoundTag;", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, dyeColor, "m_41068_", "()[F", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitVarInsn(Opcodes.ILOAD, 3);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.TConstructJeiCalls", writer.toByteArray()))
+                .accept(transformed, 0);
+        List<MethodInsnNode> calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(3, calls.size());
+        assertEquals(Opcodes.INVOKESTATIC, calls.get(0).getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", calls.get(0).owner);
+        assertEquals("getMaxStackSize", calls.get(0).name);
+        assertEquals("(L" + item + ";)I", calls.get(0).desc);
+        assertEquals(Opcodes.INVOKESTATIC, calls.get(1).getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", calls.get(1).owner);
+        assertEquals("getBlockEntityData", calls.get(1).name);
+        assertEquals("(L" + itemStack + ";)Lnet/minecraft/nbt/CompoundTag;", calls.get(1).desc);
+        assertEquals(Opcodes.INVOKESTATIC, calls.get(2).getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyDyeColorShim", calls.get(2).owner);
+        assertEquals("getTextureDiffuseColors", calls.get(2).name);
+        assertEquals("(L" + dyeColor + ";)[F", calls.get(2).desc);
+    }
+
+    @Test
+    void rewritesLegacyEnchantmentListDeserialization() {
+        String listTag = "net/minecraft/nbt/ListTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyEnchantmentList", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "read",
+                "(L" + listTag + ";)Ljava/util/Map;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, "net/minecraft/world/item/enchantment/EnchantmentHelper",
+                "m_44882_", "(L" + listTag + ";)Ljava/util/Map;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyEnchantmentList", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyEnchantmentShim", call.owner);
+        assertEquals("deserializeEnchantments", call.name);
+        assertEquals("(L" + listTag + ";)Ljava/util/Map;", call.desc);
+    }
+
+    @Test
+    void remapsLegacyBlockPositionNbtHelpersToCompatibilityShim() {
+        String blockPos = "net/minecraft/core/BlockPos";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyBlockPosNbt", null,
+                "java/lang/Object", null);
+        var read = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "read",
+                "(L" + compoundTag + ";)L" + blockPos + ";", null, null);
+        read.visitCode();
+        read.visitVarInsn(Opcodes.ALOAD, 0);
+        read.visitMethodInsn(Opcodes.INVOKESTATIC, "net/minecraft/nbt/NbtUtils", "m_129239_",
+                "(L" + compoundTag + ";)L" + blockPos + ";", false);
+        read.visitInsn(Opcodes.ARETURN);
+        read.visitMaxs(0, 1);
+        read.visitEnd();
+        var write = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "write",
+                "(L" + blockPos + ";)L" + compoundTag + ";", null, null);
+        write.visitCode();
+        write.visitVarInsn(Opcodes.ALOAD, 0);
+        write.visitMethodInsn(Opcodes.INVOKESTATIC, "net/minecraft/nbt/NbtUtils", "m_129224_",
+                "(L" + blockPos + ";)L" + compoundTag + ";", false);
+        write.visitInsn(Opcodes.ARETURN);
+        write.visitMaxs(0, 1);
+        write.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyBlockPosNbt", writer.toByteArray())).accept(transformed, 0);
+        List<MethodInsnNode> calls = transformed.methods.stream()
+                .flatMap(method -> java.util.Arrays.stream(method.instructions.toArray()))
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .toList();
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().allMatch(call ->
+                call.owner.equals("net/neoforged/forgestuck/compat/LegacyBlockPosNbt")));
+        assertTrue(calls.stream().anyMatch(call -> call.name.equals("read")));
+        assertTrue(calls.stream().anyMatch(call -> call.name.equals("write")));
+    }
+
+    @Test
+    void remapsLegacyItemStackCustomNameCheck() {
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyNameCheck", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "hasCustomName",
+                "(L" + itemStack + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, itemStack, "m_41788_", "()Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyNameCheck", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", call.owner);
+        assertEquals("hasCustomHoverName", call.name);
+        assertEquals("(L" + itemStack + ";)Z", call.desc);
+    }
+
+    @Test
+    void remapsInheritedLegacySlotIndexFieldToAccessor() {
+        String slotSubclass = "slimeknights/mantle/inventory/WrapperSlot";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacySlotIndex", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "getIndex",
+                "(L" + slotSubclass + ";)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitFieldInsn(Opcodes.GETFIELD, slotSubclass, "f_40219_", "I");
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "indexHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_GETFIELD, slotSubclass, "f_40219_", "I", false));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(0, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacySlotIndex", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKEVIRTUAL, call.getOpcode());
+        assertEquals("net/minecraft/world/inventory/Slot", call.owner);
+        assertEquals("getSlotIndex", call.name);
+        assertEquals("()I", call.desc);
+        assertFalse(java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .anyMatch(FieldInsnNode.class::isInstance));
+        Handle handle = java.util.Arrays.stream(transformed.methods.get(1).instructions.toArray())
+                .filter(org.objectweb.asm.tree.LdcInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.LdcInsnNode.class::cast)
+                .map(ldc -> (Handle) ldc.cst)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.H_INVOKEVIRTUAL, handle.getTag());
+        assertEquals("net/minecraft/world/inventory/Slot", handle.getOwner());
+        assertEquals("getSlotIndex", handle.getName());
+        assertEquals("()I", handle.getDesc());
+    }
+
+    @Test
+    void remapsLegacyFieldsReferencedThroughModSubclassOwners() {
+        String moduleScreen = "slimeknights/mantle/client/screen/ModuleScreen";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyModuleScreenFields", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "left",
+                "(L" + moduleScreen + ";)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitFieldInsn(Opcodes.GETFIELD, moduleScreen, "f_97735_", "I");
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyModuleScreenFields", writer.toByteArray())).accept(transformed, 0);
+
+        FieldInsnNode field = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(FieldInsnNode.class::isInstance).map(FieldInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(moduleScreen, field.owner);
+        assertEquals("leftPos", field.name);
+    }
+
+    @Test
+    void upgradesLegacyScreenBackgroundCallWithRenderArguments() {
+        String guiGraphics = "net/minecraft/client/gui/GuiGraphics";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyModuleScreen", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_88315_",
+                "(L" + guiGraphics + ";IIF)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "sample/LegacyModuleScreen", "m_280273_",
+                "(L" + guiGraphics + ";)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 5);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyModuleScreen", writer.toByteArray())).accept(transformed, 0);
+
+        MethodNode render = transformed.methods.stream()
+                .filter(candidate -> candidate.desc.equals("(L" + guiGraphics + ";IIF)V"))
+                .findFirst().orElseThrow();
+        List<AbstractInsnNode> instructions = java.util.Arrays.stream(render.instructions.toArray())
+                .filter(instruction -> instruction.getOpcode() >= 0).toList();
+        MethodInsnNode call = instructions.stream().filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals("renderBackground", call.name);
+        assertEquals("(L" + guiGraphics + ";IIF)V", call.desc);
+        int callIndex = instructions.indexOf(call);
+        assertEquals(Opcodes.ILOAD, instructions.get(callIndex - 3).getOpcode());
+        assertEquals(2, ((VarInsnNode) instructions.get(callIndex - 3)).var);
+        assertEquals(Opcodes.ILOAD, instructions.get(callIndex - 2).getOpcode());
+        assertEquals(3, ((VarInsnNode) instructions.get(callIndex - 2)).var);
+        assertEquals(Opcodes.FLOAD, instructions.get(callIndex - 1).getOpcode());
+        assertEquals(4, ((VarInsnNode) instructions.get(callIndex - 1)).var);
+    }
+
+    @Test
+    void removesMantleMultiModuleScreenBackgroundCallToPreventDuplicateRendering() {
+        String guiGraphics = "net/minecraft/client/gui/GuiGraphics";
+        String multiModuleScreen = "slimeknights/mantle/client/screen/MultiModuleScreen";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, multiModuleScreen, null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_88315_",
+                "(L" + guiGraphics + ";IIF)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, multiModuleScreen, "m_280273_",
+                "(L" + guiGraphics + ";)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 5);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "slimeknights.mantle.client.screen.MultiModuleScreen", writer.toByteArray()))
+                .accept(transformed, 0);
+
+        MethodNode render = transformed.methods.stream()
+                .filter(candidate -> candidate.desc.equals("(L" + guiGraphics + ";IIF)V"))
+                .findFirst().orElseThrow();
+        List<AbstractInsnNode> instructions = java.util.Arrays.stream(render.instructions.toArray())
+                .filter(instruction -> instruction.getOpcode() >= 0).toList();
+        assertTrue(instructions.stream().anyMatch(instruction -> instruction.getOpcode() == Opcodes.POP2));
+        assertFalse(instructions.stream().anyMatch(MethodInsnNode.class::isInstance));
+    }
+
+    @Test
+    void remapsLegacyRecipeIdAndPotionTagCallsAndHandles() {
+        String recipe = "net/minecraft/world/item/crafting/Recipe";
+        String recipeSubclass = "slimeknights/tconstruct/library/recipe/casting/ICastingRecipe";
+        String recipeId = "net/minecraft/resources/ResourceLocation";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        String potion = "net/minecraft/world/item/alchemy/Potion";
+        String potionUtils = "net/minecraft/world/item/alchemy/PotionUtils";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyJeiCalls", null,
+                "java/lang/Object", null);
+        var recipeIdMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "recipeId",
+                "(L" + recipeSubclass + ";)L" + recipeId + ";", null, null);
+        recipeIdMethod.visitCode();
+        recipeIdMethod.visitVarInsn(Opcodes.ALOAD, 0);
+        recipeIdMethod.visitMethodInsn(Opcodes.INVOKEINTERFACE, recipeSubclass, "m_6423_",
+                "()L" + recipeId + ";", true);
+        recipeIdMethod.visitInsn(Opcodes.ARETURN);
+        recipeIdMethod.visitMaxs(0, 1);
+        recipeIdMethod.visitEnd();
+        var recipeIdHandleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "recipeIdHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        recipeIdHandleMethod.visitCode();
+        recipeIdHandleMethod.visitLdcInsn(new Handle(Opcodes.H_INVOKEINTERFACE, recipeSubclass,
+                "m_6423_", "()L" + recipeId + ";", true));
+        recipeIdHandleMethod.visitInsn(Opcodes.ARETURN);
+        recipeIdHandleMethod.visitMaxs(0, 0);
+        recipeIdHandleMethod.visitEnd();
+        var potionMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "potion",
+                "(L" + compoundTag + ";)L" + potion + ";", null, null);
+        potionMethod.visitCode();
+        potionMethod.visitVarInsn(Opcodes.ALOAD, 0);
+        potionMethod.visitMethodInsn(Opcodes.INVOKESTATIC, potionUtils, "m_43577_",
+                "(L" + compoundTag + ";)L" + potion + ";", false);
+        potionMethod.visitInsn(Opcodes.ARETURN);
+        potionMethod.visitMaxs(0, 1);
+        potionMethod.visitEnd();
+        var potionHandleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "potionHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        potionHandleMethod.visitCode();
+        potionHandleMethod.visitLdcInsn(new Handle(Opcodes.H_INVOKESTATIC, potionUtils, "m_43577_",
+                "(L" + compoundTag + ";)L" + potion + ";", false));
+        potionHandleMethod.visitInsn(Opcodes.ARETURN);
+        potionHandleMethod.visitMaxs(0, 0);
+        potionHandleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyJeiCalls", writer.toByteArray()))
+                .accept(transformed, 0);
+
+        MethodInsnNode recipeIdCall = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, recipeIdCall.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", recipeIdCall.owner);
+        assertEquals("getRecipeId", recipeIdCall.name);
+        assertEquals("(L" + recipe + ";)L" + recipeId + ";", recipeIdCall.desc);
+        Handle recipeHandle = java.util.Arrays.stream(transformed.methods.get(1).instructions.toArray())
+                .filter(org.objectweb.asm.tree.LdcInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.LdcInsnNode.class::cast)
+                .map(ldc -> (Handle) ldc.cst)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.H_INVOKESTATIC, recipeHandle.getTag());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", recipeHandle.getOwner());
+        assertEquals("getRecipeId", recipeHandle.getName());
+        assertEquals("(L" + recipe + ";)L" + recipeId + ";", recipeHandle.getDesc());
+        MethodInsnNode potionCall = java.util.Arrays.stream(transformed.methods.get(2).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, potionCall.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyPotion", potionCall.owner);
+        assertEquals("getPotion", potionCall.name);
+        assertEquals("(L" + compoundTag + ";)L" + potion + ";", potionCall.desc);
+        Handle potionHandle = java.util.Arrays.stream(transformed.methods.get(3).instructions.toArray())
+                .filter(org.objectweb.asm.tree.LdcInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.LdcInsnNode.class::cast)
+                .map(ldc -> (Handle) ldc.cst)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.H_INVOKESTATIC, potionHandle.getTag());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyPotion", potionHandle.getOwner());
+        assertEquals("getPotion", potionHandle.getName());
+        assertEquals("(L" + compoundTag + ";)L" + potion + ";", potionHandle.getDesc());
+    }
+
+    @Test
+    void remapsLegacyDefaultVertexFormatElementFieldsAndHandles() {
+        String legacyOwner = "com/mojang/blaze3d/vertex/DefaultVertexFormat";
+        String elementOwner = "com/mojang/blaze3d/vertex/VertexFormatElement";
+        String vertexFormat = "com/mojang/blaze3d/vertex/VertexFormat";
+        String descriptor = "L" + elementOwner + ";";
+        List<Map.Entry<String, String>> fields = List.of(
+                Map.entry("f_85804_", "POSITION"),
+                Map.entry("ELEMENT_POSITION", "POSITION"),
+                Map.entry("f_85805_", "COLOR"),
+                Map.entry("f_85806_", "UV0"),
+                Map.entry("f_85807_", "UV1"),
+                Map.entry("f_85808_", "UV2"),
+                Map.entry("f_85809_", "NORMAL"),
+                Map.entry("f_85810_", "PADDING"),
+                Map.entry("ELEMENT_PADDING", "PADDING"));
+        List<Map.Entry<String, String>> mappedFields = fields.stream()
+                .filter(entry -> !entry.getValue().equals("PADDING")).toList();
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyVertexFormatElements", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "elements", "()V", null, null);
+        method.visitCode();
+        fields.forEach(entry -> {
+            method.visitFieldInsn(Opcodes.GETSTATIC, legacyOwner, entry.getKey(), descriptor);
+            method.visitInsn(Opcodes.POP);
+        });
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "positionHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_GETSTATIC, legacyOwner, "f_85804_", descriptor, false));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(0, 0);
+        handleMethod.visitEnd();
+        var constructorMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "createFormat",
+                "()L" + vertexFormat + ";", null, null);
+        constructorMethod.visitCode();
+        constructorMethod.visitTypeInsn(Opcodes.NEW, vertexFormat);
+        constructorMethod.visitInsn(Opcodes.DUP);
+        constructorMethod.visitMethodInsn(Opcodes.INVOKESTATIC, "com/google/common/collect/ImmutableMap", "of",
+                "()Lcom/google/common/collect/ImmutableMap;", false);
+        constructorMethod.visitMethodInsn(Opcodes.INVOKESPECIAL, vertexFormat, "<init>",
+                "(Lcom/google/common/collect/ImmutableMap;)V", false);
+        constructorMethod.visitInsn(Opcodes.ARETURN);
+        constructorMethod.visitMaxs(0, 0);
+        constructorMethod.visitEnd();
+        var constructorHandleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "formatHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        constructorHandleMethod.visitCode();
+        constructorHandleMethod.visitLdcInsn(new Handle(Opcodes.H_NEWINVOKESPECIAL, vertexFormat, "<init>",
+                "(Lcom/google/common/collect/ImmutableMap;)V", false));
+        constructorHandleMethod.visitInsn(Opcodes.ARETURN);
+        constructorHandleMethod.visitMaxs(0, 0);
+        constructorHandleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyVertexFormatElements", writer.toByteArray())).accept(transformed, 0);
+
+        List<FieldInsnNode> remappedFields = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(FieldInsnNode.class::isInstance).map(FieldInsnNode.class::cast).toList();
+        assertEquals(mappedFields.size(), remappedFields.size());
+        for (int i = 0; i < remappedFields.size(); i++) {
+            assertEquals(elementOwner, remappedFields.get(i).owner);
+            assertEquals(mappedFields.get(i).getValue(), remappedFields.get(i).name);
+        }
+        List<MethodInsnNode> paddingCalls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .filter(call -> call.name.equals("paddingElementPlaceholder")).toList();
+        assertEquals(2, paddingCalls.size());
+        assertTrue(paddingCalls.stream().allMatch(call -> call.owner.equals(
+                "net/neoforged/forgestuck/compat/LegacyVertexFormatShim")));
+        Handle handle = java.util.Arrays.stream(transformed.methods.get(1).instructions.toArray())
+                .filter(org.objectweb.asm.tree.LdcInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.LdcInsnNode.class::cast)
+                .map(ldc -> (Handle) ldc.cst)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.H_GETSTATIC, handle.getTag());
+        assertEquals(elementOwner, handle.getOwner());
+        assertEquals("POSITION", handle.getName());
+        assertEquals(descriptor, handle.getDesc());
+
+        MethodInsnNode constructor = java.util.Arrays.stream(transformed.methods.get(2).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .filter(call -> call.name.equals("create")).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, constructor.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyVertexFormatShim", constructor.owner);
+        assertEquals("(Lcom/google/common/collect/ImmutableMap;)L" + vertexFormat + ";", constructor.desc);
+        assertTrue(java.util.Arrays.stream(transformed.methods.get(2).instructions.toArray())
+                .noneMatch(instruction -> instruction instanceof TypeInsnNode type
+                        && type.getOpcode() == Opcodes.NEW && type.desc.equals(vertexFormat)));
+        Handle constructorHandle = java.util.Arrays.stream(transformed.methods.get(3).instructions.toArray())
+                .filter(org.objectweb.asm.tree.LdcInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.LdcInsnNode.class::cast)
+                .map(ldc -> (Handle) ldc.cst)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.H_INVOKESTATIC, constructorHandle.getTag());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyVertexFormatShim", constructorHandle.getOwner());
+        assertEquals("create", constructorHandle.getName());
+        assertEquals("(Lcom/google/common/collect/ImmutableMap;)L" + vertexFormat + ";",
+                constructorHandle.getDesc());
+    }
+
+    @Test
+    void rebuildsLegacyVertexFormatAndPreservesPadding() {
+        var format = net.neoforged.forgestuck.compat.LegacyVertexFormatShim.create(
+                com.google.common.collect.ImmutableMap.of(
+                        "Position", com.mojang.blaze3d.vertex.VertexFormatElement.POSITION,
+                        "Padding", net.neoforged.forgestuck.compat.LegacyVertexFormatShim.paddingElementPlaceholder()));
+
+        assertEquals(1, format.getElements().size());
+        assertEquals(List.of("Position"), format.getElementAttributeNames());
+        assertEquals(13, format.getVertexSize());
+    }
+
+    @Test
+    void remapsLegacyAabbBlockPosConstructorAndHandle() {
+        String aabb = "net/minecraft/world/phys/AABB";
+        String blockPos = "net/minecraft/core/BlockPos";
+        String legacyDescriptor = "(L" + blockPos + ";L" + blockPos + ";)V";
+        String currentDescriptor = "(L" + blockPos + ";L" + blockPos + ";)L" + aabb + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyAabbBounds", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "bounds",
+                "(L" + blockPos + ";L" + blockPos + ";)L" + aabb + ";", null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW, aabb);
+        method.visitInsn(Opcodes.DUP);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, aabb, "<init>", legacyDescriptor, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "constructorHandle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_NEWINVOKESPECIAL, aabb, "<init>", legacyDescriptor, false));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(0, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyAabbBounds", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode factory = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .filter(call -> call.owner.equals(aabb))
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, factory.getOpcode());
+        assertEquals(aabb, factory.owner);
+        assertEquals("encapsulatingFullBlocks", factory.name);
+        assertEquals(currentDescriptor, factory.desc);
+        assertTrue(java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .noneMatch(instruction -> instruction instanceof TypeInsnNode type
+                        && type.getOpcode() == Opcodes.NEW && type.desc.equals(aabb)));
+        Handle handle = java.util.Arrays.stream(transformed.methods.get(1).instructions.toArray())
+                .filter(org.objectweb.asm.tree.LdcInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.LdcInsnNode.class::cast)
+                .map(ldc -> (Handle) ldc.cst)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals(aabb, handle.getOwner());
+        assertEquals("encapsulatingFullBlocks", handle.getName());
+        assertEquals(currentDescriptor, handle.getDesc());
+    }
+
+    @Test
+    void addsCurrentBlockInteractionBridgesForLegacyUseMethod() {
+        String block = "net/minecraft/world/level/block/Block";
+        String oldUseDescriptor = "(Lnet/minecraft/world/level/block/state/BlockState;"
+                + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                + "Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;"
+                + "Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;";
+        String useWithoutItemDescriptor = "(Lnet/minecraft/world/level/block/state/BlockState;"
+                + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                + "Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/phys/BlockHitResult;)"
+                + "Lnet/minecraft/world/InteractionResult;";
+        String useItemOnDescriptor = "(Lnet/minecraft/world/item/ItemStack;"
+                + "Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/level/Level;"
+                + "Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/entity/player/Player;"
+                + "Lnet/minecraft/world/InteractionHand;Lnet/minecraft/world/phys/BlockHitResult;)"
+                + "Lnet/minecraft/world/ItemInteractionResult;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyInventoryBlock", null, block, null);
+        var use = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_6227_", oldUseDescriptor, null, null);
+        use.visitCode();
+        use.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/world/InteractionResult", "CONSUME",
+                "Lnet/minecraft/world/InteractionResult;");
+        use.visitInsn(Opcodes.ARETURN);
+        use.visitMaxs(1, 7);
+        use.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyInventoryBlock", writer.toByteArray())).accept(transformed, 0);
+        MethodNode useWithoutItem = transformed.methods.stream()
+                .filter(method -> method.name.equals("useWithoutItem")
+                        && method.desc.equals(useWithoutItemDescriptor))
+                .findFirst().orElseThrow();
+        MethodNode useItemOn = transformed.methods.stream()
+                .filter(method -> method.name.equals("useItemOn") && method.desc.equals(useItemOnDescriptor))
+                .findFirst().orElseThrow();
+        assertTrue(java.util.Arrays.stream(useWithoutItem.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .anyMatch(call -> call.owner.equals("sample/LegacyInventoryBlock") && call.name.equals("m_6227_")
+                        && call.desc.equals(oldUseDescriptor)));
+        assertTrue(java.util.Arrays.stream(useItemOn.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .anyMatch(call -> call.owner.equals("net/neoforged/forgestuck/compat/LegacyBlockInteractionShim")
+                        && call.name.equals("toItemInteractionResult")));
+    }
+
+    @Test
+    void addsLegacyPassFallbackToDirectBlockSubclassWithoutUseOverride() {
+        String block = "net/minecraft/world/level/block/Block";
+        String oldUseDescriptor = "(Lnet/minecraft/world/level/block/state/BlockState;"
+                + "Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;"
+                + "Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/InteractionHand;"
+                + "Lnet/minecraft/world/phys/BlockHitResult;)Lnet/minecraft/world/InteractionResult;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyBaseBlock", null, block, null);
+        var legacyStateDefinition = writer.visitMethod(Opcodes.ACC_PROTECTED, "m_7926_",
+                "(Lnet/minecraft/world/level/block/state/StateDefinition$Builder;)V", null, null);
+        legacyStateDefinition.visitCode();
+        legacyStateDefinition.visitInsn(Opcodes.RETURN);
+        legacyStateDefinition.visitMaxs(0, 2);
+        legacyStateDefinition.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyBaseBlock", writer.toByteArray())).accept(transformed, 0);
+        MethodNode fallback = transformed.methods.stream()
+                .filter(method -> method.name.equals("m_6227_") && method.desc.equals(oldUseDescriptor))
+                .findFirst().orElseThrow();
+        assertTrue((fallback.access & Opcodes.ACC_PUBLIC) != 0);
+        assertTrue(java.util.Arrays.stream(fallback.instructions.toArray())
+                .anyMatch(instruction -> instruction instanceof FieldInsnNode field
+                        && field.owner.equals("net/minecraft/world/InteractionResult")
+                        && field.name.equals("PASS")));
+        assertFalse(transformed.methods.stream().anyMatch(method ->
+                method.name.equals("useItemOn") || method.name.equals("useWithoutItem")));
+    }
+
+    @Test
+    void remapsLegacyDyeableLeatherColorMethodBeforeOwnerReplacement() {
+        String dyeable = "net/minecraft/world/item/DyeableLeatherItem";
+        String stack = "net/minecraft/world/item/ItemStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyDyeableColor", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "color",
+                "(L" + dyeable + ";L" + stack + ";)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, dyeable, "m_41121_",
+                "(L" + stack + ";)I", true);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(2, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        byte[] srgRemapped = new SrgMemberRemapStep().apply("sample.LegacyDyeableColor", writer.toByteArray());
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new ForgeOwnerRemapStep().apply("sample.LegacyDyeableColor", srgRemapped))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("net/neoforged/forgestuck/compat/LegacyDyeableLeatherItem", call.owner);
+        assertEquals("getColor", call.name);
+    }
+
+    @Test
+    void remapsInheritedItemIsFoilCallThroughSubclassOwner() {
+        String item = "net/minecraft/world/item/Item";
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        String potionInfuser = "cofh/thermal/innovation/common/item/PotionInfuserItem";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyItemFoilCheck", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "isFoil",
+                "(L" + potionInfuser + ";L" + itemStack + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, potionInfuser, "m_41113_",
+                "(L" + itemStack + ";)Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyItemFoilCheck", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKEVIRTUAL, call.getOpcode());
+        assertEquals(potionInfuser, call.owner);
+        assertEquals("isFoil", call.name);
+        assertEquals("(L" + itemStack + ";)Z", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyItemStackEnchantmentTagAccessorToComponentShim() {
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        String listTag = "net/minecraft/nbt/ListTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "cofh/thermal/lib/common/block/entity/AugmentableBlockEntity",
+                null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "readEnchantments",
+                "(L" + itemStack + ";)L" + listTag + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, itemStack, "m_41785_",
+                "()L" + listTag + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "cofh.thermal.lib.common.block.entity.AugmentableBlockEntity", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", call.owner);
+        assertEquals("getEnchantmentTags", call.name);
+        assertEquals("(L" + itemStack + ";)L" + listTag + ";", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyServerListenerConnectionFieldToAccessor() {
+        String listener = "net/minecraft/server/network/ServerGamePacketListenerImpl";
+        String connection = "net/minecraft/network/Connection";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyConnectionCheck", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "connection",
+                "(L" + listener + ";)L" + connection + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitFieldInsn(Opcodes.GETFIELD, listener, "f_9742_", "L" + connection + ";");
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyConnectionCheck", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode accessor = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKEVIRTUAL, accessor.getOpcode());
+        assertEquals(listener, accessor.owner);
+        assertEquals("getConnection", accessor.name);
+        assertEquals("()L" + connection + ";", accessor.desc);
+    }
+
+    @Test
+    void adaptsCoFHParticleRenderingToCurrentBufferLifecycle() {
+        String tesselator = "com/mojang/blaze3d/vertex/Tesselator";
+        String bufferBuilder = "com/mojang/blaze3d/vertex/BufferBuilder";
+        String particleRenderType = "net/minecraft/client/particle/ParticleRenderType";
+        String textureManager = "net/minecraft/client/renderer/texture/TextureManager";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "cofh/core/client/event/CoreClientEvents", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "renderTranslucent",
+                "()V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 6);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, tesselator, "m_85915_",
+                "()L" + bufferBuilder + ";", false);
+        method.visitVarInsn(Opcodes.ASTORE, 7);
+        method.visitVarInsn(Opcodes.ALOAD, 11);
+        method.visitVarInsn(Opcodes.ALOAD, 7);
+        method.visitVarInsn(Opcodes.ALOAD, 5);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, particleRenderType, "m_6505_",
+                "(L" + bufferBuilder + ";L" + textureManager + ";)V", true);
+        method.visitVarInsn(Opcodes.ALOAD, 11);
+        method.visitVarInsn(Opcodes.ALOAD, 6);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, particleRenderType, "m_6294_",
+                "(L" + tesselator + ";)V", true);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 12);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "cofh.core.client.event.CoreClientEvents", writer.toByteArray())).accept(transformed, 0);
+        var instructions = transformed.methods.get(0).instructions.toArray();
+        var calls = java.util.Arrays.stream(instructions)
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertTrue(calls.stream().noneMatch(call -> call.name.equals("m_85915_")
+                || call.name.equals("m_6505_") || call.name.equals("m_6294_")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(particleRenderType)
+                && call.name.equals("begin") && call.getOpcode() == Opcodes.INVOKEINTERFACE
+                && call.desc.equals("(L" + tesselator + ";L" + textureManager + ";)L" + bufferBuilder + ";")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(bufferBuilder)
+                && call.name.equals("build") && call.desc.equals("()Lcom/mojang/blaze3d/vertex/MeshData;")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals("com/mojang/blaze3d/vertex/BufferUploader")
+                && call.name.equals("drawWithShader")));
+    }
+
+    @Test
+    void adaptsLegacyTesselatorBufferLifecycleForAnyMod() {
+        String tesselator = "com/mojang/blaze3d/vertex/Tesselator";
+        String bufferBuilder = "com/mojang/blaze3d/vertex/BufferBuilder";
+        String vertexFormat = "com/mojang/blaze3d/vertex/VertexFormat";
+        String mode = "com/mojang/blaze3d/vertex/VertexFormat$Mode";
+        String renderedBuffer = "com/mojang/blaze3d/vertex/BufferBuilder$RenderedBuffer";
+        String meshData = "com/mojang/blaze3d/vertex/MeshData";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyFluidGui", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "render",
+                "(L" + tesselator + ";)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, tesselator, "m_85915_",
+                "()L" + bufferBuilder + ";", false);
+        method.visitVarInsn(Opcodes.ASTORE, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitFieldInsn(Opcodes.GETSTATIC, mode, "QUADS", "L" + mode + ";");
+        method.visitFieldInsn(Opcodes.GETSTATIC, "com/mojang/blaze3d/vertex/DefaultVertexFormat",
+                "POSITION_TEX", "L" + vertexFormat + ";");
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, bufferBuilder, "m_166779_",
+                "(L" + mode + ";L" + vertexFormat + ";)V", false);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, bufferBuilder, "m_231175_",
+                "()L" + renderedBuffer + ";", false);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, "com/mojang/blaze3d/vertex/BufferUploader",
+                "m_231202_", "(L" + renderedBuffer + ";)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyFluidGui", writer.toByteArray())).accept(transformed, 0);
+        var calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertTrue(java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .anyMatch(instruction -> instruction.getOpcode() == Opcodes.ACONST_NULL));
+        assertTrue(calls.stream().noneMatch(call -> call.name.equals("m_85915_")
+                || call.name.equals("m_166779_") || call.name.equals("m_231175_")
+                || call.name.equals("m_231202_")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(tesselator)
+                && call.name.equals("begin") && call.getOpcode() == Opcodes.INVOKEVIRTUAL
+                && call.desc.equals("(L" + mode + ";L" + vertexFormat + ";)L" + bufferBuilder + ";")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(bufferBuilder)
+                && call.name.equals("build") && call.desc.equals("()L" + meshData + ";")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals("com/mojang/blaze3d/vertex/BufferUploader")
+                && call.name.equals("drawWithShader") && call.desc.equals("(L" + meshData + ";)V")));
+    }
+
+    @Test
+    void adaptsLegacyTesselatorEndLifecycle() {
+        String tesselator = "com/mojang/blaze3d/vertex/Tesselator";
+        String bufferBuilder = "com/mojang/blaze3d/vertex/BufferBuilder";
+        String vertexFormat = "com/mojang/blaze3d/vertex/VertexFormat";
+        String mode = "com/mojang/blaze3d/vertex/VertexFormat$Mode";
+        String meshData = "com/mojang/blaze3d/vertex/MeshData";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyTesselatorEnd", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "render", "()V", null, null);
+        method.visitCode();
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, tesselator, "getInstance",
+                "()L" + tesselator + ";", false);
+        method.visitVarInsn(Opcodes.ASTORE, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, tesselator, "m_85915_",
+                "()L" + bufferBuilder + ";", false);
+        method.visitVarInsn(Opcodes.ASTORE, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitFieldInsn(Opcodes.GETSTATIC, mode, "QUADS", "L" + mode + ";");
+        method.visitFieldInsn(Opcodes.GETSTATIC, "com/mojang/blaze3d/vertex/DefaultVertexFormat",
+                "POSITION_TEX", "L" + vertexFormat + ";");
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, bufferBuilder, "m_166779_",
+                "(L" + mode + ";L" + vertexFormat + ";)V", false);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, tesselator, "m_85914_", "()V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyTesselatorEnd", writer.toByteArray())).accept(transformed, 0);
+        var calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertTrue(calls.stream().noneMatch(call -> call.name.equals("m_85915_")
+                || call.name.equals("m_166779_") || call.name.equals("m_85914_")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(tesselator)
+                && call.name.equals("begin")
+                && call.desc.equals("(L" + mode + ";L" + vertexFormat + ";)L" + bufferBuilder + ";")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(bufferBuilder)
+                && call.name.equals("build") && call.desc.equals("()L" + meshData + ";")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals("com/mojang/blaze3d/vertex/BufferUploader")
+                && call.name.equals("drawWithShader") && call.desc.equals("(L" + meshData + ";)V")));
+    }
+
+    @Test
+    void adaptsLegacyTesselatorLifecycleWhenReceiverComesFromInterfaceAccessor() {
+        String tesselator = "com/mojang/blaze3d/vertex/Tesselator";
+        String bufferBuilder = "com/mojang/blaze3d/vertex/BufferBuilder";
+        String vertexFormat = "com/mojang/blaze3d/vertex/VertexFormat";
+        String mode = "com/mojang/blaze3d/vertex/VertexFormat$Mode";
+        String renderedBuffer = "com/mojang/blaze3d/vertex/BufferBuilder$RenderedBuffer";
+        String meshData = "com/mojang/blaze3d/vertex/MeshData";
+        String target = "sample/DrawTarget";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyDrawTarget", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "render",
+                "(L" + target + ";)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, target, "tesselator",
+                "()L" + tesselator + ";", true);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, tesselator, "m_85915_",
+                "()L" + bufferBuilder + ";", false);
+        method.visitVarInsn(Opcodes.ASTORE, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitFieldInsn(Opcodes.GETSTATIC, mode, "QUADS", "L" + mode + ";");
+        method.visitFieldInsn(Opcodes.GETSTATIC, "com/mojang/blaze3d/vertex/DefaultVertexFormat",
+                "POSITION_TEX", "L" + vertexFormat + ";");
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, bufferBuilder, "m_166779_",
+                "(L" + mode + ";L" + vertexFormat + ";)V", false);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, bufferBuilder, "m_231175_",
+                "()" + "L" + renderedBuffer + ";", false);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, "com/mojang/blaze3d/vertex/BufferUploader",
+                "m_231202_", "(L" + renderedBuffer + ";)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyDrawTarget", writer.toByteArray())).accept(transformed, 0);
+        var calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertTrue(calls.stream().noneMatch(call -> call.name.equals("m_85915_")
+                || call.name.equals("m_166779_") || call.name.equals("m_231175_")
+                || call.name.equals("m_231202_")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(tesselator)
+                && call.name.equals("getInstance") && call.getOpcode() == Opcodes.INVOKESTATIC));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(tesselator)
+                && call.name.equals("begin") && call.getOpcode() == Opcodes.INVOKEVIRTUAL));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(bufferBuilder)
+                && call.name.equals("build") && call.desc.equals("()L" + meshData + ";")));
+    }
+
+    @Test
+    void adaptsLegacyFriendlyByteBufIdWrite() {
+        String friendlyByteBuf = "net/minecraft/network/FriendlyByteBuf";
+        String idMap = "net/minecraft/core/IdMap";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyIdMapWriter", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "write",
+                "(L" + friendlyByteBuf + ";L" + idMap + ";Ljava/lang/Object;)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, friendlyByteBuf, "m_236818_",
+                "(L" + idMap + ";Ljava/lang/Object;)V", false);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 3);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyIdMapWriter", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyFriendlyByteBuf", call.owner);
+        assertEquals("writeId", call.name);
+        assertEquals("(L" + friendlyByteBuf + ";L" + idMap + ";Ljava/lang/Object;)V", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyFriendlyByteBufItemStackPacketMethods() {
+        String friendlyByteBuf = "net/minecraft/network/FriendlyByteBuf";
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyItemStackBuffer", null,
+                "java/lang/Object", null);
+        var write = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "write",
+                "(L" + friendlyByteBuf + ";L" + itemStack + ";)L" + friendlyByteBuf + ";", null, null);
+        write.visitCode();
+        write.visitVarInsn(Opcodes.ALOAD, 0);
+        write.visitVarInsn(Opcodes.ALOAD, 1);
+        write.visitMethodInsn(Opcodes.INVOKEVIRTUAL, friendlyByteBuf, "m_130055_",
+                "(L" + itemStack + ";)L" + friendlyByteBuf + ";", false);
+        write.visitInsn(Opcodes.ARETURN);
+        write.visitMaxs(0, 2);
+        write.visitEnd();
+        var read = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "read",
+                "(L" + friendlyByteBuf + ";)L" + itemStack + ";", null, null);
+        read.visitCode();
+        read.visitVarInsn(Opcodes.ALOAD, 0);
+        read.visitMethodInsn(Opcodes.INVOKEVIRTUAL, friendlyByteBuf, "m_130267_",
+                "()L" + itemStack + ";", false);
+        read.visitInsn(Opcodes.ARETURN);
+        read.visitMaxs(0, 1);
+        read.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyItemStackBuffer", writer.toByteArray())).accept(transformed, 0);
+        var calls = transformed.methods.stream()
+                .flatMap(method -> java.util.Arrays.stream(method.instructions.toArray()))
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().allMatch(call -> call.getOpcode() == Opcodes.INVOKESTATIC
+                && call.owner.equals("net/neoforged/forgestuck/compat/LegacyFriendlyByteBuf")));
+        assertTrue(calls.stream().anyMatch(call -> call.name.equals("writeItem")
+                && call.desc.equals("(L" + friendlyByteBuf + ";L" + itemStack + ";)L" + friendlyByteBuf + ";")));
+        assertTrue(calls.stream().anyMatch(call -> call.name.equals("readItem")
+                && call.desc.equals("(L" + friendlyByteBuf + ";)L" + itemStack + ";")));
+    }
+
+    @Test
+    void adaptsLegacyMobEffectLookupToHolderAwareCompatMethod() {
+        String player = "net/minecraft/world/entity/player/Player";
+        String livingEntity = "net/minecraft/world/entity/LivingEntity";
+        String mobEffect = "net/minecraft/world/effect/MobEffect";
+        String instance = "net/minecraft/world/effect/MobEffectInstance";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyMobEffectLookup", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "get",
+                "(L" + player + ";L" + mobEffect + ";)L" + instance + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, player, "getEffect",
+                "(L" + mobEffect + ";)L" + instance + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyMobEffectLookup", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyMobEffect", call.owner);
+        assertEquals("getEffect", call.name);
+        assertEquals("(L" + livingEntity + ";L" + mobEffect + ";)L" + instance + ";", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyMobEffectRemovalToHolderAwareCompatMethod() {
+        String player = "net/minecraft/world/entity/player/Player";
+        String livingEntity = "net/minecraft/world/entity/LivingEntity";
+        String mobEffect = "net/minecraft/world/effect/MobEffect";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyMobEffectRemoval", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "remove",
+                "(L" + player + ";L" + mobEffect + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, player, "removeEffect",
+                "(L" + mobEffect + ";)Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyMobEffectRemoval", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyMobEffect", call.owner);
+        assertEquals("removeEffect", call.name);
+        assertEquals("(L" + livingEntity + ";L" + mobEffect + ";)Z", call.desc);
+    }
+
+    @Test
+    void expandsTConstructEquipmentContextCachesForTheBodySlot() {
+        String context = "slimeknights/tconstruct/library/tools/context/EquipmentContext";
+        String toolView = "slimeknights/tconstruct/library/tools/nbt/IToolStackView";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, context, null, "java/lang/Object", null);
+        var constructor = writer.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null);
+        constructor.visitCode();
+        constructor.visitVarInsn(Opcodes.ALOAD, 0);
+        constructor.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Object", "<init>", "()V", false);
+        constructor.visitIntInsn(Opcodes.BIPUSH, 6);
+        constructor.visitIntInsn(Opcodes.NEWARRAY, Opcodes.T_BOOLEAN);
+        constructor.visitInsn(Opcodes.POP);
+        constructor.visitIntInsn(Opcodes.BIPUSH, 6);
+        constructor.visitTypeInsn(Opcodes.ANEWARRAY, toolView);
+        constructor.visitInsn(Opcodes.POP);
+        constructor.visitInsn(Opcodes.RETURN);
+        constructor.visitMaxs(0, 1);
+        constructor.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(context, writer.toByteArray())).accept(transformed, 0);
+        var sizes = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(IntInsnNode.class::isInstance).map(IntInsnNode.class::cast)
+                .filter(instruction -> instruction.getOpcode() == Opcodes.BIPUSH)
+                .map(instruction -> instruction.operand).toList();
+        assertEquals(List.of(7, 7), sizes);
+    }
+
+    @Test
+    void adaptsLegacyAttributeValueLookupToHolderAwareCompatMethod() {
+        String livingEntity = "net/minecraft/world/entity/LivingEntity";
+        String attribute = "net/minecraft/world/entity/ai/attributes/Attribute";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyAttributeLookup", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "value",
+                "(L" + livingEntity + ";L" + attribute + ";)D", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, livingEntity, "getAttributeValue",
+                "(L" + attribute + ";)D", false);
+        method.visitInsn(Opcodes.DRETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyAttributeLookup", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyAttribute", call.owner);
+        assertEquals("getValue", call.name);
+        assertEquals("(L" + livingEntity + ";L" + attribute + ";)D", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyEntityArmorSlotsToLivingEntityAccessor() {
+        String entity = "net/minecraft/world/entity/Entity";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyArmorSlots", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "armor",
+                "(L" + entity + ";)Ljava/lang/Iterable;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, entity, "getArmorSlots",
+                "()Ljava/lang/Iterable;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyArmorSlots", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyEntityEquipment", call.owner);
+        assertEquals("getArmorSlots", call.name);
+        assertEquals("(L" + entity + ";)Ljava/lang/Iterable;", call.desc);
+    }
+
+    @Test
+    void adaptsHolderReferenceContainsTagToIs() {
+        String holderReference = "net/minecraft/core/Holder$Reference";
+        String tagKey = "net/minecraft/tags/TagKey";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyHolderTagCheck", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "hasTag",
+                "(L" + holderReference + ";L" + tagKey + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, holderReference, "containsTag",
+                "(L" + tagKey + ";)Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyHolderTagCheck", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKEVIRTUAL, call.getOpcode());
+        assertEquals(holderReference, call.owner);
+        assertEquals("is", call.name);
+        assertEquals("(L" + tagKey + ";)Z", call.desc);
+    }
+
+    @Test
+    void adaptsHolderInterfaceContainsTagToIs() {
+        String holder = "net/minecraft/core/Holder";
+        String tagKey = "net/minecraft/tags/TagKey";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyHolderInterfaceTagCheck", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "hasTag",
+                "(L" + holder + ";L" + tagKey + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, holder, "containsTag",
+                "(L" + tagKey + ";)Z", true);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyHolderInterfaceTagCheck", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKEINTERFACE, call.getOpcode());
+        assertEquals(holder, call.owner);
+        assertTrue(call.itf);
+        assertEquals("is", call.name);
+        assertEquals("(L" + tagKey + ";)Z", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyTConstructSpawnEquipmentCalls() {
+        String mob = "net/minecraft/world/entity/Mob";
+        String event = "net/neoforged/neoforge/event/entity/living/FinalizeSpawnEvent";
+        String randomSource = "net/minecraft/util/RandomSource";
+        String serverLevel = "net/minecraft/world/level/ServerLevelAccessor";
+        String difficulty = "net/minecraft/world/DifficultyInstance";
+        String spawnType = "net/minecraft/world/entity/MobSpawnType";
+        String spawnData = "net/minecraft/world/entity/SpawnGroupData";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        String legacyFinalize = "(L" + serverLevel + ";L" + difficulty + ";L" + spawnType
+                + ";L" + spawnData + ";L" + compoundTag + ";)L" + spawnData + ";";
+        String finalize = "(L" + serverLevel + ";L" + difficulty + ";L" + spawnType
+                + ";L" + spawnData + ";)L" + spawnData + ";";
+        String equipment = "slimeknights/tconstruct/library/json/loot/equipment/MobEquipment";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, equipment, null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "spawn",
+                "(L" + mob + ";L" + event + ";L" + serverLevel + ";L" + difficulty
+                        + ";L" + spawnType + ";L" + spawnData + ";)V",
+                null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, mob, "m_217043_",
+                "()L" + randomSource + ";", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.ALOAD, 3);
+        method.visitVarInsn(Opcodes.ALOAD, 4);
+        method.visitVarInsn(Opcodes.ALOAD, 5);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, event, "getSpawnTag",
+                "()L" + compoundTag + ";", false);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, mob, "m_6518_", legacyFinalize, false);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 6);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(equipment, writer.toByteArray())).accept(transformed, 0);
+        var calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals("net/minecraft/world/entity/Entity")
+                && call.name.equals("getRandom") && call.desc.equals("()L" + randomSource + ";")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(mob)
+                && call.name.equals("finalizeSpawn") && call.desc.equals(finalize)));
+    }
+
+    @Test
+    void adaptsLegacyItemStackGetTagElementWithoutCreation() {
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyStackTagElement", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "get",
+                "(L" + itemStack + ";Ljava/lang/String;)L" + compoundTag + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, itemStack, "m_41737_",
+                "(Ljava/lang/String;)L" + compoundTag + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        var namedMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "getNamed",
+                "(L" + itemStack + ";Ljava/lang/String;)L" + compoundTag + ";", null, null);
+        namedMethod.visitCode();
+        namedMethod.visitVarInsn(Opcodes.ALOAD, 0);
+        namedMethod.visitVarInsn(Opcodes.ALOAD, 1);
+        namedMethod.visitMethodInsn(Opcodes.INVOKEVIRTUAL, itemStack, "getTagElement",
+                "(Ljava/lang/String;)L" + compoundTag + ";", false);
+        namedMethod.visitInsn(Opcodes.ARETURN);
+        namedMethod.visitMaxs(0, 2);
+        namedMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyStackTagElement", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", call.owner);
+        assertEquals("getTagElement", call.name);
+        assertEquals("(L" + itemStack + ";Ljava/lang/String;)L" + compoundTag + ";", call.desc);
+        MethodInsnNode namedCall = java.util.Arrays.stream(transformed.methods.get(1).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, namedCall.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", namedCall.owner);
+        assertEquals("getTagElement", namedCall.name);
+        assertEquals("(L" + itemStack + ";Ljava/lang/String;)L" + compoundTag + ";", namedCall.desc);
+    }
+
+    @Test
+    void preservesLegacyItemStackGetOrCreateTagElement() {
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyCreateTagElement", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "get",
+                "(L" + itemStack + ";Ljava/lang/String;)L" + compoundTag + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, itemStack, "getOrCreateTagElement",
+                "(Ljava/lang/String;)L" + compoundTag + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyCreateTagElement", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", call.owner);
+        assertEquals("getOrCreateTagElement", call.name);
+        assertEquals("(L" + itemStack + ";Ljava/lang/String;)L" + compoundTag + ";", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyItemStackSetHoverNameToCustomNameComponent() {
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        String component = "net/minecraft/network/chat/Component";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyStackHoverName", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "setName",
+                "(L" + itemStack + ";L" + component + ";)L" + itemStack + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, itemStack, "m_41714_",
+                "(L" + component + ";)L" + itemStack + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyStackHoverName", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", call.owner);
+        assertEquals("setHoverName", call.name);
+        assertEquals("(L" + itemStack + ";L" + component + ";)L" + itemStack + ";", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyPatchouliVariableLookupWithTheLevelRegistryAccess() {
+        String level = "net/minecraft/world/level/Level";
+        String provider = "vazkii/patchouli/api/IVariableProvider";
+        String variable = "vazkii/patchouli/api/IVariable";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyPatchouliProcessor", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC, "setup",
+                "(L" + level + ";L" + provider + ";)V", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitLdcInsn("output");
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, provider, "get",
+                "(Ljava/lang/String;)L" + variable + ";", true);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 3);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyPatchouliProcessor", writer.toByteArray())).accept(transformed, 0);
+        assertTrue(transformed.methods.get(0).maxStack >= 3);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .filter(access -> access.owner.equals(provider))
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKEINTERFACE, call.getOpcode());
+        assertEquals(provider, call.owner);
+        assertEquals("(Ljava/lang/String;Lnet/minecraft/core/HolderLookup$Provider;)L" + variable + ";", call.desc);
+        assertTrue(java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .anyMatch(access -> access.owner.equals(level) && access.name.equals("registryAccess")
+                        && access.desc.equals("()Lnet/minecraft/core/RegistryAccess;")));
+    }
+
+    @Test
+    void adaptsLegacyFriendlyByteBufCompoundTagWrite() {
+        String friendlyByteBuf = "net/minecraft/network/FriendlyByteBuf";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        String tag = "net/minecraft/nbt/Tag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyCompoundTagWriter", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "write",
+                "(L" + friendlyByteBuf + ";L" + compoundTag + ";)L" + friendlyByteBuf + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, friendlyByteBuf, "m_130079_",
+                "(L" + compoundTag + ";)L" + friendlyByteBuf + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyCompoundTagWriter", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKEVIRTUAL, call.getOpcode());
+        assertEquals(friendlyByteBuf, call.owner);
+        assertEquals("writeNbt", call.name);
+        assertEquals("(L" + tag + ";)L" + friendlyByteBuf + ";", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyIngredientIsVanillaCall() {
+        String ingredient = "net/minecraft/world/item/crafting/Ingredient";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyIngredientCheck", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "check",
+                "(L" + ingredient + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, ingredient, "isVanilla", "()Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyIngredientCheck", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyIngredientBridge", call.owner);
+        assertEquals("isVanilla", call.name);
+        assertEquals("(L" + ingredient + ";)Z", call.desc);
+    }
+
+    @Test
+    void adaptsMantleItemStackShareTagCallsToComponentPatchHelpers() {
+        String friendlyByteBuf = "net/minecraft/network/FriendlyByteBuf";
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        String compoundTag = "net/minecraft/nbt/CompoundTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC,
+                "slimeknights/mantle/data/loadable/common/ItemStackLoadable$NBTStack", null,
+                "java/lang/Object", null);
+        var encode = writer.visitMethod(Opcodes.ACC_PUBLIC, "encode",
+                "(L" + friendlyByteBuf + ";L" + itemStack + ";)V", null, null);
+        encode.visitCode();
+        encode.visitVarInsn(Opcodes.ALOAD, 2);
+        encode.visitMethodInsn(Opcodes.INVOKEVIRTUAL, itemStack, "getShareTag",
+                "()L" + compoundTag + ";", false);
+        encode.visitInsn(Opcodes.POP);
+        encode.visitInsn(Opcodes.RETURN);
+        encode.visitMaxs(0, 3);
+        encode.visitEnd();
+        var decode = writer.visitMethod(Opcodes.ACC_PUBLIC, "decode",
+                "(L" + friendlyByteBuf + ";Lsample/TypedMap;L" + itemStack + ";L" + compoundTag + ";)V",
+                null, null);
+        decode.visitCode();
+        decode.visitVarInsn(Opcodes.ALOAD, 3);
+        decode.visitVarInsn(Opcodes.ALOAD, 4);
+        decode.visitMethodInsn(Opcodes.INVOKEVIRTUAL, itemStack, "readShareTag",
+                "(L" + compoundTag + ";)V", false);
+        decode.visitInsn(Opcodes.RETURN);
+        decode.visitMaxs(0, 5);
+        decode.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "slimeknights.mantle.data.loadable.common.ItemStackLoadable$NBTStack",
+                writer.toByteArray())).accept(transformed, 0);
+        var calls = transformed.methods.stream()
+                .flatMap(method -> java.util.Arrays.stream(method.instructions.toArray()))
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertTrue(calls.stream().allMatch(call -> call.getOpcode() == Opcodes.INVOKESTATIC
+                && call.owner.equals("net/neoforged/forgestuck/compat/LegacyItemStackShim")));
+        assertTrue(calls.stream().anyMatch(call -> call.name.equals("getShareTag")
+                && call.desc.equals("(L" + friendlyByteBuf + ";L" + itemStack + ";)L" + compoundTag + ";")));
+        assertTrue(calls.stream().anyMatch(call -> call.name.equals("readShareTag")
+                && call.desc.equals("(L" + friendlyByteBuf + ";L" + itemStack + ";L" + compoundTag + ";)V")));
+    }
+
+    @Test
+    void adaptsLegacyLivingEntityHasEffectCallToHolderApi() {
+        String livingEntity = "net/minecraft/world/entity/LivingEntity";
+        String mobEffect = "net/minecraft/world/effect/MobEffect";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyEffectCheck", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "check",
+                "(L" + livingEntity + ";L" + mobEffect + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, livingEntity, "m_21023_",
+                "(L" + mobEffect + ";)Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyEffectCheck", writer.toByteArray())).accept(transformed, 0);
+        var call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyMobEffect", call.owner);
+        assertEquals("hasEffect", call.name);
+        assertEquals("(L" + livingEntity + ";L" + mobEffect + ";)Z", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyPlayerHasEffectCallToHolderApi() {
+        String player = "net/minecraft/world/entity/player/Player";
+        String mobEffect = "net/minecraft/world/effect/MobEffect";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyPlayerEffectCheck", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "check",
+                "(L" + player + ";L" + mobEffect + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, player, "m_21023_",
+                "(L" + mobEffect + ";)Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(0, 2);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyPlayerEffectCheck", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyMobEffect", call.owner);
+        assertEquals("(Lnet/minecraft/world/entity/LivingEntity;L" + mobEffect + ";)Z", call.desc);
+    }
+
+    @Test
+    void adaptsLegacyUnbakedModelBakeSignature() {
+        String unbakedModel = "net/minecraft/client/resources/model/UnbakedModel";
+        String modelBaker = "net/minecraft/client/resources/model/ModelBaker";
+        String modelState = "net/minecraft/client/resources/model/ModelState";
+        String resourceLocation = "net/minecraft/resources/ResourceLocation";
+        String bakedModel = "net/minecraft/client/resources/model/BakedModel";
+        String legacyDescriptor = "(L" + modelBaker + ";Ljava/util/function/Function;L" + modelState
+                + ";L" + resourceLocation + ";)L" + bakedModel + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyModelBake", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "bake",
+                "(L" + unbakedModel + ";L" + modelBaker + ";Ljava/util/function/Function;L" + modelState
+                        + ";L" + resourceLocation + ";)L" + bakedModel + ";",
+                null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.ALOAD, 3);
+        method.visitVarInsn(Opcodes.ALOAD, 4);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, unbakedModel, "m_7611_", legacyDescriptor, true);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyModelBake", writer.toByteArray())).accept(transformed, 0);
+        var instructions = transformed.methods.get(0).instructions.toArray();
+        MethodInsnNode bakeCall = java.util.Arrays.stream(instructions)
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("bake", bakeCall.name);
+        assertEquals("(L" + modelBaker + ";Ljava/util/function/Function;L" + modelState + ";)L" + bakedModel + ";",
+                bakeCall.desc);
+        int callIndex = java.util.Arrays.asList(instructions).indexOf(bakeCall);
+        assertEquals(Opcodes.POP, instructions[callIndex - 1].getOpcode());
+    }
+
+    @Test
+    void bridgesLegacyUnbakedModelImplementationsToCurrentBakeSignature() {
+        String unbakedModel = "net/minecraft/client/resources/model/UnbakedModel";
+        String modelBaker = "net/minecraft/client/resources/model/ModelBaker";
+        String modelState = "net/minecraft/client/resources/model/ModelState";
+        String bakedModel = "net/minecraft/client/resources/model/BakedModel";
+        String legacyDescriptor = "(L" + modelBaker
+                + ";Ljava/util/function/Function;L" + modelState
+                + ";Lnet/minecraft/resources/ResourceLocation;)L" + bakedModel + ";";
+        String targetDescriptor = "(L" + modelBaker
+                + ";Ljava/util/function/Function;L" + modelState + ";)L" + bakedModel + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyUnbakedModel", null,
+                "java/lang/Object", new String[] {unbakedModel});
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_7611_", legacyDescriptor, null, null);
+        method.visitCode();
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 5);
+        method.visitEnd();
+        writer.visitEnd();
+
+        SrgMemberRemapStep step = new SrgMemberRemapStep();
+        step.scan("sample.LegacyUnbakedModel", writer.toByteArray(), null);
+        ClassNode transformed = new ClassNode();
+        new ClassReader(step.apply("sample.LegacyUnbakedModel", writer.toByteArray()))
+                .accept(transformed, 0);
+
+        MethodNode bridge = transformed.methods.stream()
+                .filter(candidate -> candidate.name.equals("bake") && candidate.desc.equals(targetDescriptor))
+                .findFirst().orElseThrow();
+        var calls = java.util.Arrays.stream(bridge.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals(
+                "net/neoforged/forgestuck/compat/LegacyModelResourceLocations")
+                && call.name.equals("missingModelLocation")));
+        assertTrue(calls.stream().anyMatch(call -> call.owner.equals("sample/LegacyUnbakedModel")
+                && (call.name.equals("bake") || call.name.equals("m_7611_"))
+                && call.desc.equals(legacyDescriptor)));
+    }
+
+    @Test
+    void bridgesLegacyContainerMethodsThroughAddonInterfaces() {
+        ClassWriter interfaceWriter = new ClassWriter(0);
+        interfaceWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC | Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT,
+                "sample/AddonInventory", null, "java/lang/Object",
+                new String[] {"net/minecraft/world/Container"});
+        interfaceWriter.visitEnd();
+
+        ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        classWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyInventory", null,
+                "java/lang/Object", new String[] {"sample/AddonInventory"});
+        var size = classWriter.visitMethod(Opcodes.ACC_PUBLIC, "m_6643_", "()I", null, null);
+        size.visitCode();
+        size.visitIntInsn(Opcodes.BIPUSH, 4);
+        size.visitInsn(Opcodes.IRETURN);
+        size.visitMaxs(1, 1);
+        size.visitEnd();
+        classWriter.visitEnd();
+
+        SrgMemberRemapStep step = new SrgMemberRemapStep();
+        step.scan("sample.AddonInventory", interfaceWriter.toByteArray(), null);
+        step.scan("sample.LegacyInventory", classWriter.toByteArray(), null);
+        ClassNode transformed = new ClassNode();
+        new ClassReader(step.apply("sample.LegacyInventory", classWriter.toByteArray()))
+                .accept(transformed, 0);
+
+        MethodNode bridge = transformed.methods.stream()
+                .filter(method -> method.name.equals("getContainerSize") && method.desc.equals("()I"))
+                .findFirst().orElseThrow();
+        assertTrue(java.util.Arrays.stream(bridge.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .anyMatch(call -> call.name.equals("m_6643_") && call.owner.equals("sample/LegacyInventory")));
+    }
+
+    @Test
+    void bridgesLegacyIngredientJsonAndNetworkMethods() {
+        String ingredient = "net/minecraft/world/item/crafting/Ingredient";
+        String json = "com/google/gson/JsonElement";
+        String buffer = "net/minecraft/network/FriendlyByteBuf";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyIngredientCodec", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "calls", "()V", null, null);
+        method.visitCode();
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, ingredient, "m_43917_",
+                "(L" + json + ";)L" + ingredient + ";", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ICONST_0);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, ingredient, "m_288218_",
+                "(L" + json + ";Z)L" + ingredient + ";", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, ingredient, "m_43923_", "(L" + buffer + ";)V", false);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, ingredient, "m_43940_",
+                "(L" + buffer + ";)L" + ingredient + ";", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, ingredient, "m_43942_", "()L" + json + ";", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyIngredientCodec", writer.toByteArray())).accept(transformed, 0);
+        var calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(List.of("fromJson", "fromJson", "toNetwork", "fromNetwork", "toJson"),
+                calls.stream().map(call -> call.name).toList());
+        assertTrue(calls.stream().allMatch(call -> call.owner.equals(
+                "net/neoforged/forgestuck/compat/LegacyIngredientBridge")
+                && call.getOpcode() == Opcodes.INVOKESTATIC));
+        assertEquals("(L" + json + ";)L" + ingredient + ";", calls.get(0).desc);
+        assertEquals("(L" + json + ";Z)L" + ingredient + ";", calls.get(1).desc);
+        assertEquals("(L" + ingredient + ";L" + buffer + ";)V", calls.get(2).desc);
+        assertEquals("(L" + buffer + ";)L" + ingredient + ";", calls.get(3).desc);
+        assertEquals("(L" + ingredient + ";)L" + json + ";", calls.get(4).desc);
+    }
+
+    @Test
+    void bridgesLegacyForestryRecipeMethodsToTheCurrentRecipeApi() {
+        String recipeInterface = "forestry/api/recipes/IForestryRecipe";
+        String recipeType = "net/minecraft/world/item/crafting/RecipeType";
+        String serializer = "net/minecraft/world/item/crafting/RecipeSerializer";
+        String registryAccess = "net/minecraft/core/RegistryAccess";
+        String holderProvider = "net/minecraft/core/HolderLookup$Provider";
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/GendustryProcessorRecipe", null,
+                "java/lang/Object", new String[] {recipeInterface});
+        var typeMethod = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_6671_", "()L" + recipeType + ";", null, null);
+        typeMethod.visitCode();
+        typeMethod.visitInsn(Opcodes.ACONST_NULL);
+        typeMethod.visitInsn(Opcodes.ARETURN);
+        typeMethod.visitMaxs(1, 1);
+        typeMethod.visitEnd();
+        var serializerMethod = writer.visitMethod(
+                Opcodes.ACC_PUBLIC, "m_7707_", "()L" + serializer + ";", null, null);
+        serializerMethod.visitCode();
+        serializerMethod.visitInsn(Opcodes.ACONST_NULL);
+        serializerMethod.visitInsn(Opcodes.ARETURN);
+        serializerMethod.visitMaxs(1, 1);
+        serializerMethod.visitEnd();
+        var resultMethod = writer.visitMethod(
+                Opcodes.ACC_PUBLIC, "m_8043_", "(L" + registryAccess + ";)L" + itemStack + ";", null, null);
+        resultMethod.visitCode();
+        resultMethod.visitInsn(Opcodes.ACONST_NULL);
+        resultMethod.visitInsn(Opcodes.ARETURN);
+        resultMethod.visitMaxs(1, 2);
+        resultMethod.visitEnd();
+        writer.visitEnd();
+
+        SrgMemberRemapStep step = new SrgMemberRemapStep();
+        step.scan("sample.GendustryProcessorRecipe", writer.toByteArray(), null);
+        ClassNode transformed = new ClassNode();
+        new ClassReader(step.apply("sample.GendustryProcessorRecipe", writer.toByteArray()))
+                .accept(transformed, 0);
+        assertTrue(transformed.methods.stream().anyMatch(method ->
+                method.name.equals("getType") && method.desc.equals("()L" + recipeType + ";")));
+        assertTrue(transformed.methods.stream().anyMatch(method ->
+                method.name.equals("getSerializer") && method.desc.equals("()L" + serializer + ";")));
+        MethodNode resultBridge = transformed.methods.stream()
+                .filter(method -> method.name.equals("getResultItem")
+                        && method.desc.equals("(L" + holderProvider + ";)L" + itemStack + ";")
+                        && (method.access & Opcodes.ACC_SYNTHETIC) != 0)
+                .findFirst().orElseThrow();
+        var instructions = resultBridge.instructions.toArray();
+        assertTrue(java.util.Arrays.stream(instructions)
+                .anyMatch(instruction -> instruction.getOpcode() == Opcodes.CHECKCAST));
+        assertTrue(java.util.Arrays.stream(instructions)
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .anyMatch(call -> call.name.equals("m_8043_")
+                        && call.desc.equals("(L" + registryAccess + ";)L" + itemStack + ";")));
+    }
+
+    @Test
+    void bridgesRecipeMethodsDeclaredThroughAnIndirectSuperclass() {
+        String recipe = "net/minecraft/world/item/crafting/Recipe";
+        String recipeType = "net/minecraft/world/item/crafting/RecipeType";
+        ClassWriter baseWriter = new ClassWriter(0);
+        baseWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/RecipeBase", null, "java/lang/Object",
+                new String[] {recipe});
+        baseWriter.visitEnd();
+        ClassWriter recipeWriter = new ClassWriter(0);
+        recipeWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/PulverizerRecipe", null,
+                "sample/RecipeBase", null);
+        var legacyMethod = recipeWriter.visitMethod(Opcodes.ACC_PUBLIC, "m_6671_",
+                "()L" + recipeType + ";", null, null);
+        legacyMethod.visitCode();
+        legacyMethod.visitInsn(Opcodes.ACONST_NULL);
+        legacyMethod.visitInsn(Opcodes.ARETURN);
+        legacyMethod.visitMaxs(1, 1);
+        legacyMethod.visitEnd();
+        recipeWriter.visitEnd();
+
+        SrgMemberRemapStep step = new SrgMemberRemapStep();
+        step.scan("sample.RecipeBase", baseWriter.toByteArray(), null);
+        step.scan("sample.PulverizerRecipe", recipeWriter.toByteArray(), null);
+        ClassNode transformed = new ClassNode();
+        new ClassReader(step.apply("sample.PulverizerRecipe", recipeWriter.toByteArray())).accept(transformed, 0);
+        MethodNode bridge = transformed.methods.stream()
+                .filter(method -> method.name.equals("getType") && method.desc.equals("()L" + recipeType + ";"))
+                .findFirst().orElseThrow();
+        MethodInsnNode delegate = java.util.Arrays.stream(bridge.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("m_6671_", delegate.name);
+        assertEquals("sample/PulverizerRecipe", delegate.owner);
+    }
+
+    @Test
+    void bridgesLegacyMenuProviderMethodInheritedThroughModSuperclass() {
+        String descriptor = "(ILnet/minecraft/world/entity/player/Inventory;"
+                + "Lnet/minecraft/world/entity/player/Player;)"
+                + "Lnet/minecraft/world/inventory/AbstractContainerMenu;";
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/IndustrialApiary", null,
+                "forestry/core/tiles/TileBase", null);
+        var createMenu = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_7208_", descriptor, null, null);
+        createMenu.visitCode();
+        createMenu.visitInsn(Opcodes.ACONST_NULL);
+        createMenu.visitInsn(Opcodes.ARETURN);
+        createMenu.visitMaxs(1, 4);
+        createMenu.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.IndustrialApiary", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodNode bridge = transformed.methods.stream()
+                .filter(method -> method.name.equals("createMenu") && method.desc.equals(descriptor))
+                .findFirst().orElseThrow();
+        MethodInsnNode delegate = java.util.Arrays.stream(bridge.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("m_7208_", delegate.name);
+        assertEquals("sample/IndustrialApiary", delegate.owner);
+    }
+
+    @Test
+    void bridgesLegacyEntityBlockMethodsInheritedThroughModSuperclass() {
+        String entityBlock = "net/minecraft/world/level/block/EntityBlock";
+        String factoryDescriptor = "(Lnet/minecraft/core/BlockPos;"
+                + "Lnet/minecraft/world/level/block/state/BlockState;)"
+                + "Lnet/minecraft/world/level/block/entity/BlockEntity;";
+        String tickerDescriptor = "(Lnet/minecraft/world/level/Level;"
+                + "Lnet/minecraft/world/level/block/state/BlockState;"
+                + "Lnet/minecraft/world/level/block/entity/BlockEntityType;)"
+                + "Lnet/minecraft/world/level/block/entity/BlockEntityTicker;";
+
+        ClassWriter baseWriter = new ClassWriter(0);
+        baseWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC | Opcodes.ACC_ABSTRACT,
+                "sample/EntityBlockBase", null, "java/lang/Object", new String[] {entityBlock});
+        baseWriter.visitEnd();
+        ClassWriter childWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        childWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyController", null,
+                "sample/EntityBlockBase", null);
+        var factory = childWriter.visitMethod(Opcodes.ACC_PUBLIC, "m_142194_", factoryDescriptor, null, null);
+        factory.visitCode();
+        factory.visitInsn(Opcodes.ACONST_NULL);
+        factory.visitInsn(Opcodes.ARETURN);
+        factory.visitMaxs(0, 0);
+        factory.visitEnd();
+        var ticker = childWriter.visitMethod(Opcodes.ACC_PUBLIC, "m_142354_", tickerDescriptor, null, null);
+        ticker.visitCode();
+        ticker.visitInsn(Opcodes.ACONST_NULL);
+        ticker.visitInsn(Opcodes.ARETURN);
+        ticker.visitMaxs(0, 0);
+        ticker.visitEnd();
+        childWriter.visitEnd();
+
+        SrgMemberRemapStep step = new SrgMemberRemapStep();
+        step.scan("sample.EntityBlockBase", baseWriter.toByteArray(), null);
+        step.scan("sample.LegacyController", childWriter.toByteArray(), null);
+        ClassNode transformed = new ClassNode();
+        new ClassReader(step.apply("sample.LegacyController", childWriter.toByteArray()))
+                .accept(transformed, 0);
+
+        assertTrue(transformed.methods.stream().anyMatch(method ->
+                method.name.equals("newBlockEntity") && method.desc.equals(factoryDescriptor)));
+        assertTrue(transformed.methods.stream().anyMatch(method ->
+                method.name.equals("getTicker") && method.desc.equals(tickerDescriptor)));
+        for (String legacyName : List.of("m_142194_", "m_142354_")) {
+            assertTrue(transformed.methods.stream().anyMatch(method -> method.name.equals(legacyName)));
+        }
+    }
+
+    @Test
+    void remapsCallsToLegacyMethodsInheritedFromUnscannedModSuperclass() {
+        String apiary = "sample/IndustrialApiary";
+        String level = "net/minecraft/world/level/Level";
+        ClassWriter apiaryWriter = new ClassWriter(0);
+        apiaryWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, apiary, null,
+                "forestry/core/tiles/TileBase", null);
+        apiaryWriter.visitEnd();
+
+        ClassWriter menuWriter = new ClassWriter(0);
+        menuWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/IndustrialApiaryMenu", null,
+                "java/lang/Object", null);
+        var method = menuWriter.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "getLevel",
+                "(L" + apiary + ";)L" + level + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, apiary, "m_58904_", "()L" + level + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        menuWriter.visitEnd();
+
+        SrgMemberRemapStep step = new SrgMemberRemapStep();
+        step.scan(apiary, apiaryWriter.toByteArray(), null);
+        ClassNode transformed = new ClassNode();
+        new ClassReader(step.apply("sample.IndustrialApiaryMenu", menuWriter.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("getLevel", call.name);
+    }
+
+    @Test
+    void remapsItemDefaultInstanceOnExternalItemSubclass() {
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/DnaExtractorRecipeCategory", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "labware",
+                "(Lforestry/core/platform/item/ItemForestry;)Lnet/minecraft/world/item/ItemStack;",
+                null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "forestry/core/platform/item/ItemForestry",
+                "m_7968_", "()Lnet/minecraft/world/item/ItemStack;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.DnaExtractorRecipeCategory", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("forestry/core/platform/item/ItemForestry", call.owner);
+        assertEquals("getDefaultInstance", call.name);
+        assertEquals("()Lnet/minecraft/world/item/ItemStack;", call.desc);
+    }
+
+    @Test
+    void recreatesLegacyTypedCraftingBookCategoryCodec() {
+        String category = "net/minecraft/world/item/crafting/CraftingBookCategory";
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/RecipeCategoryCodec", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "codec",
+                "()Lnet/minecraft/util/StringRepresentable$EnumCodec;", null, null);
+        method.visitCode();
+        method.visitFieldInsn(Opcodes.GETSTATIC, category, "f_244644_",
+                "Lnet/minecraft/util/StringRepresentable$EnumCodec;");
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.RecipeCategoryCodec", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("net/neoforged/forgestuck/compat/LegacyEnumCodecs", call.owner);
+        assertEquals("craftingBookCategoryCodec", call.name);
+        assertEquals("()Lnet/minecraft/util/StringRepresentable$EnumCodec;", call.desc);
+    }
+
+    @Test
+    void bridgesLegacySimpleGeometryAddQuadsModelNameParameter() {
+        String simpleGeometry = "net/neoforged/neoforge/client/model/geometry/SimpleUnbakedGeometry";
+        String context = "net/neoforged/neoforge/client/model/geometry/IGeometryBakingContext";
+        String modelBuilder = "net/neoforged/neoforge/client/model/IModelBuilder";
+        String baker = "net/minecraft/client/resources/model/ModelBaker";
+        String modelState = "net/minecraft/client/resources/model/ModelState";
+        String resourceLocation = "net/minecraft/resources/ResourceLocation";
+        String legacyDescriptor = "(L" + context + ";L" + modelBuilder + ";L" + baker
+                + ";Ljava/util/function/Function;L" + modelState + ";L" + resourceLocation + ";)V";
+        String targetDescriptor = "(L" + context + ";L" + modelBuilder + ";L" + baker
+                + ";Ljava/util/function/Function;L" + modelState + ";)V";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacySimpleGeometry", null,
+                simpleGeometry, null);
+        var legacy = writer.visitMethod(Opcodes.ACC_PUBLIC, "addQuads", legacyDescriptor, null, null);
+        legacy.visitCode();
+        legacy.visitInsn(Opcodes.RETURN);
+        legacy.visitMaxs(0, 7);
+        legacy.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacySimpleGeometry", writer.toByteArray())).accept(transformed, 0);
+        MethodNode bridge = transformed.methods.stream()
+                .filter(method -> method.name.equals("addQuads") && method.desc.equals(targetDescriptor))
+                .findFirst().orElseThrow();
+        var calls = java.util.Arrays.stream(bridge.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(3, calls.size());
+        assertEquals("getModelName", calls.get(0).name);
+        assertEquals("parse", calls.get(1).name);
+        assertEquals("addQuads", calls.get(2).name);
+        assertEquals(legacyDescriptor, calls.get(2).desc);
+    }
+
+    @Test
+    void remapsLegacyBlockElementFaceDataAccessor() {
+        String face = "net/minecraft/client/renderer/block/model/BlockElementFace";
+        String data = "net/neoforged/neoforge/client/model/ExtraFaceData";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyFaceData", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "blockLight",
+                "(L" + face + ";)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, face, "getFaceData", "()L" + data + ";", false);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, data, "blockLight", "()I", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyFaceData", writer.toByteArray()))
+                .accept(transformed, 0);
+        var calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertEquals(face, calls.get(0).owner);
+        assertEquals("faceData", calls.get(0).name);
+        assertEquals("()L" + data + ";", calls.get(0).desc);
+        assertEquals("blockLight", calls.get(1).name);
+    }
+
+    @Test
+    void normalizesLegacyTextureAtlasSpriteUvArguments() {
+        String sprite = "net/minecraft/client/renderer/texture/TextureAtlasSprite";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacySpriteUv", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "uv",
+                "(L" + sprite + ";D)F", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.DLOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, sprite, "m_111392_", "(D)F", false);
+        method.visitInsn(Opcodes.POP);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.DLOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, sprite, "getV", "(D)F", false);
+        method.visitInsn(Opcodes.FRETURN);
+        method.visitMaxs(0, 3);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        LegacyNameMappings mappings = new LegacyNameMappings(Map.of("m_111392_", "getU"), Set.of());
+        new ClassReader(new SrgMemberRemapStep(mappings).apply("sample.LegacySpriteUv", writer.toByteArray()))
+                .accept(transformed, 0);
+        var instructions = transformed.methods.get(0).instructions.toArray();
+        var calls = java.util.Arrays.stream(instructions)
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertEquals("getU", calls.get(0).name);
+        assertEquals("(F)F", calls.get(0).desc);
+        assertEquals("getV", calls.get(1).name);
+        assertEquals("(F)F", calls.get(1).desc);
+        for (MethodInsnNode call : calls) {
+            int index = java.util.Arrays.asList(instructions).indexOf(call);
+            assertEquals(Opcodes.FMUL, instructions[index - 1].getOpcode());
+            assertEquals(Float.valueOf(0.0625f),
+                    ((org.objectweb.asm.tree.LdcInsnNode) instructions[index - 2]).cst);
+            assertEquals(Opcodes.D2F, instructions[index - 3].getOpcode());
+        }
+    }
+
+    @Test
+    void bridgesLegacyBlockModelBakeFaceSignature() {
+        String blockModel = "net/minecraft/client/renderer/block/model/BlockModel";
+        String element = "net/minecraft/client/renderer/block/model/BlockElement";
+        String face = "net/minecraft/client/renderer/block/model/BlockElementFace";
+        String sprite = "net/minecraft/client/renderer/texture/TextureAtlasSprite";
+        String direction = "net/minecraft/core/Direction";
+        String modelState = "net/minecraft/client/resources/model/ModelState";
+        String resourceLocation = "net/minecraft/resources/ResourceLocation";
+        String quad = "net/minecraft/client/renderer/block/model/BakedQuad";
+        String legacyDescriptor = "(L" + element + ";L" + face + ";L" + sprite + ";L" + direction
+                + ";L" + modelState + ";L" + resourceLocation + ";)L" + quad + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyBakeFace", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "bake", legacyDescriptor, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.ALOAD, 3);
+        method.visitVarInsn(Opcodes.ALOAD, 4);
+        method.visitVarInsn(Opcodes.ALOAD, 5);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, blockModel, "m_111437_", legacyDescriptor, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 6);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyBakeFace", writer.toByteArray()))
+                .accept(transformed, 0);
+        var instructions = transformed.methods.get(0).instructions.toArray();
+        var call = java.util.Arrays.stream(instructions)
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(blockModel, call.owner);
+        assertEquals("bakeFace", call.name);
+        assertEquals("(L" + element + ";L" + face + ";L" + sprite + ";L" + direction
+                + ";L" + modelState + ";)L" + quad + ";", call.desc);
+        assertEquals(1, java.util.Arrays.stream(instructions)
+                .filter(instruction -> instruction.getOpcode() == Opcodes.POP).count());
+    }
+
+    @Test
+    void bridgesLegacyFaceBakeryUvLockHelper() {
+        String faceBakery = "net/minecraft/client/renderer/block/model/FaceBakery";
+        String uv = "net/minecraft/client/renderer/block/model/BlockFaceUV";
+        String direction = "net/minecraft/core/Direction";
+        String transformation = "com/mojang/math/Transformation";
+        String resourceLocation = "net/minecraft/resources/ResourceLocation";
+        String legacyDescriptor = "(L" + uv + ";L" + direction + ";L" + transformation
+                + ";L" + resourceLocation + ";)L" + uv + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyUvLock", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "recompute",
+                legacyDescriptor, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.ALOAD, 3);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, faceBakery, "m_111581_", legacyDescriptor, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 4);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyUvLock", writer.toByteArray()))
+                .accept(transformed, 0);
+        var instructions = transformed.methods.get(0).instructions.toArray();
+        var call = java.util.Arrays.stream(instructions)
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(faceBakery, call.owner);
+        assertEquals("recomputeUVs", call.name);
+        assertEquals("(L" + uv + ";L" + direction + ";L" + transformation + ";)L" + uv + ";", call.desc);
+        assertEquals(1, java.util.Arrays.stream(instructions)
+                .filter(instruction -> instruction.getOpcode() == Opcodes.POP).count());
+    }
+
+    @Test
+    void bridgesLegacyPostChainResourceManagerConstructor() {
+        String postChain = "net/minecraft/client/renderer/PostChain";
+        String textureManager = "net/minecraft/client/renderer/texture/TextureManager";
+        String resourceManager = "net/minecraft/server/packs/resources/ResourceManager";
+        String resourceProvider = "net/minecraft/server/packs/resources/ResourceProvider";
+        String renderTarget = "com/mojang/blaze3d/pipeline/RenderTarget";
+        String resourceLocation = "net/minecraft/resources/ResourceLocation";
+        String legacyDescriptor = "(L" + textureManager + ";L" + resourceManager + ";L" + renderTarget
+                + ";L" + resourceLocation + ";)V";
+        String targetDescriptor = "(L" + textureManager + ";L" + resourceProvider + ";L" + renderTarget
+                + ";L" + resourceLocation + ";)V";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyPostChain", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m_6213_",
+                "(L" + textureManager + ";L" + resourceManager + ";L" + renderTarget + ";L"
+                        + resourceLocation + ";)L" + postChain + ";",
+                null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW, postChain);
+        method.visitInsn(Opcodes.DUP);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.ALOAD, 3);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, postChain, "<init>", legacyDescriptor, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 4);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyPostChain", writer.toByteArray()))
+                .accept(transformed, 0);
+        var call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESPECIAL, call.getOpcode());
+        assertEquals(postChain, call.owner);
+        assertEquals("<init>", call.name);
+        assertEquals(targetDescriptor, call.desc);
+    }
+
+    @Test
+    void bridgesLegacyTextColorParseReturnType() {
+        String textColor = "net/minecraft/network/chat/TextColor";
+        String legacyDescriptor = "(Ljava/lang/String;)L" + textColor + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyTextColor", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m_131268_",
+                "(Ljava/lang/String;)L" + textColor + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKESTATIC, textColor, "parseColor", legacyDescriptor, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyTextColor", writer.toByteArray()))
+                .accept(transformed, 0);
+        var call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyTextColorShim", call.owner);
+        assertEquals("parseColor", call.name);
+        assertEquals(legacyDescriptor, call.desc);
+    }
+
+    @Test
+    void adaptsLegacyPlacementModifierCodecLambda() {
+        String placementModifierType = "net/minecraft/world/level/levelgen/placement/PlacementModifierType";
+        String codecDescriptor = "()Lcom/mojang/serialization/Codec;";
+        String typeDescriptor = "()L" + placementModifierType + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyPlacementType", null, "java/lang/Object", null);
+        var codec = writer.visitMethod(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
+                "lambda$codec", codecDescriptor, null, null);
+        codec.visitCode();
+        codec.visitInsn(Opcodes.ACONST_NULL);
+        codec.visitInsn(Opcodes.ARETURN);
+        codec.visitMaxs(1, 0);
+        codec.visitEnd();
+        var type = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m_191869_", typeDescriptor, null, null);
+        type.visitCode();
+        type.visitInvokeDynamicInsn("m_191869_", typeDescriptor,
+                new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory",
+                        "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;"
+                                + "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;"
+                                + "Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;",
+                        false),
+                Type.getMethodType(codecDescriptor),
+                new Handle(Opcodes.H_INVOKESTATIC, "sample/LegacyPlacementType", "lambda$codec",
+                        codecDescriptor, false),
+                Type.getMethodType(codecDescriptor));
+        type.visitInsn(Opcodes.ARETURN);
+        type.visitMaxs(1, 0);
+        type.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyPlacementType", writer.toByteArray())).accept(transformed, 0);
+        var calls = java.util.Arrays.stream(transformed.methods.stream()
+                .filter(method -> method.name.equals("m_191869_")).findFirst().orElseThrow()
+                .instructions.toArray()).filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertEquals("sample/LegacyPlacementType", calls.get(0).owner);
+        assertEquals("lambda$codec", calls.get(0).name);
+        assertEquals(codecDescriptor, calls.get(0).desc);
+        assertEquals("net/neoforged/forgestuck/compat/LegacyPlacementModifierType", calls.get(1).owner);
+        assertEquals("adapt", calls.get(1).name);
+        assertEquals("(Lcom/mojang/serialization/Codec;)L" + placementModifierType + ";", calls.get(1).desc);
+        assertFalse(java.util.Arrays.stream(transformed.methods.stream()
+                .filter(method -> method.name.equals("m_191869_")).findFirst().orElseThrow()
+                .instructions.toArray()).anyMatch(org.objectweb.asm.tree.InvokeDynamicInsnNode.class::isInstance));
+    }
+
+    @Test
+    void adaptsLegacyStructureTypeCodecLambda() {
+        String structureType = "net/minecraft/world/level/levelgen/structure/StructureType";
+        String codecDescriptor = "()Lcom/mojang/serialization/Codec;";
+        String typeDescriptor = "()L" + structureType + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyStructureTypeFactory", null,
+                "java/lang/Object", null);
+        var codec = writer.visitMethod(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
+                "lambda$codec", codecDescriptor, null, null);
+        codec.visitCode();
+        codec.visitInsn(Opcodes.ACONST_NULL);
+        codec.visitInsn(Opcodes.ARETURN);
+        codec.visitMaxs(1, 0);
+        codec.visitEnd();
+        var type = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m_191869_", typeDescriptor, null,
+                null);
+        type.visitCode();
+        type.visitInvokeDynamicInsn("m_191869_", typeDescriptor,
+                new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory",
+                        "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;"
+                                + "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;"
+                                + "Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;",
+                        false),
+                Type.getMethodType(codecDescriptor),
+                new Handle(Opcodes.H_INVOKESTATIC, "sample/LegacyStructureTypeFactory", "lambda$codec",
+                        codecDescriptor, false),
+                Type.getMethodType(codecDescriptor));
+        type.visitInsn(Opcodes.ARETURN);
+        type.visitMaxs(1, 0);
+        type.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyStructureTypeFactory", writer.toByteArray())).accept(transformed, 0);
+        var calls = java.util.Arrays.stream(transformed.methods.stream()
+                .filter(method -> method.name.equals("m_191869_")).findFirst().orElseThrow()
+                .instructions.toArray()).filter(MethodInsnNode.class::isInstance)
+                .map(MethodInsnNode.class::cast).toList();
+        assertEquals(2, calls.size());
+        assertEquals("sample/LegacyStructureTypeFactory", calls.get(0).owner);
+        assertEquals("lambda$codec", calls.get(0).name);
+        assertEquals(codecDescriptor, calls.get(0).desc);
+        assertEquals("net/neoforged/forgestuck/compat/LegacyStructureType", calls.get(1).owner);
+        assertEquals("adapt", calls.get(1).name);
+        assertEquals("(Lcom/mojang/serialization/Codec;)L" + structureType + ";", calls.get(1).desc);
+        assertFalse(java.util.Arrays.stream(transformed.methods.stream()
+                .filter(method -> method.name.equals("m_191869_")).findFirst().orElseThrow()
+                .instructions.toArray()).anyMatch(org.objectweb.asm.tree.InvokeDynamicInsnNode.class::isInstance));
+    }
+
+    @Test
+    void preservesLegacyImmutableVertexFormatElementsReturnType() {
+        String vertexFormat = "com/mojang/blaze3d/vertex/VertexFormat";
+        String immutableList = "com/google/common/collect/ImmutableList";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyVertexFormat", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "elements",
+                "(L" + vertexFormat + ";)L" + immutableList + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, vertexFormat, "m_111436_",
+                "()L" + immutableList + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        LegacyNameMappings mappings = new LegacyNameMappings(Map.of("m_111436_", "getElements"), Set.of());
+        new ClassReader(new SrgMemberRemapStep(mappings).apply("sample.LegacyVertexFormat", writer.toByteArray()))
+                .accept(transformed, 0);
+        var call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyVertexFormatShim", call.owner);
+        assertEquals("getElements", call.name);
+        assertEquals("(L" + vertexFormat + ";)L" + immutableList + ";", call.desc);
+    }
+
+    @Test
+    void remapsLegacyVertexFormatElementRecordAccessors() {
+        String element = "com/mojang/blaze3d/vertex/VertexFormatElement";
+        String type = element + "$Type";
+        String usage = element + "$Usage";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyVertexFormatElement", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "usage",
+                "(L" + element + ";)L" + usage + ";", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, element, "m_86048_", "()L" + usage + ";", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        var count = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "count",
+                "(L" + element + ";)I", null, null);
+        count.visitCode();
+        count.visitVarInsn(Opcodes.ALOAD, 0);
+        count.visitMethodInsn(Opcodes.INVOKEVIRTUAL, element, "getElementCount", "()I", false);
+        count.visitInsn(Opcodes.IRETURN);
+        count.visitMaxs(1, 1);
+        count.visitEnd();
+        var typeMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "type",
+                "(L" + element + ";)L" + type + ";", null, null);
+        typeMethod.visitCode();
+        typeMethod.visitVarInsn(Opcodes.ALOAD, 0);
+        typeMethod.visitMethodInsn(Opcodes.INVOKEVIRTUAL, element, "m_86041_", "()L" + type + ";", false);
+        typeMethod.visitInsn(Opcodes.ARETURN);
+        typeMethod.visitMaxs(1, 1);
+        typeMethod.visitEnd();
+        writer.visitEnd();
+
+        LegacyNameMappings mappings = new LegacyNameMappings(Map.of(
+                "m_86041_", "type",
+                "m_86048_", "usage"), Set.of());
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep(mappings)
+                .apply("sample.LegacyVertexFormatElement", writer.toByteArray())).accept(transformed, 0);
+        var calls = transformed.methods.stream()
+                .flatMap(methodNode -> java.util.Arrays.stream(methodNode.instructions.toArray()))
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(List.of("usage", "count", "type"), calls.stream().map(call -> call.name).toList());
+    }
+
     @Test
     void bridgesLegacyUnbakedGeometryBakeSignature() {
         String geometry = "net/neoforged/neoforge/client/model/geometry/IUnbakedGeometry";
@@ -147,6 +3040,8 @@ class SrgMemberRemapStepTest {
                 Opcodes.FCONST_0, Opcodes.FCONST_0, Opcodes.FCONST_0);
         addVertexCall(method, vertexConsumer, "m_7421_", "(FF)L" + vertexConsumer + ";",
                 Opcodes.FCONST_0, Opcodes.FCONST_0);
+        addVertexCall(method, vertexConsumer, "m_7122_", "(II)L" + vertexConsumer + ";",
+                Opcodes.ICONST_0, Opcodes.ICONST_0);
         addVertexCall(method, vertexConsumer, "m_7120_", "(II)L" + vertexConsumer + ";",
                 Opcodes.ICONST_0, Opcodes.ICONST_0);
         method.visitVarInsn(Opcodes.ALOAD, 0);
@@ -169,8 +3064,9 @@ class SrgMemberRemapStepTest {
                 .accept(transformed, 0);
         var calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
                 .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
-        assertEquals(7, calls.size());
-        assertEquals(java.util.List.of("vertex", "color", "color", "normal", "uv", "uv2", "endVertex"),
+        assertEquals(8, calls.size());
+        assertEquals(java.util.List.of(
+                        "vertex", "color", "color", "normal", "uv", "overlayCoords", "uv2", "endVertex"),
                 calls.stream().map(call -> call.name).toList());
         assertTrue(calls.stream().allMatch(call -> call.getOpcode() == Opcodes.INVOKESTATIC
                 && call.owner.equals(shim) && !call.itf));
@@ -180,6 +3076,62 @@ class SrgMemberRemapStepTest {
         assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
         assertEquals(shim, handle.getOwner());
         assertEquals("(L" + vertexConsumer + ";DDD)L" + vertexConsumer + ";", handle.getDesc());
+    }
+
+    @Test
+    void bridgesTConstructTintedVertexBuilderToModernVertexConsumer() {
+        String vertexConsumer = "com/mojang/blaze3d/vertex/VertexConsumer";
+        String builder = "slimeknights/tconstruct/smeltery/client/util/TintedVertexBuilder";
+        String returnType = "L" + vertexConsumer + ";";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, builder, null, "java/lang/Object",
+                new String[] {vertexConsumer});
+        String[][] legacyMethods = {
+                {"m_5483_", "(DDD)" + returnType},
+                {"m_6122_", "(IIII)" + returnType},
+                {"m_7421_", "(FF)" + returnType},
+                {"m_7122_", "(II)" + returnType},
+                {"m_7120_", "(II)" + returnType},
+                {"m_5601_", "(FFF)" + returnType},
+                {"m_7404_", "(IIII)V"},
+                {"m_141991_", "()V"}
+        };
+        for (String[] legacyMethod : legacyMethods) {
+            var method = writer.visitMethod(Opcodes.ACC_PUBLIC, legacyMethod[0], legacyMethod[1], null, null);
+            method.visitCode();
+            if (legacyMethod[1].endsWith("V")) {
+                method.visitInsn(Opcodes.RETURN);
+                method.visitMaxs(0, 5);
+            } else {
+                method.visitInsn(Opcodes.ACONST_NULL);
+                method.visitInsn(Opcodes.ARETURN);
+                method.visitMaxs(1, 5);
+            }
+            method.visitEnd();
+        }
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(builder, writer.toByteArray())).accept(transformed, 0);
+        for (String modernMethod : List.of("addVertex", "setColor", "setUv", "setUv1", "setUv2", "setNormal")) {
+            assertTrue(transformed.methods.stream().anyMatch(method -> method.name.equals(modernMethod)
+                    && (method.access & Opcodes.ACC_SYNTHETIC) != 0), modernMethod);
+        }
+        for (String[] legacyDefault : List.of(
+                new String[] {"m_7404_", "(IIII)V"},
+                new String[] {"m_141991_", "()V"})) {
+            var method = transformed.methods.stream().filter(candidate -> candidate.name.equals(legacyDefault[0])
+                    && candidate.desc.equals(legacyDefault[1])).findFirst().orElseThrow();
+            assertTrue(java.util.Arrays.stream(method.instructions.toArray())
+                    .noneMatch(MethodInsnNode.class::isInstance));
+        }
+        var overlayBridge = transformed.methods.stream().filter(method -> method.name.equals("setUv1"))
+                .findFirst().orElseThrow();
+        MethodInsnNode legacyOverlay = java.util.Arrays.stream(overlayBridge.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("m_7122_", legacyOverlay.name);
+        assertEquals(builder, legacyOverlay.owner);
     }
 
     @Test
@@ -646,6 +3598,83 @@ class SrgMemberRemapStepTest {
         assertTrue(java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
                 .noneMatch(instruction -> instruction instanceof TypeInsnNode type
                         && type.getOpcode() == Opcodes.NEW && type.desc.equals(oldPost)));
+    }
+
+    @Test
+    void replacesLegacyOverlayPostConstructionAfterEventBusOwnerRemap() {
+        String oldPost = "net/minecraftforge/client/event/RenderGuiOverlayEvent$Post";
+        String oldPre = "net/minecraftforge/client/event/RenderGuiOverlayEvent$Pre";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "example/RemappedLegacyOverlayPost", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m_123456_",
+                "(L" + oldPre + ";)V", null, null);
+        method.visitCode();
+        method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraftforge/common/MinecraftForge", "EVENT_BUS",
+                "Lnet/minecraftforge/eventbus/api/IEventBus;");
+        method.visitTypeInsn(Opcodes.NEW, oldPost);
+        method.visitInsn(Opcodes.DUP);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitInsn(Opcodes.FCONST_0);
+        method.visitInsn(Opcodes.ACONST_NULL);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, oldPost, "<init>",
+                "(Lcom/mojang/blaze3d/platform/Window;Lnet/minecraft/client/gui/GuiGraphics;F"
+                        + "Lnet/minecraftforge/client/gui/overlay/NamedGuiOverlay;)V",
+                false);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, "net/minecraftforge/eventbus/api/IEventBus", "post",
+                "(Lnet/minecraftforge/eventbus/api/Event;)Z", true);
+        method.visitInsn(Opcodes.POP);
+        method.visitInsn(Opcodes.RETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        byte[] ownerRemapped = new ForgeOwnerRemapStep().apply(
+                "example.RemappedLegacyOverlayPost", writer.toByteArray());
+        new ClassReader(new SrgMemberRemapStep().apply("example.RemappedLegacyOverlayPost", ownerRemapped))
+                .accept(transformed, 0);
+        var calls = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).toList();
+        assertEquals(1, calls.size());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyGuiOverlayEvent", calls.get(0).owner);
+        assertEquals("postAfterHealthbar", calls.get(0).name);
+        assertEquals("(Lnet/neoforged/neoforge/client/event/RenderGuiLayerEvent$Pre;)Z", calls.get(0).desc);
+        assertTrue(java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .noneMatch(instruction -> instruction instanceof TypeInsnNode type
+                        && type.getOpcode() == Opcodes.NEW && type.desc.equals(oldPost)));
+    }
+
+    @Test
+    void bridgesLegacyGuiOverlayPartialTickAfterOwnerRemap() {
+        String oldPost = "net/minecraftforge/client/event/RenderGuiOverlayEvent$Post";
+        String targetEvent = "net/neoforged/neoforge/client/event/RenderGuiLayerEvent";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "example/LegacyOverlayPartialTick", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "m_123456_",
+                "(L" + oldPost + ";)F", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, oldPost, "getPartialTick", "()F", false);
+        method.visitInsn(Opcodes.FRETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        byte[] ownerRemapped = new ForgeOwnerRemapStep().apply(
+                "example.LegacyOverlayPartialTick", writer.toByteArray());
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("example.LegacyOverlayPartialTick", ownerRemapped))
+                .accept(transformed, 0);
+        var call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyGuiOverlayEvent", call.owner);
+        assertEquals("getPartialTick", call.name);
+        assertEquals("(L" + targetEvent + ";)F", call.desc);
     }
 
     private static void addVertexCall(org.objectweb.asm.MethodVisitor method, String owner, String name,
@@ -1131,6 +4160,156 @@ class SrgMemberRemapStepTest {
     }
 
     @Test
+    void adaptsLegacyCustomRecipeSuperclassConstructor() {
+        String category = "net/minecraft/world/item/crafting/CraftingBookCategory";
+        String resourceLocation = "net/minecraft/resources/ResourceLocation";
+        String customRecipe = "net/minecraft/world/item/crafting/CustomRecipe";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyCustomRecipe", null,
+                customRecipe, null);
+        var constructor = writer.visitMethod(Opcodes.ACC_PUBLIC, "<init>",
+                "(L" + resourceLocation + ";L" + category + ";)V", null, null);
+        constructor.visitCode();
+        constructor.visitVarInsn(Opcodes.ALOAD, 0);
+        constructor.visitVarInsn(Opcodes.ALOAD, 1);
+        constructor.visitVarInsn(Opcodes.ALOAD, 2);
+        constructor.visitMethodInsn(Opcodes.INVOKESPECIAL, customRecipe, "<init>",
+                "(L" + resourceLocation + ";L" + category + ";)V", false);
+        constructor.visitInsn(Opcodes.RETURN);
+        constructor.visitMaxs(0, 0);
+        constructor.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyCustomRecipe", writer.toByteArray())).accept(node, 0);
+        var instructions = node.methods.get(0).instructions.toArray();
+        MethodInsnNode superCall = java.util.Arrays.stream(instructions)
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        int callIndex = java.util.Arrays.asList(instructions).indexOf(superCall);
+        assertEquals("(L" + category + ";)V", superCall.desc);
+        assertEquals(Opcodes.POP, instructions[callIndex - 1].getOpcode());
+        assertEquals(Opcodes.SWAP, instructions[callIndex - 2].getOpcode());
+    }
+
+    @Test
+    void adaptsLegacySimpleCraftingRecipeFactoryLambda() {
+        String category = "net/minecraft/world/item/crafting/CraftingBookCategory";
+        String resourceLocation = "net/minecraft/resources/ResourceLocation";
+        String customRecipe = "net/minecraft/world/item/crafting/CustomRecipe";
+        String recipe = "sample/LegacySimpleRecipe";
+        String factory = "net/minecraft/world/item/crafting/SimpleCraftingRecipeSerializer$Factory";
+        String legacyArguments = "(L" + resourceLocation + ";L" + category + ";)";
+        ClassWriter recipeWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        recipeWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, recipe, null, customRecipe, null);
+        var recipeConstructor = recipeWriter.visitMethod(Opcodes.ACC_PUBLIC, "<init>",
+                legacyArguments + "V", null, null);
+        recipeConstructor.visitCode();
+        recipeConstructor.visitVarInsn(Opcodes.ALOAD, 0);
+        recipeConstructor.visitVarInsn(Opcodes.ALOAD, 1);
+        recipeConstructor.visitVarInsn(Opcodes.ALOAD, 2);
+        recipeConstructor.visitMethodInsn(Opcodes.INVOKESPECIAL, customRecipe, "<init>",
+                legacyArguments + "V", false);
+        recipeConstructor.visitInsn(Opcodes.RETURN);
+        recipeConstructor.visitMaxs(0, 0);
+        recipeConstructor.visitEnd();
+        recipeWriter.visitEnd();
+        byte[] recipeBytes = recipeWriter.toByteArray();
+
+        ClassWriter factoryWriter = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        factoryWriter.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyRecipeFactory", null,
+                "java/lang/Object", null);
+        var factoryMethod = factoryWriter.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "factory",
+                "()L" + factory + ";", null, null);
+        factoryMethod.visitCode();
+        factoryMethod.visitInvokeDynamicInsn("m_247316_", "()L" + factory + ";",
+                new Handle(Opcodes.H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory",
+                        "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;"
+                                + "Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;"
+                                + "Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;", false),
+                Type.getMethodType(legacyArguments + "Lnet/minecraft/world/item/crafting/CraftingRecipe;"),
+                new Handle(Opcodes.H_NEWINVOKESPECIAL, recipe, "<init>", legacyArguments + "V", false),
+                Type.getMethodType(legacyArguments + "L" + recipe + ";"));
+        factoryMethod.visitInsn(Opcodes.ARETURN);
+        factoryMethod.visitMaxs(0, 0);
+        factoryMethod.visitEnd();
+        factoryWriter.visitEnd();
+        byte[] factoryBytes = factoryWriter.toByteArray();
+
+        SrgMemberRemapStep step = new SrgMemberRemapStep();
+        step.scan("sample.LegacySimpleRecipe", recipeBytes, null);
+        step.scan("sample.LegacyRecipeFactory", factoryBytes, null);
+        ClassNode transformedRecipe = new ClassNode();
+        new ClassReader(step.apply("sample.LegacySimpleRecipe", recipeBytes)).accept(transformedRecipe, 0);
+        ClassNode transformedFactory = new ClassNode();
+        new ClassReader(step.apply("sample.LegacyRecipeFactory", factoryBytes)).accept(transformedFactory, 0);
+
+        MethodNode bridgeConstructor = transformedRecipe.methods.stream()
+                .filter(method -> method.name.equals("<init>") && method.desc.equals("(L" + category + ";)V"))
+                .findFirst().orElseThrow();
+        assertTrue(java.util.Arrays.stream(bridgeConstructor.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .anyMatch(call -> call.owner.equals(
+                        "net/neoforged/forgestuck/compat/LegacyRecipeSerializerCodec")
+                        && call.name.equals("legacyRecipeId")));
+        var indy = java.util.Arrays.stream(transformedFactory.methods.get(0).instructions.toArray())
+                .filter(org.objectweb.asm.tree.InvokeDynamicInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.InvokeDynamicInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals("create", indy.name);
+        assertEquals("(L" + category + ";)Lnet/minecraft/world/item/crafting/CraftingRecipe;",
+                ((Type) indy.bsmArgs[0]).getDescriptor());
+        assertEquals("(L" + category + ";)V", ((Handle) indy.bsmArgs[1]).getDesc());
+        assertEquals("(L" + category + ";)L" + recipe + ";", ((Type) indy.bsmArgs[2]).getDescriptor());
+    }
+
+    @Test
+    void addsCodecBridgeToLegacyCriterionTriggersAndErasesRemovedContexts() {
+        String context = "net/minecraft/advancements/critereon/DeserializationContext";
+        String trigger = "sample/LegacyCriterionTrigger";
+        String simpleTrigger = "net/minecraft/advancements/critereon/SimpleCriterionTrigger";
+        String parserDescriptor = "(Lcom/google/gson/JsonObject;"
+                + "Lnet/minecraft/advancements/critereon/ContextAwarePredicate;L" + context + ";)"
+                + "Lsample/LegacyCriterionTrigger$Instance;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, trigger, null, simpleTrigger, null);
+        var parser = writer.visitMethod(Opcodes.ACC_PROTECTED, "createInstance", parserDescriptor, null, null);
+        parser.visitCode();
+        parser.visitInsn(Opcodes.ACONST_NULL);
+        parser.visitInsn(Opcodes.ARETURN);
+        parser.visitMaxs(0, 4);
+        parser.visitEnd();
+        var legacyOverride = writer.visitMethod(Opcodes.ACC_PROTECTED, "m_7214_",
+                "(Lcom/google/gson/JsonObject;Lnet/minecraft/advancements/critereon/ContextAwarePredicate;"
+                        + "L" + context + ";)Lnet/minecraft/advancements/critereon/AbstractCriterionTriggerInstance;",
+                null, null);
+        legacyOverride.visitCode();
+        legacyOverride.visitInsn(Opcodes.ACONST_NULL);
+        legacyOverride.visitInsn(Opcodes.ARETURN);
+        legacyOverride.visitMaxs(0, 4);
+        legacyOverride.visitEnd();
+        writer.visitEnd();
+        byte[] bytes = writer.toByteArray();
+
+        SrgMemberRemapStep step = new SrgMemberRemapStep();
+        step.scan("sample.LegacyCriterionTrigger", bytes, null);
+        ClassNode transformed = new ClassNode();
+        new ClassReader(step.apply("sample.LegacyCriterionTrigger", bytes)).accept(transformed, 0);
+
+        assertTrue(transformed.methods.stream().anyMatch(method ->
+                method.name.equals("createInstance")
+                        && method.desc.equals(parserDescriptor.replace("L" + context + ";", "Ljava/lang/Object;"))));
+        MethodNode codec = transformed.methods.stream()
+                .filter(method -> method.name.equals("codec")
+                        && method.desc.equals("()Lcom/mojang/serialization/Codec;"))
+                .findFirst().orElseThrow();
+        var call = java.util.Arrays.stream(codec.instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals("net/neoforged/forgestuck/compat/LegacyCriteriaTriggers", call.owner);
+        assertEquals("codec", call.name);
+    }
+
+    @Test
     void redirectsRemovedItemStackTagAccessorToComponentBackedShim() {
         ClassWriter writer = new ClassWriter(0);
         writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyStackUser", null, "java/lang/Object", null);
@@ -1155,6 +4334,50 @@ class SrgMemberRemapStepTest {
         assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", call.owner);
         assertEquals("getTag", call.name);
         assertEquals("(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraft/nbt/CompoundTag;", call.desc);
+    }
+
+    @Test
+    void redirectsLegacyItemStackTagFieldReadsAndWritesToComponentShim() {
+        String stack = "net/minecraft/world/item/ItemStack";
+        String tag = "net/minecraft/nbt/CompoundTag";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyStackFields", null, "java/lang/Object", null);
+        var read = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "read",
+                "(L" + stack + ";)L" + tag + ";", null, null);
+        read.visitCode();
+        read.visitVarInsn(Opcodes.ALOAD, 0);
+        read.visitFieldInsn(Opcodes.GETFIELD, stack, "f_41590_", "L" + tag + ";");
+        read.visitInsn(Opcodes.ARETURN);
+        read.visitMaxs(0, 0);
+        read.visitEnd();
+        var write = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "write",
+                "(L" + stack + ";L" + tag + ";)V", null, null);
+        write.visitCode();
+        write.visitVarInsn(Opcodes.ALOAD, 0);
+        write.visitVarInsn(Opcodes.ALOAD, 1);
+        write.visitFieldInsn(Opcodes.PUTFIELD, stack, "f_41590_", "L" + tag + ";");
+        write.visitInsn(Opcodes.RETURN);
+        write.visitMaxs(0, 0);
+        write.visitEnd();
+        writer.visitEnd();
+
+        ClassNode node = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyStackFields", writer.toByteArray()))
+                .accept(node, 0);
+        var readCall = java.util.Arrays.stream(node.methods.stream()
+                        .filter(method -> method.name.equals("read")).findFirst().orElseThrow()
+                        .instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        var writeCall = java.util.Arrays.stream(node.methods.stream()
+                        .filter(method -> method.name.equals("write")).findFirst().orElseThrow()
+                        .instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, readCall.getOpcode());
+        assertEquals("getTag", readCall.name);
+        assertEquals("(L" + stack + ";)L" + tag + ";", readCall.desc);
+        assertEquals(Opcodes.INVOKESTATIC, writeCall.getOpcode());
+        assertEquals("setTag", writeCall.name);
+        assertEquals("(L" + stack + ";L" + tag + ";)V", writeCall.desc);
     }
 
     @Test
@@ -1212,6 +4435,37 @@ class SrgMemberRemapStepTest {
                 .findFirst().orElseThrow();
         assertEquals(desc, bridge.desc);
         assertTrue((bridge.access & Opcodes.ACC_SYNTHETIC) != 0);
+    }
+
+    @Test
+    void bridgesLegacyFluidSourceAndAmountOverridesThroughForgeFlowingFluid() {
+        String fluidState = "net/minecraft/world/level/material/FluidState";
+        ClassWriter writer = new ClassWriter(0);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyFluidSource", null,
+                "net/minecraftforge/fluids/ForgeFlowingFluid", null);
+        var source = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_7444_", "(L" + fluidState + ";)Z", null, null);
+        source.visitCode();
+        source.visitInsn(Opcodes.ICONST_1);
+        source.visitInsn(Opcodes.IRETURN);
+        source.visitMaxs(1, 2);
+        source.visitEnd();
+        var amount = writer.visitMethod(Opcodes.ACC_PUBLIC, "m_7430_", "(L" + fluidState + ";)I", null, null);
+        amount.visitCode();
+        amount.visitInsn(Opcodes.ICONST_1);
+        amount.visitInsn(Opcodes.IRETURN);
+        amount.visitMaxs(1, 2);
+        amount.visitEnd();
+        writer.visitEnd();
+
+        SrgMemberRemapStep step = new SrgMemberRemapStep();
+        step.scan("sample.LegacyFluidSource", writer.toByteArray(), null);
+        ClassNode transformed = new ClassNode();
+        new ClassReader(step.apply("sample.LegacyFluidSource", writer.toByteArray())).accept(transformed, 0);
+        for (var method : List.of(
+                transformed.methods.stream().filter(candidate -> candidate.name.equals("isSource")).findFirst().orElseThrow(),
+                transformed.methods.stream().filter(candidate -> candidate.name.equals("getAmount")).findFirst().orElseThrow())) {
+            assertTrue((method.access & Opcodes.ACC_SYNTHETIC) != 0);
+        }
     }
 
     @Test
@@ -1436,13 +4690,477 @@ class SrgMemberRemapStepTest {
         ClassNode transformed = new ClassNode();
         new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyPotionDefault", writer.toByteArray()))
                 .accept(transformed, 0);
+        for (MethodNode transformedMethod : transformed.methods) {
+            var instructions = java.util.Arrays.stream(transformedMethod.instructions.toArray()).toList();
+            FieldInsnNode field = instructions.stream().filter(FieldInsnNode.class::isInstance)
+                    .map(FieldInsnNode.class::cast).findFirst().orElseThrow();
+            assertEquals("WATER", field.name);
+            assertEquals("Lnet/minecraft/core/Holder;", field.desc);
+            assertTrue(instructions.stream().filter(MethodInsnNode.class::isInstance)
+                    .map(MethodInsnNode.class::cast)
+                    .anyMatch(call -> call.owner.equals("net/minecraft/core/Holder") && call.name.equals("value")));
+        }
+    }
+
+    @Test
+    void mapsLegacyEmptyPotionKeyToWaterRegistryKey() {
+        String resourceKey = "net/minecraft/resources/ResourceKey";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyPotionKey", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "empty",
+                "()L" + resourceKey + ";", null, null);
+        method.visitCode();
+        method.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/world/item/alchemy/Potions", "f_268695_",
+                "L" + resourceKey + ";");
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyPotionKey", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyPotion", call.owner);
+        assertEquals("emptyKey", call.name);
+        assertEquals("()L" + resourceKey + ";", call.desc);
+    }
+
+    @Test
+    void mapsLegacyHolderGetCallsAndHandlesToValue() {
+        String holder = "net/minecraft/core/Holder";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyHolderGet", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "get",
+                "(L" + holder + ";)Ljava/lang/Object;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, holder, "get", "()Ljava/lang/Object;", true);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new org.objectweb.asm.Handle(Opcodes.H_INVOKEINTERFACE, holder, "get",
+                "()Ljava/lang/Object;", true));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(1, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyHolderGet", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast).findFirst().orElseThrow();
+        assertEquals("value", call.name);
+        var handle = (org.objectweb.asm.Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                transformed.methods.get(1).instructions.getFirst()).cst;
+        assertEquals("value", handle.getName());
+    }
+
+    @Test
+    void adaptsLegacyRecipeManagerByTypeCallsAndHandles() {
+        String manager = "net/minecraft/world/item/crafting/RecipeManager";
+        String recipeType = "net/minecraft/world/item/crafting/RecipeType";
+        String legacyDescriptor = "(L" + recipeType + ";)Ljava/util/Map;";
+        String adapterDescriptor = "(L" + manager + ";L" + recipeType + ";)Ljava/util/Map;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyRecipeManager", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "lookup",
+                "(L" + manager + ";L" + recipeType + ";)Ljava/util/Map;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, manager, "m_44054_", legacyDescriptor, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(2, 2);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_INVOKEVIRTUAL, manager, "byType", legacyDescriptor, false));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(1, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyRecipeManager", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", call.owner);
+        assertEquals("byType", call.name);
+        assertEquals(adapterDescriptor, call.desc);
+        var handle = (Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                transformed.methods.get(1).instructions.getFirst()).cst;
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", handle.getOwner());
+        assertEquals(adapterDescriptor, handle.getDesc());
+    }
+
+    @Test
+    void adaptsLegacyRecipeManagerGetRecipesForCallsAndHandles() {
+        String manager = "net/minecraft/world/item/crafting/RecipeManager";
+        String recipeType = "net/minecraft/world/item/crafting/RecipeType";
+        String container = "net/minecraft/world/Container";
+        String level = "net/minecraft/world/level/Level";
+        String legacyDescriptor = "(L" + recipeType + ";L" + container + ";L" + level + ";)Ljava/util/List;";
+        String adapterDescriptor = "(L" + manager + ";" + legacyDescriptor.substring(1);
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyRecipeLookup", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "lookup",
+                adapterDescriptor, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.ALOAD, 3);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, manager, "m_44056_", legacyDescriptor, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(4, 4);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_INVOKEVIRTUAL, manager, "getRecipesFor",
+                legacyDescriptor, false));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(1, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyRecipeLookup", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", call.owner);
+        assertEquals("getRecipesFor", call.name);
+        assertEquals(adapterDescriptor, call.desc);
+        var handle = (Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                transformed.methods.get(1).instructions.getFirst()).cst;
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", handle.getOwner());
+        assertEquals("getRecipesFor", handle.getName());
+        assertEquals(adapterDescriptor, handle.getDesc());
+    }
+
+    @Test
+    void adaptsLegacyRecipeManagerGetAllRecipesForCallsAndHandles() {
+        String manager = "net/minecraft/world/item/crafting/RecipeManager";
+        String recipeType = "net/minecraft/world/item/crafting/RecipeType";
+        String legacyDescriptor = "(L" + recipeType + ";)Ljava/util/List;";
+        String adapterDescriptor = "(L" + manager + ";L" + recipeType + ";)Ljava/util/List;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyAllRecipeLookup", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "lookup",
+                adapterDescriptor, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, manager, "m_44013_", legacyDescriptor, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(2, 2);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_INVOKEVIRTUAL, manager, "getAllRecipesFor",
+                legacyDescriptor, false));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(1, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyAllRecipeLookup", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", call.owner);
+        assertEquals("getAllRecipesFor", call.name);
+        assertEquals(adapterDescriptor, call.desc);
+        var handle = (Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                transformed.methods.get(1).instructions.getFirst()).cst;
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", handle.getOwner());
+        assertEquals("getAllRecipesFor", handle.getName());
+        assertEquals(adapterDescriptor, handle.getDesc());
+    }
+
+    @Test
+    void adaptsLegacyRecipeManagerGetRecipeForCallsAndHandles() {
+        String manager = "net/minecraft/world/item/crafting/RecipeManager";
+        String recipeType = "net/minecraft/world/item/crafting/RecipeType";
+        String container = "net/minecraft/world/Container";
+        String level = "net/minecraft/world/level/Level";
+        String legacyDescriptor = "(L" + recipeType + ";L" + container + ";L" + level + ";)Ljava/util/Optional;";
+        String adapterDescriptor = "(L" + manager + ";" + legacyDescriptor.substring(1);
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacySingleRecipeLookup", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "lookup",
+                adapterDescriptor, null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitVarInsn(Opcodes.ALOAD, 2);
+        method.visitVarInsn(Opcodes.ALOAD, 3);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, manager, "m_44015_", legacyDescriptor, false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(4, 4);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_INVOKEVIRTUAL, manager, "getRecipeFor",
+                legacyDescriptor, false));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(1, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacySingleRecipeLookup", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", call.owner);
+        assertEquals("getRecipeFor", call.name);
+        assertEquals(adapterDescriptor, call.desc);
+        var handle = (Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                transformed.methods.get(1).instructions.getFirst()).cst;
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyRecipeManager", handle.getOwner());
+        assertEquals("getRecipeFor", handle.getName());
+        assertEquals(adapterDescriptor, handle.getDesc());
+    }
+
+    @Test
+    void clampsEmptyTConstructSmelteryColumnCountBeforeConstructingSideInventory() {
+        String owner = "slimeknights/tconstruct/smeltery/menu/HeatingStructureContainerMenu";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, owner, null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "calcColumns",
+                "(I)I", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ILOAD, 0);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(owner.replace('/', '.'), writer.toByteArray()))
+                .accept(transformed, 0);
         var instructions = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray()).toList();
-        FieldInsnNode field = instructions.stream().filter(FieldInsnNode.class::isInstance)
-                .map(FieldInsnNode.class::cast).findFirst().orElseThrow();
-        assertEquals("WATER", field.name);
-        assertEquals("Lnet/minecraft/core/Holder;", field.desc);
-        assertTrue(instructions.stream().filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
-                .anyMatch(call -> call.owner.equals("net/minecraft/core/Holder") && call.name.equals("value")));
+        int returnIndex = java.util.stream.IntStream.range(0, instructions.size())
+                .filter(index -> instructions.get(index).getOpcode() == Opcodes.IRETURN)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.ICONST_1, instructions.get(returnIndex - 2).getOpcode());
+        MethodInsnNode max = (MethodInsnNode) instructions.get(returnIndex - 1);
+        assertEquals("java/lang/Math", max.owner);
+        assertEquals("max", max.name);
+        assertEquals("(II)I", max.desc);
+    }
+
+    @Test
+    void adaptsLegacyItemIsEdibleCallsAndHandles() {
+        String item = "net/minecraft/world/item/Item";
+        String compat = "net/neoforged/forgestuck/compat/LegacyItemStackShim";
+        String adapterDescriptor = "(L" + item + ";)Z";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyItemEdible", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test",
+                "(L" + item + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, item, "m_41472_", "()Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_INVOKEVIRTUAL, item, "m_41472_", "()Z", false));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(1, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyItemEdible", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals(compat, call.owner);
+        assertEquals("isEdible", call.name);
+        assertEquals(adapterDescriptor, call.desc);
+        var handle = (Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                transformed.methods.get(1).instructions.getFirst()).cst;
+        assertEquals(Opcodes.H_INVOKESTATIC, handle.getTag());
+        assertEquals(compat, handle.getOwner());
+        assertEquals("isEdible", handle.getName());
+        assertEquals(adapterDescriptor, handle.getDesc());
+    }
+
+    @Test
+    void adaptsLegacyItemIsDamageableToDefaultInstanceCheck() {
+        String item = "net/minecraft/world/item/Item";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyItemDamageable", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "test",
+                "(L" + item + ";)Z", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, item, "m_41465_", "()Z", false);
+        method.visitInsn(Opcodes.IRETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply(
+                "sample.LegacyItemDamageable", writer.toByteArray())).accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, call.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyItemStackShim", call.owner);
+        assertEquals("isDamageable", call.name);
+        assertEquals("(L" + item + ";)Z", call.desc);
+    }
+
+    @Test
+    void updatesLegacyRecipeResultCallsAndHandlesToHolderLookupProvider() {
+        String recipe = "net/minecraft/world/item/crafting/ShapelessRecipe";
+        String legacyDescriptor =
+                "(Lnet/minecraft/core/RegistryAccess;)Lnet/minecraft/world/item/ItemStack;";
+        String currentDescriptor =
+                "(Lnet/minecraft/core/HolderLookup$Provider;)Lnet/minecraft/world/item/ItemStack;";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyRecipeResult", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "result",
+                "(L" + recipe + ";Lnet/minecraft/core/RegistryAccess;)Lnet/minecraft/world/item/ItemStack;",
+                null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ALOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKEINTERFACE, recipe, "m_8043_", legacyDescriptor, true);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(2, 2);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_INVOKEINTERFACE, recipe, "getResultItem",
+                legacyDescriptor, true));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(1, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyRecipeResult", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("getResultItem", call.name);
+        assertEquals(currentDescriptor, call.desc);
+        var handle = (Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                transformed.methods.get(1).instructions.getFirst()).cst;
+        assertEquals("getResultItem", handle.getName());
+        assertEquals(currentDescriptor, handle.getDesc());
+    }
+
+    @Test
+    void remapsHolderReferenceGetCallsAndHandlesToValue() {
+        String reference = "net/minecraft/core/Holder$Reference";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyHolderReference", null, "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "get",
+                "(L" + reference + ";)Ljava/lang/Object;", null, null);
+        method.visitCode();
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitMethodInsn(Opcodes.INVOKEVIRTUAL, reference, "get", "()Ljava/lang/Object;", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(1, 1);
+        method.visitEnd();
+        var handleMethod = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "handle",
+                "()Ljava/lang/invoke/MethodHandle;", null, null);
+        handleMethod.visitCode();
+        handleMethod.visitLdcInsn(new Handle(Opcodes.H_INVOKEVIRTUAL, reference, "get",
+                "()Ljava/lang/Object;", false));
+        handleMethod.visitInsn(Opcodes.ARETURN);
+        handleMethod.visitMaxs(1, 0);
+        handleMethod.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyHolderReference", writer.toByteArray()))
+                .accept(transformed, 0);
+        MethodInsnNode call = java.util.Arrays.stream(transformed.methods.get(0).instructions.toArray())
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals("value", call.name);
+        var handle = (Handle) ((org.objectweb.asm.tree.LdcInsnNode)
+                transformed.methods.get(1).instructions.getFirst()).cst;
+        assertEquals("value", handle.getName());
+    }
+
+    @Test
+    void adaptsLegacyEnchantmentInstanceConstructionToHolderFactory() {
+        String enchantment = "net/minecraft/world/item/enchantment/Enchantment";
+        String instance = "net/minecraft/world/item/enchantment/EnchantmentInstance";
+        ClassWriter writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
+        writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/LegacyEnchantmentInstance", null,
+                "java/lang/Object", null);
+        var method = writer.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "create",
+                "(L" + enchantment + ";I)L" + instance + ";", null, null);
+        method.visitCode();
+        method.visitTypeInsn(Opcodes.NEW, instance);
+        method.visitInsn(Opcodes.DUP);
+        method.visitVarInsn(Opcodes.ALOAD, 0);
+        method.visitVarInsn(Opcodes.ILOAD, 1);
+        method.visitMethodInsn(Opcodes.INVOKESPECIAL, instance, "<init>",
+                "(L" + enchantment + ";I)V", false);
+        method.visitInsn(Opcodes.ARETURN);
+        method.visitMaxs(0, 0);
+        method.visitEnd();
+        writer.visitEnd();
+
+        ClassNode transformed = new ClassNode();
+        new ClassReader(new SrgMemberRemapStep().apply("sample.LegacyEnchantmentInstance", writer.toByteArray()))
+                .accept(transformed, 0);
+        var instructions = transformed.methods.get(0).instructions.toArray();
+        assertFalse(java.util.Arrays.stream(instructions).anyMatch(instruction ->
+                instruction instanceof TypeInsnNode type && type.getOpcode() == Opcodes.NEW
+                        && type.desc.equals(instance)));
+        MethodInsnNode factory = java.util.Arrays.stream(instructions)
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .findFirst().orElseThrow();
+        assertEquals(Opcodes.INVOKESTATIC, factory.getOpcode());
+        assertEquals("net/neoforged/forgestuck/compat/LegacyEnchantmentRegistry", factory.owner);
+        assertEquals("createInstance", factory.name);
+        assertEquals("(L" + enchantment + ";I)L" + instance + ";", factory.desc);
     }
 
     @Test

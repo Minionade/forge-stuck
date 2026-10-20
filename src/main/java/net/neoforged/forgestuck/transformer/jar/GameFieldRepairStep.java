@@ -114,7 +114,8 @@ public final class GameFieldRepairStep implements ClassTransformStep {
             repaired.add(key + " (Holder.value())");
             return;
         }
-        if (key.equals("net/minecraft/world/level/storage/loot/BuiltInLootTables.EMPTY")
+        if ((key.equals("net/minecraft/world/level/storage/loot/BuiltInLootTables.EMPTY")
+                || key.equals("net/minecraft/world/level/storage/loot/BuiltInLootTables.FISHING_FISH"))
                 && f.desc.equals("Lnet/minecraft/resources/ResourceLocation;")) {
             f.desc = "Lnet/minecraft/resources/ResourceKey;";
             m.instructions.insert(f, new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "net/minecraft/resources/ResourceKey", "location",

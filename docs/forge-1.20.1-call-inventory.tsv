@@ -627,19 +627,19 @@ PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.event.Rend
 KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Pre.getPartialTick()F
 KNOWN_GAP	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.client.event.RenderGuiOverlayEvent$Pre.getWindow()Lcom/mojang/blaze3d/platform/Window;
 PATCHED	method	3	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.event.RenderLevelStageEvent.getPartialTick()F
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.event.RenderLivingEvent.setCanceled(Z)V
-KNOWN_GAP	method	2	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.common.capabilities.ICapabilityProvider.getCapability(Lnet/minecraftforge/common/capabilities/Capability;)Lnet/minecraftforge/common/util/LazyOptional;
-KNOWN_GAP	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.common.capabilities.ICapabilityProvider.getCapability(Lnet/minecraftforge/common/capabilities/Capability;Lnet/minecraft/core/Direction;)Lnet/minecraftforge/common/util/LazyOptional;
-KNOWN_GAP	method	15	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.client.event.RenderLivingEvent.setCanceled(Z)V
+PATCHED	method	2	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.common.capabilities.ICapabilityProvider.getCapability(Lnet/minecraftforge/common/capabilities/Capability;)Lnet/minecraftforge/common/util/LazyOptional;
+PATCHED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.common.capabilities.ICapabilityProvider.getCapability(Lnet/minecraftforge/common/capabilities/Capability;Lnet/minecraft/core/Direction;)Lnet/minecraftforge/common/util/LazyOptional;
+PATCHED	method	15	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.common.capabilities.RegisterCapabilitiesEvent.register(Ljava/lang/Class;)V
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.conditions.ItemExistsCondition.<init>(Ljava/lang/String;Ljava/lang/String;)V
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.conditions.ItemExistsCondition.<init>(Lnet/minecraft/resources/ResourceLocation;)V
 PATCHED	method	11	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.conditions.ModLoadedCondition.<init>(Ljava/lang/String;)V
 PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.conditions.NotCondition.<init>(Lnet/minecraftforge/common/crafting/conditions/ICondition;)V
 PATCHED	method	2	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.CraftingHelper.getID(Lnet/minecraftforge/common/crafting/IIngredientSerializer;)Lnet/minecraft/resources/ResourceLocation;
-KNOWN_GAP	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.CraftingHelper.getIngredient(Lcom/google/gson/JsonElement;Z)Lnet/minecraft/world/item/crafting/Ingredient;
-KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.CraftingHelper.getItemStack(Lcom/google/gson/JsonObject;Z)Lnet/minecraft/world/item/ItemStack;
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.crafting.CraftingHelper.getItemStack(Lcom/google/gson/JsonObject;ZZ)Lnet/minecraft/world/item/ItemStack;
-KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.CraftingHelper.getNBT(Lcom/google/gson/JsonElement;)Lnet/minecraft/nbt/CompoundTag;
+PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.CraftingHelper.getIngredient(Lcom/google/gson/JsonElement;Z)Lnet/minecraft/world/item/crafting/Ingredient;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.CraftingHelper.getItemStack(Lcom/google/gson/JsonObject;Z)Lnet/minecraft/world/item/ItemStack;
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.crafting.CraftingHelper.getItemStack(Lcom/google/gson/JsonObject;ZZ)Lnet/minecraft/world/item/ItemStack;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.CraftingHelper.getNBT(Lcom/google/gson/JsonElement;)Lnet/minecraft/nbt/CompoundTag;
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.ExistingFileHelper.exists(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraftforge/common/data/ExistingFileHelper$IResourceType;)Z
 PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.data.ExistingFileHelper.trackGenerated(Lnet/minecraft/resources/ResourceLocation;Lnet/minecraftforge/common/data/ExistingFileHelper$IResourceType;)V
 PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.common.ForgeConfigSpec.setConfig(Lcom/electronwill/nightconfig/core/CommentedConfig;)V
@@ -656,14 +656,14 @@ PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entit
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.EntityAttributeModificationEvent.add(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/ai/attributes/Attribute;D)V
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.LivingAttackEvent.getAmount()F
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.living.LivingDamageEvent.setCanceled(Z)V
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Added.isCanceled()Z
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Applicable.isCanceled()Z
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Added.isCanceled()Z
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Applicable.isCanceled()Z
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Applicable.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.MobEffectEvent$Remove.<init>(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/effect/MobEffectInstance;)V
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.living.MobSpawnEvent$FinalizeSpawn.getSpawnTag()Lnet/minecraft/nbt/CompoundTag;
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.PotionColorCalculationEvent.getEffects()Ljava/util/Collection;
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.PotionColorCalculationEvent.setColor(I)V
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.PotionColorCalculationEvent.shouldHideParticles(Z)V
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.PotionColorCalculationEvent.getEffects()Ljava/util/Collection;
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.PotionColorCalculationEvent.setColor(I)V
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.living.PotionColorCalculationEvent.shouldHideParticles(Z)V
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.living.ShieldBlockEvent.setShieldTakesDamage(Z)V
 PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.CriticalHitEvent.getDamageModifier()F
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.CriticalHitEvent.getResult()Lnet/minecraftforge/eventbus/api/Event$Result;
@@ -673,7 +673,7 @@ PATCHED	method	3	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.even
 PATCHED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.getItem()Lnet/minecraft/world/entity/item/ItemEntity;
 PATCHED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.isCanceled()Z
 PATCHED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.player.EntityItemPickupEvent.setCanceled(Z)V
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.player.PlayerEvent$StartTracking.isCanceled()Z
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.entity.player.PlayerEvent$StartTracking.isCanceled()Z
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent.setCanceled(Z)V
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent.setCancellationResult(Lnet/minecraft/world/InteractionResult;)V
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$LeftClickEmpty.getCancellationResult()Lnet/minecraft/world/InteractionResult;
@@ -682,14 +682,14 @@ PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entit
 PATCHED	method	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickBlock.getUseItem()Lnet/minecraftforge/eventbus/api/Event$Result;
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickEmpty.getCancellationResult()Lnet/minecraft/world/InteractionResult;
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.player.PlayerInteractEvent$RightClickEmpty.setCancellationResult(Lnet/minecraft/world/InteractionResult;)V
-KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.ProjectileImpactEvent.setImpactResult(Lnet/minecraftforge/event/entity/ProjectileImpactEvent$ImpactResult;)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.ProjectileImpactEvent.setImpactResult(Lnet/minecraftforge/event/entity/ProjectileImpactEvent$ImpactResult;)V
 PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.entity.SpawnPlacementRegisterEvent.register(Lnet/minecraft/world/entity/EntityType;Lnet/minecraft/world/entity/SpawnPlacements$Type;Lnet/minecraft/world/level/levelgen/Heightmap$Types;Lnet/minecraft/world/entity/SpawnPlacements$SpawnPredicate;Lnet/minecraftforge/event/entity/SpawnPlacementRegisterEvent$Operation;)V
 KNOWN_GAP	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.level.BlockEvent$BreakEvent.getExpToDrop()I
 KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.level.BlockEvent$BreakEvent.setExpToDrop(I)V
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.level.SaplingGrowTreeEvent.getRandomSource()Lnet/minecraft/util/RandomSource;
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.level.SaplingGrowTreeEvent.isCanceled()Z
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.event.level.SaplingGrowTreeEvent.setResult(Lnet/minecraftforge/eventbus/api/Event$Result;)V
-KNOWN_GAP	method	7	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.eventbus.api.IEventBus.addGenericListener(Ljava/lang/Class;Ljava/util/function/Consumer;)V
+PATCHED	method	7	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.eventbus.api.IEventBus.addGenericListener(Ljava/lang/Class;Ljava/util/function/Consumer;)V
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.eventbus.api.IEventBus.addGenericListener(Ljava/lang/Class;Lnet/minecraftforge/eventbus/api/EventPriority;Ljava/util/function/Consumer;)V
 PATCHED	method	15	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.eventbus.api.IEventBus.post(Lnet/minecraftforge/eventbus/api/Event;)Z
 PATCHED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; bdlib-1.27.0.8-mc1.20.1.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.fluids.capability.IFluidHandlerItem.drain(ILnet/minecraftforge/fluids/capability/IFluidHandler$FluidAction;)Lnet/minecraftforge/fluids/FluidStack;
@@ -710,10 +710,10 @@ PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidS
 PATCHED	method	44	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.fluids.FluidStack.getTag()Lnet/minecraft/nbt/CompoundTag;
 PATCHED	method	7	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.fluids.FluidStack.hasTag()Z
 PATCHED	method	21	TConstruct-1.20.1-3.12.1.231.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.fluids.FluidStack.loadFluidStackFromNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraftforge/fluids/FluidStack;
-KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidStack.readFromPacket(Lnet/minecraft/network/FriendlyByteBuf;)Lnet/minecraftforge/fluids/FluidStack;
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidStack.readFromPacket(Lnet/minecraft/network/FriendlyByteBuf;)Lnet/minecraftforge/fluids/FluidStack;
 PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidStack.setTag(Lnet/minecraft/nbt/CompoundTag;)V
 PATCHED	method	17	TConstruct-1.20.1-3.12.1.231.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.fluids.FluidStack.writeToNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;
-KNOWN_GAP	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidStack.writeToPacket(Lnet/minecraft/network/FriendlyByteBuf;)V
+PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidStack.writeToPacket(Lnet/minecraft/network/FriendlyByteBuf;)V
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidType.getDensity(Lnet/minecraftforge/fluids/FluidStack;)I
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.fluids.FluidType.getDescription()Lnet/minecraft/network/chat/Component;
 PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidType.getDescription(Lnet/minecraftforge/fluids/FluidStack;)Lnet/minecraft/network/chat/Component;
@@ -730,7 +730,7 @@ PATCHED	method	4	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	ne
 PATCHED	method	4	cofh_core-1.20.1-11.0.2.56.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.items.IItemHandlerModifiable.getSlots()I
 PATCHED	method	4	cofh_core-1.20.1-11.0.2.56.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.items.IItemHandlerModifiable.getStackInSlot(I)Lnet/minecraft/world/item/ItemStack;
 PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.items.SlotItemHandler.m_8010_(Lnet/minecraft/world/entity/player/Player;)Z
-KNOWN_GAP	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.DeferredRegister.createOptional(Lnet/minecraft/resources/ResourceKey;Ljava/lang/String;)Lnet/minecraftforge/registries/DeferredRegister;
+PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.DeferredRegister.createOptional(Lnet/minecraft/resources/ResourceKey;Ljava/lang/String;)Lnet/minecraftforge/registries/DeferredRegister;
 PATCHED	field	3	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.registries.ForgeRegistries.FLUID_TYPESLjava/util/function/Supplier;
 PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.registries.IForgeRegistry.iterator()Ljava/util/Iterator;
 PATCHED	method	2	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.registries.IForgeRegistry.tags()Lnet/minecraftforge/registries/tags/ITagManager;
@@ -942,8 +942,8 @@ PATCHED	method	17	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.cra
 PATCHED	method	16	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.IntersectionIngredient.of([Lnet/minecraft/world/item/crafting/Ingredient;)Lnet/minecraft/world/item/crafting/Ingredient;
 PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.IShapedRecipe.getRecipeHeight()I
 PATCHED	method	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.IShapedRecipe.getRecipeWidth()I
-UNMAPPED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.StrictNBTIngredient.<init>(Lnet/minecraft/world/item/ItemStack;)V
-UNMAPPED	field	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.StrictNBTIngredient$Serializer.INSTANCELnet/minecraftforge/common/crafting/StrictNBTIngredient$Serializer;
+PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.StrictNBTIngredient.<init>(Lnet/minecraft/world/item/ItemStack;)V
+PATCHED	field	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.common.crafting.StrictNBTIngredient$Serializer.INSTANCELnet/minecraftforge/common/crafting/StrictNBTIngredient$Serializer;
 PATCHED	field	3	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.VanillaIngredientSerializer.INSTANCELnet/minecraftforge/common/crafting/VanillaIngredientSerializer;
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.crafting.VanillaIngredientSerializer.parse(Lcom/google/gson/JsonObject;)Lnet/minecraft/world/item/crafting/Ingredient;
 PATCHED	method	11	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_cultivation-1.20.1-11.0.1.24.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_expansion-1.20.1-11.0.1.29.jar; thermal_foundation-1.20.1-11.0.6.70.jar; thermal_innovation-1.20.1-11.0.1.23.jar; thermal_integration-1.20.1-11.0.1.27.jar; thermal_locomotion-1.20.1-11.0.1.19.jar	net.minecraftforge.common.data.BlockTagsProvider.<init>(Lnet/minecraft/data/PackOutput;Ljava/util/concurrent/CompletableFuture;Ljava/lang/String;Lnet/minecraftforge/common/data/ExistingFileHelper;)V
@@ -1094,9 +1094,9 @@ PATCHED	field	3	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$
 PATCHED	field	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_FISHING_RODSLnet/minecraft/tags/TagKey;
 PATCHED	field	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_SHIELDSLnet/minecraft/tags/TagKey;
 PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.Tags$Items.TOOLS_TRIDENTSLnet/minecraft/tags/TagKey;
-KNOWN_GAP	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.byName(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/world/item/Tier;
-KNOWN_GAP	method	7	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.getName(Lnet/minecraft/world/item/Tier;)Lnet/minecraft/resources/ResourceLocation;
-KNOWN_GAP	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.getSortedTiers()Ljava/util/List;
+PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.byName(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/world/item/Tier;
+PATCHED	method	7	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.getName(Lnet/minecraft/world/item/Tier;)Lnet/minecraft/resources/ResourceLocation;
+PATCHED	method	5	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.TierSortingRegistry.getSortedTiers()Ljava/util/List;
 PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.common.TierSortingRegistry.isCorrectTierForDrops(Lnet/minecraft/world/item/Tier;Lnet/minecraft/world/level/block/state/BlockState;)Z
 PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.util.BlockSnapshot.create(Lnet/minecraft/resources/ResourceKey;Lnet/minecraft/world/level/LevelAccessor;Lnet/minecraft/core/BlockPos;)Lnet/minecraftforge/common/util/BlockSnapshot;
 PATCHED	method	15	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.util.Lazy.get()Ljava/lang/Object;
@@ -1109,7 +1109,7 @@ PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.common.util
 PATCHED	method	7	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.world.ForgeBiomeModifiers$AddFeaturesBiomeModifier.<init>(Lnet/minecraft/core/HolderSet;Lnet/minecraft/core/HolderSet;Lnet/minecraft/world/level/levelgen/GenerationStep$Decoration;)V
 PATCHED	method	4	TConstruct-1.20.1-3.12.1.231.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.common.world.ForgeBiomeModifiers$AddSpawnsBiomeModifier.<init>(Lnet/minecraft/core/HolderSet;Ljava/util/List;)V
 PATCHED	method	4	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.entity.PartEntity.getParent()Lnet/minecraft/world/entity/Entity;
-UNMAPPED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.ProjectileImpactEvent$ImpactResult.SKIP_ENTITYLnet/minecraftforge/event/entity/ProjectileImpactEvent$ImpactResult;
+PATCHED	field	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.entity.ProjectileImpactEvent$ImpactResult.SKIP_ENTITYLnet/minecraftforge/event/entity/ProjectileImpactEvent$ImpactResult;
 PATCHED	method	1	Mantle-1.20.1-1.11.117.jar	net.minecraftforge.event.ForgeEventFactory.canCreateFluidSource(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Z)Z
 PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.event.ForgeEventFactory.firePlayerCraftingEvent(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/Container;)V
 PATCHED	method	1	thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.event.ForgeEventFactory.onApplyBonemeal(Lnet/minecraft/world/entity/player/Player;Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/world/item/ItemStack;)I
@@ -1126,7 +1126,7 @@ PATCHED	method	1	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.capa
 PATCHED	method	4	cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.fluids.FluidActionResult.getResult()Lnet/minecraft/world/item/ItemStack;
 PATCHED	method	4	cofh_core-1.20.1-11.0.2.56.jar; thermal_innovation-1.20.1-11.0.1.23.jar	net.minecraftforge.fluids.FluidActionResult.isSuccess()Z
 PATCHED	method	6	TConstruct-1.20.1-3.12.1.231.jar; gendustry-1.20.1-1.0.5.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.fluids.FluidUtil.getFluidContained(Lnet/minecraft/world/item/ItemStack;)Ljava/util/Optional;
-KNOWN_GAP	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidUtil.getFluidHandler(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraftforge/common/util/LazyOptional;
+PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar	net.minecraftforge.fluids.FluidUtil.getFluidHandler(Lnet/minecraft/world/item/ItemStack;)Lnet/minecraftforge/common/util/LazyOptional;
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidUtil.tryEmptyContainerAndStow(Lnet/minecraft/world/item/ItemStack;Lnet/minecraftforge/fluids/capability/IFluidHandler;Lnet/minecraftforge/items/IItemHandler;ILnet/minecraft/world/entity/player/Player;Z)Lnet/minecraftforge/fluids/FluidActionResult;
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidUtil.tryFillContainerAndStow(Lnet/minecraft/world/item/ItemStack;Lnet/minecraftforge/fluids/capability/IFluidHandler;Lnet/minecraftforge/items/IItemHandler;ILnet/minecraft/world/entity/player/Player;Z)Lnet/minecraftforge/fluids/FluidActionResult;
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.fluids.FluidUtil.tryFluidTransfer(Lnet/minecraftforge/fluids/capability/IFluidHandler;Lnet/minecraftforge/fluids/capability/IFluidHandler;Lnet/minecraftforge/fluids/FluidStack;Z)Lnet/minecraftforge/fluids/FluidStack;
@@ -1154,7 +1154,7 @@ PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; bdlib-1.27.0.8-mc1.20.1.jar	n
 PATCHED	method	2	TConstruct-1.20.1-3.12.1.231.jar; bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.items.wrapper.InvWrapper.insertItem(ILnet/minecraft/world/item/ItemStack;Z)Lnet/minecraft/world/item/ItemStack;
 PATCHED	method	1	bdlib-1.27.0.8-mc1.20.1.jar	net.minecraftforge.items.wrapper.InvWrapper.isItemValid(ILnet/minecraft/world/item/ItemStack;)Z
 PATCHED	method	5	TConstruct-1.20.1-3.12.1.231.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.items.wrapper.SidedInvWrapper.<init>(Lnet/minecraft/world/WorldlyContainer;Lnet/minecraft/core/Direction;)V
-UNMAPPED	method	15	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.network.NetworkHooks.getEntitySpawningPacket(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/network/protocol/Packet;
+PATCHED	method	15	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.network.NetworkHooks.getEntitySpawningPacket(Lnet/minecraft/world/entity/Entity;)Lnet/minecraft/network/protocol/Packet;
 PATCHED	method	1	cofh_core-1.20.1-11.0.2.56.jar	net.minecraftforge.network.NetworkHooks.openScreen(Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/world/MenuProvider;)V
 PATCHED	method	6	TConstruct-1.20.1-3.12.1.231.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar	net.minecraftforge.network.NetworkHooks.openScreen(Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/world/MenuProvider;Ljava/util/function/Consumer;)V
 PATCHED	method	9	Mantle-1.20.1-1.11.117.jar; TConstruct-1.20.1-3.12.1.231.jar; advgenerators-1.6.0.6-mc1.20.1.jar; bdlib-1.27.0.8-mc1.20.1.jar; cofh_core-1.20.1-11.0.2.56.jar; thermal_dynamics-1.20.1-11.0.1.23.jar; thermal_foundation-1.20.1-11.0.6.70.jar	net.minecraftforge.network.NetworkHooks.openScreen(Lnet/minecraft/server/level/ServerPlayer;Lnet/minecraft/world/MenuProvider;Lnet/minecraft/core/BlockPos;)V

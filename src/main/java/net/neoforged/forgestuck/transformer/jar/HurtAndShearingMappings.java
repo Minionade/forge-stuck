@@ -12,7 +12,8 @@ final class HurtAndShearingMappings {
                         "getEntity()Lnet/minecraft/world/entity/LivingEntity;",
                         "getEntity()Lnet/minecraft/world/entity/Entity;",
                         "getSource()Lnet/minecraft/world/damagesource/DamageSource;",
-                        "getAmount()F", "setAmount(F)V")),
+                        "getAmount()F", "setAmount(F)V", "isCanceled()Z", "setCanceled(Z)V",
+                        "isCancelable()Z", "hasResult()Z")),
                 new ForgeOwnerMappings.Entry("net/minecraftforge/event/entity/living/LivingHurtEvent",
                         "net/neoforged/forgestuck/compat/LegacyLivingHurtEvent", Set.of(
                         "<init>(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/damagesource/DamageSource;F)V",

@@ -1,7 +1,6 @@
 package net.neoforged.forgestuck.transformer.jar;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import net.minecraft.core.registries.Registries;
@@ -11,7 +10,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-/** Datapack-registry Forge fields (enchantments) link and expose their key; contents fail per call. */
+/** Datapack-registry Forge fields (enchantments) resolve via the active access or vanilla menu-time fallback. */
 class DatapackRegistryViewTest {
     @BeforeAll
     static void bootstrap() {
@@ -19,11 +18,13 @@ class DatapackRegistryViewTest {
     }
 
     @Test
-    void enchantmentsFieldHoldsKeyButLookupsFailAtTheCall() {
+    void enchantmentsFieldUsesTheVanillaFallbackBeforeWorldAccessExists() {
         assertEquals(Registries.ENCHANTMENT, ForgeRegistries.ENCHANTMENTS.getRegistryKey());
         assertEquals(Registries.ENCHANTMENT, ForgeRegistries.Keys.ENCHANTMENTS);
-        var ex = assertThrows(UnsupportedOperationException.class, () -> ForgeRegistries.ENCHANTMENTS.getValues());
-        assertTrue(ex.getMessage().contains("RegistryAccess"), ex.getMessage());
+        assertTrue(ForgeRegistries.ENCHANTMENTS.containsKey(
+                net.minecraft.resources.ResourceLocation.withDefaultNamespace("sharpness")));
+        assertTrue(ForgeRegistries.ENCHANTMENTS.getValue(
+                net.minecraft.resources.ResourceLocation.withDefaultNamespace("sharpness")) != null);
     }
 
     @Test

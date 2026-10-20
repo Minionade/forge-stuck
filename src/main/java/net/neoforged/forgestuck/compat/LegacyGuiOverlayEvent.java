@@ -14,6 +14,10 @@ public final class LegacyGuiOverlayEvent {
         return getOverlayByName(event);
     }
 
+    public static float getPartialTick(RenderGuiLayerEvent event) {
+        return event.getPartialTick().getGameTimeDeltaPartialTick(false);
+    }
+
     public static boolean postAfterHealthbar(RenderGuiLayerEvent.Pre event) {
         return LegacyEventBusPost.post(NeoForge.EVENT_BUS, new RenderGuiLayerEvent.Post(event.getGuiGraphics(),
                 event.getPartialTick(), event.getName(), event.getLayer()));

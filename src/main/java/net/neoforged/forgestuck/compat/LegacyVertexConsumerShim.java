@@ -25,9 +25,19 @@ public final class LegacyVertexConsumerShim {
         return consumer.setUv(u, v);
     }
 
+    public static VertexConsumer overlayCoords(VertexConsumer consumer, int u, int v) {
+        return consumer.setUv1(u, v);
+    }
+
     public static VertexConsumer uv2(VertexConsumer consumer, int u, int v) {
         return consumer.setUv2(u, v);
     }
 
-    public static void endVertex(VertexConsumer consumer) {}
+    public static void endVertex(VertexConsumer consumer) {
+        if (consumer instanceof LegacyQuadBakingVertexConsumer.Adapter adapter) {
+            adapter.endLegacyVertex();
+        } else if (consumer instanceof LegacyTransformingVertexPipeline pipeline) {
+            pipeline.endLegacyVertex();
+        }
+    }
 }

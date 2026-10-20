@@ -8,8 +8,13 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.neoforged.forgestuck.transformer.ForgeClassTransformer;
@@ -36,6 +41,59 @@ class ItemStackShimTest {
     @Test
     void getTagIsNullWithoutCustomData() {
         assertNull(LegacyItemStackShim.getTag(new ItemStack(Items.STICK)));
+    }
+
+    @Test
+    void getTagElementDoesNotCreateMissingAugmentData() {
+        ItemStack stack = new ItemStack(Items.STICK);
+
+        assertNull(LegacyItemStackShim.getTagElement(stack, "AugmentData"));
+        assertFalse(stack.has(DataComponents.CUSTOM_DATA));
+    }
+
+    @Test
+    void getTagElementReturnsExistingCompound() {
+        ItemStack stack = new ItemStack(Items.STICK);
+        CompoundTag element = new CompoundTag();
+        element.putString("type", "machine");
+        CompoundTag tag = new CompoundTag();
+        tag.put("AugmentData", element);
+        LegacyItemStackShim.setTag(stack, tag);
+
+        CompoundTag result = LegacyItemStackShim.getTagElement(stack, "AugmentData");
+
+        assertEquals(element, result);
+        result.putInt("level", 2);
+        assertEquals(2, LegacyItemStackShim.getTag(stack).getCompound("AugmentData").getInt("level"));
+    }
+
+    @Test
+    void getOrCreateTagElementCreatesLiveChild() {
+        ItemStack stack = new ItemStack(Items.STICK);
+
+        LegacyItemStackShim.getOrCreateTagElement(stack, "AugmentData").putString("type", "machine");
+
+        assertEquals("machine",
+                LegacyItemStackShim.getTag(stack).getCompound("AugmentData").getString("type"));
+    }
+
+    @Test
+    void enchantmentTagsAreEmptyForUnenchantedStack() {
+        assertTrue(LegacyItemStackShim.getEnchantmentTags(new ItemStack(Items.STICK)).isEmpty());
+    }
+
+    @Test
+    void readsCurrentItemStackLimitAndBlockEntityData() {
+        Item item = Items.STICK;
+        ItemStack stack = new ItemStack(Items.WHITE_BANNER);
+        CompoundTag blockEntityData = new CompoundTag();
+        blockEntityData.putString("marker", "test");
+        stack.set(DataComponents.BLOCK_ENTITY_DATA,
+                net.minecraft.world.item.component.CustomData.of(blockEntityData));
+
+        assertEquals(item.getDefaultMaxStackSize(), LegacyItemStackShim.getMaxStackSize(item));
+        assertEquals(blockEntityData, LegacyItemStackShim.getBlockEntityData(stack));
+        assertNull(LegacyItemStackShim.getBlockEntityData(new ItemStack(Items.STICK)));
     }
 
     @Test
@@ -69,6 +127,40 @@ class ItemStackShimTest {
         LegacyItemStackShim.getTag(copy).putInt("n", 2);
         assertEquals(1, stack.get(DataComponents.CUSTOM_DATA).copyTag().getInt("n"));
         assertEquals(2, copy.get(DataComponents.CUSTOM_DATA).copyTag().getInt("n"));
+    }
+
+    @Test
+    void customHoverNameUsesCustomNameComponent() {
+        ItemStack stack = new ItemStack(Items.STICK);
+        assertFalse(LegacyItemStackShim.hasCustomHoverName(stack));
+        LegacyItemStackShim.setHoverName(stack, Component.literal("Named"));
+        assertTrue(LegacyItemStackShim.hasCustomHoverName(stack));
+        LegacyItemStackShim.setHoverName(stack, null);
+        assertFalse(LegacyItemStackShim.hasCustomHoverName(stack));
+    }
+
+    @Test
+    void legacyItemStackNbtRoundTripsWithBoundRegistryProvider() {
+        HolderLookup.Provider provider = RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
+        HolderLookup.Provider previous = LegacyItemStackShim.pushRegistryProvider(provider);
+        try {
+            ItemStack original = new ItemStack(Items.STICK, 3);
+            CompoundTag tag = LegacyItemStackShim.save(original, new CompoundTag());
+            ItemStack restored = LegacyItemStackShim.parse(tag);
+
+            assertEquals(original.getItem(), restored.getItem());
+            assertEquals(original.getCount(), restored.getCount());
+        } finally {
+            LegacyItemStackShim.restoreRegistryProvider(previous);
+        }
+    }
+
+    @Test
+    void legacyItemStackNbtRequiresARegistryProvider() {
+        assertThrows(IllegalStateException.class,
+                () -> LegacyItemStackShim.save(new ItemStack(Items.STICK), new CompoundTag()));
+        assertThrows(IllegalStateException.class,
+                () -> LegacyItemStackShim.parse(new CompoundTag()));
     }
 
     private static final class Loader extends ClassLoader {

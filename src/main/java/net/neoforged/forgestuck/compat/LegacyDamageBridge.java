@@ -21,6 +21,6 @@ public final class LegacyDamageBridge {
         LegacyLivingDamageEvent legacy = new LegacyLivingDamageEvent(
                 incoming.getEntity(), incoming.getSource(), incoming.getNewDamage());
         NeoForge.EVENT_BUS.post(legacy);
-        incoming.setNewDamage(legacy.getAmount());
+        incoming.setNewDamage(legacy.isCanceled() ? 0 : legacy.getAmount());
     }
 }

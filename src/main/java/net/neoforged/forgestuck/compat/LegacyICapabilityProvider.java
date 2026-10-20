@@ -1,4 +1,14 @@
 package net.neoforged.forgestuck.compat;
 
-/** Link-only stand-in for Forge's capability provider; lookups fail explicitly at their call sites. */
-public interface LegacyICapabilityProvider {}
+import net.minecraft.core.Direction;
+
+/** Compatibility contract for Forge capability providers. */
+public interface LegacyICapabilityProvider {
+    default <T> LazyOptional<T> getCapability(LegacyCapability<T> capability) {
+        return getCapability(capability, null);
+    }
+
+    default <T> LazyOptional<T> getCapability(LegacyCapability<T> capability, Direction side) {
+        return LazyOptional.empty();
+    }
+}

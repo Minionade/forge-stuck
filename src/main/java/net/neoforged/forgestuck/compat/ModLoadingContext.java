@@ -23,11 +23,17 @@ public final class ModLoadingContext {
     }
 
     public ModContainer getActiveContainer() {
-        return net.neoforged.fml.ModLoadingContext.get().getActiveContainer();
+        ModContainer active = net.neoforged.fml.ModLoadingContext.get().getActiveContainer();
+        if (active != null && !active.getModId().equals("minecraft")) return active;
+        ModContainer caller = FMLJavaModLoadingContext.callerModContainer();
+        return caller == null ? active : caller;
     }
 
     public String getActiveNamespace() {
-        return net.neoforged.fml.ModLoadingContext.get().getActiveNamespace();
+        ModContainer active = getActiveContainer();
+        return active == null
+                ? net.neoforged.fml.ModLoadingContext.get().getActiveNamespace()
+                : active.getModId();
     }
 
     public void registerConfig(ModConfig.Type type, IConfigSpec spec) {

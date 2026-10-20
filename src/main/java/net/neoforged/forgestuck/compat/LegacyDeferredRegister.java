@@ -52,6 +52,11 @@ public final class LegacyDeferredRegister<T> {
         return new LegacyDeferredRegister<>(DeferredRegister.create(key, modid));
     }
 
+    public static <B> LegacyDeferredRegister<B> createOptional(
+            ResourceKey<? extends Registry<B>> key, String modid) {
+        return new LegacyDeferredRegister<>(DeferredRegister.create(key, modid));
+    }
+
     public static <B> LegacyDeferredRegister<B> create(ResourceLocation registryName, String modid) {
         return new LegacyDeferredRegister<>(DeferredRegister.create(registryName, modid));
     }

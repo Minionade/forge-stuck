@@ -21,34 +21,35 @@ public final class FMLJavaModLoadingContext {
     }
 
     public IEventBus getModEventBus() {
-        IEventBus bus = ModLoadingContext.get().getActiveContainer().getEventBus();
-        if (bus == null) bus = busOfCallerModule();
+        ModContainer active = ModLoadingContext.get().getActiveContainer();
+        if (active == null || active.getModId().equals("minecraft")) active = callerModContainer();
+        IEventBus bus = active == null ? null : active.getEventBus();
         if (bus == null) throw new IllegalStateException("The active mod container has no event bus");
         return bus;
     }
 
     /**
-     * Some language providers (e.g. kotori_scala) clear the active container before touching the mod object, in which
-     * case FML falls back to the "minecraft" container, which has no bus. Resolve the mod from the calling class's
-     * module instead, which is the module of the mod jar that owns the call site.
+     * Some language providers (e.g. kotori_scala) clear the active container before touching mod code, leaving FML's
+     * fallback container as "minecraft". Resolve the mod from the outermost calling mod module; this also handles
+     * library code (such as BdLib registries) called while a dependent mod is being initialized.
      */
-    private static IEventBus busOfCallerModule() {
+    static ModContainer callerModContainer() {
         Module self = FMLJavaModLoadingContext.class.getModule();
-        String callerModule = StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
-                .walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
-                        .map(Class::getModule)
-                        .filter(m -> m != self && m.isNamed())
-                        .map(Module::getName)
-                        .findFirst())
-                .orElse(null);
-        if (callerModule == null) return null;
         ModList list = ModList.get();
         if (list == null) return null;
-        return list.getMods().stream()
-                .filter(info -> callerModule.equals(info.getOwningFile().moduleName()))
-                .map(info -> list.getModContainerById(info.getModId()).map(ModContainer::getEventBus).orElse(null))
-                .filter(java.util.Objects::nonNull)
-                .findFirst()
+        return StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE)
+                .walk(frames -> frames.map(StackWalker.StackFrame::getDeclaringClass)
+                        .map(Class::getModule)
+                        .filter(module -> module != self && module.isNamed())
+                        .map(Module::getName)
+                        .map(name -> list.getMods().stream()
+                                .filter(info -> name.equals(info.getOwningFile().moduleName()))
+                                .map(info -> list.getModContainerById(info.getModId()).orElse(null))
+                                .filter(java.util.Objects::nonNull)
+                                .findFirst()
+                                .orElse(null))
+                        .filter(container -> container != null && !container.getModId().equals("minecraft"))
+                        .reduce((first, last) -> last))
                 .orElse(null);
     }
 }

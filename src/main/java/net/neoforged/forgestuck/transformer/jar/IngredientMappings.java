@@ -38,6 +38,13 @@ final class IngredientMappings {
                         COMPAT + "LegacyIngredientSerializer", Set.of(
                                 "parse(Lcom/google/gson/JsonObject;)" + INGREDIENT,
                                 "write(Lnet/minecraft/network/FriendlyByteBuf;" + INGREDIENT + ")V",
-                                "parse(Lnet/minecraft/network/FriendlyByteBuf;)" + INGREDIENT)));
+                                "parse(Lnet/minecraft/network/FriendlyByteBuf;)" + INGREDIENT)),
+                new ForgeOwnerMappings.Entry(FORGE + "StrictNBTIngredient",
+                        COMPAT + "LegacyStrictNBTIngredient", Set.of(
+                                "<init>(Lnet/minecraft/world/item/ItemStack;)V",
+                                "getSerializer()Lnet/minecraftforge/common/crafting/IIngredientSerializer;")),
+                new ForgeOwnerMappings.Entry(FORGE + "StrictNBTIngredient$Serializer",
+                        COMPAT + "LegacyStrictNBTIngredient$Serializer", Set.of(
+                                "INSTANCELnet/minecraftforge/common/crafting/StrictNBTIngredient$Serializer;")));
     }
 }

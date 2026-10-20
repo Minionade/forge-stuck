@@ -27,6 +27,7 @@ public final class LegacyLootTypeRewriteStep implements ClassTransformStep {
     private static final String LOOT = "net/minecraft/world/level/storage/loot/";
     private static final String CONDITION_ARRAY = "[L" + LOOT + "predicates/LootItemCondition;";
     private static final String FUNCTION_ARRAY = "[L" + LOOT + "functions/LootItemFunction;";
+    private static final String CONDITIONAL_FUNCTION = LOOT + "functions/LootItemConditionalFunction";
     private static final Map<String, String> FACTORIES = Map.of(
             LOOT + "functions/LootItemFunctionType", "functionType",
             LOOT + "predicates/LootItemConditionType", "conditionType",
@@ -47,6 +48,7 @@ public final class LegacyLootTypeRewriteStep implements ClassTransformStep {
         for (MethodNode method : node.methods) {
             if (method.instructions == null) continue;
             modified |= rewrite(method.instructions);
+            modified |= rewriteConditionalFunctionConstructor(method.instructions);
             modified |= rewriteLegacyFields(method.instructions);
         }
         if (!modified) return bytes;
@@ -68,6 +70,20 @@ public final class LegacyLootTypeRewriteStep implements ClassTransformStep {
             if (helper == null) continue;
             insns.set(field, new MethodInsnNode(Opcodes.INVOKESTATIC, BRIDGE, helper,
                     "(Ljava/lang/Object;)" + field.desc, false));
+            modified = true;
+        }
+        return modified;
+    }
+
+    private static boolean rewriteConditionalFunctionConstructor(InsnList insns) {
+        boolean modified = false;
+        for (AbstractInsnNode insn : insns.toArray()) {
+            if (!(insn instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKESPECIAL
+                    || !call.owner.equals(CONDITIONAL_FUNCTION) || !call.name.equals("<init>")
+                    || !call.desc.equals("(" + CONDITION_ARRAY + ")V")) continue;
+            insns.insertBefore(call, new MethodInsnNode(Opcodes.INVOKESTATIC, "java/util/Arrays", "asList",
+                    "([Ljava/lang/Object;)Ljava/util/List;", false));
+            call.desc = "(Ljava/util/List;)V";
             modified = true;
         }
         return modified;

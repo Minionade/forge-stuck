@@ -1,9 +1,13 @@
 package net.neoforged.forgestuck.transformer.jar;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Handle;
@@ -19,9 +23,12 @@ import org.objectweb.asm.tree.AnnotationNode;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.FieldInsnNode;
 import org.objectweb.asm.tree.FieldNode;
+import org.objectweb.asm.tree.FrameNode;
 import org.objectweb.asm.tree.InvokeDynamicInsnNode;
+import org.objectweb.asm.tree.LabelNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.TypeInsnNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,9 +43,15 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     private static final Logger LOGGER = LoggerFactory.getLogger("forgestuck");
     private static final String TAG = "[Forge Stuck!!]";
     private static final String FLUID_STACK = "net/minecraftforge/fluids/FluidStack";
+    private static final String FLUID_TANK = "net/minecraftforge/fluids/capability/templates/FluidTank";
+    private static final String LEGACY_FLUID_TANK = "net/neoforged/forgestuck/compat/LegacyFluidTank";
     private static final String FLUID_STACK_TAG_CTOR =
             "(Lnet/minecraft/world/level/material/Fluid;ILnet/minecraft/nbt/CompoundTag;)V";
     private static final String FLUID_STACK_COPY_CTOR = "(L" + FLUID_STACK + ";I)V";
+    private static final String FLUID_STACK_PACKET_READ_DESC =
+            "(Lnet/minecraft/network/FriendlyByteBuf;)L" + FLUID_STACK + ";";
+    private static final String FLUID_STACK_PACKET_WRITE_DESC =
+            "(Lnet/minecraft/network/FriendlyByteBuf;)V";
     private static final String PICKUP = "net/minecraftforge/event/entity/player/EntityItemPickupEvent";
     private static final String LEGACY_PICKUP = "net/neoforged/forgestuck/compat/LegacyItemPickup";
     private static final String LEGACY_FLUID_STACK = "net/neoforged/forgestuck/compat/LegacyFluidStack";
@@ -54,8 +67,29 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             "net/neoforged/forgestuck/compat/LegacyParticleOptions";
     private static final String PARTICLE_OPTIONS = "net/minecraft/core/particles/ParticleOptions";
     private static final String PARTICLE_PROVIDER = "net/minecraft/client/particle/ParticleProvider";
+    private static final String LEGACY_ENTITY_CAPABILITY_DESC =
+            "(Lnet/minecraftforge/common/capabilities/Capability;)"
+                    + "Lnet/minecraftforge/common/util/LazyOptional;";
+    private static final String LEGACY_SIDED_ENTITY_CAPABILITY_DESC =
+            "(Lnet/minecraftforge/common/capabilities/Capability;Lnet/minecraft/core/Direction;)"
+                    + "Lnet/minecraftforge/common/util/LazyOptional;";
+    private static final String LEGACY_CAPABILITY_LOOKUP_DESC =
+            "(Lnet/minecraftforge/common/capabilities/Capability;)"
+                    + "Lnet/minecraftforge/common/util/LazyOptional;";
+    private static final String LEGACY_CAPABILITY_ACCESS =
+            "net/neoforged/forgestuck/compat/LegacyCapabilities";
+    private static final String LEGACY_CAPABILITY_PROVIDER =
+            "net/neoforged/forgestuck/compat/LegacyICapabilityProvider";
+    private static final String LEGACY_ATTACH_CAPABILITIES_EVENT =
+            "net/neoforged/forgestuck/compat/LegacyAttachCapabilitiesEvent";
+    private static final String BLOCK_ENTITY = "net/minecraft/world/level/block/entity/BlockEntity";
+    private static final String TCONSTRUCT_MOB_EQUIPMENT =
+            "slimeknights/tconstruct/library/json/loot/equipment/MobEquipment";
+    private static final String LEGACY_FINALIZE_SPAWN_EVENT =
+            "net/minecraftforge/event/entity/living/MobSpawnEvent$FinalizeSpawn";
 
     private final ForgeOwnerMappings mappings;
+    private final Map<String, Set<String>> declaredSupertypes = new ConcurrentHashMap<>();
 
     public ForgeOwnerRemapStep() {
         this(ForgeOwnerMappings.defaults());
@@ -75,9 +109,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         if (bytes == null || className.startsWith("net.neoforged.forgestuck")) {
             return bytes;
         }
-        if (!mappings.mayReference(bytes) && !hasLegacyGameApiCalls(bytes)) return bytes;
+        boolean blockEntitySubclass = BLOCK_ENTITY.equals(new ClassReader(bytes).getSuperName());
+        if (!mappings.mayReference(bytes) && !hasLegacyGameApiCalls(bytes) && !blockEntitySubclass) return bytes;
         ClassNode node = new ClassNode();
         new ClassReader(bytes).accept(node, 0);
+        boolean addCapabilityProvider = blockEntitySubclass && !node.interfaces.contains(LEGACY_CAPABILITY_PROVIDER);
+        if (addCapabilityProvider) node.interfaces.add(LEGACY_CAPABILITY_PROVIDER);
 
         Set<String> blocked = new HashSet<>();
         int[] adapted = {0};
@@ -85,6 +122,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         boolean mixin = isMixin(node);
         int replaced = mixin ? 0 : rewriteLegacyFluidStackConstructors(className, node);
         if (!mixin) {
+            replaced += rewriteTConstructSpawnTag(node);
+            replaced += rewriteLegacyFluidTankNbtCalls(node);
+            replaced += rewriteLegacyAttachCapabilityHandlers(node);
+            replaced += rewriteLegacyFluidStackPacketCalls(node);
+            replaced += rewriteLegacyFriendlyByteBufFluidStackCalls(node);
+            replaced += rewriteLegacyFriendlyByteBufRegistryCalls(node);
             replaced += rewriteLegacyItemTagAliases(node);
             replaced += rewriteLegacyBlockTagAliases(node);
             replaced += rewriteLegacyConditionListConstructors(node);
@@ -98,7 +141,11 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             replaced += rewriteByteBufCodecCalls(node);
             replaced += rewriteLegacyEntityDataSerializerFactories(node);
             replaced += rewriteLegacyLazyInvocationKinds(node);
+            replaced += rewriteLegacyEntityCapabilityCalls(node);
+            replaced += rewriteLegacyBlockEntityCapabilityCalls(node);
+            replaced += rewriteLegacyLevelCapabilityCalls(node);
         }
+        replaced += rewriteLegacyItemStackCapabilityCalls(node);
 
         if (!mixin) replaced += replaceUnsupported(className, node, report);
         if (!mixin) replaced += replaceUnsupportedHandles(className, node, report);
@@ -114,6 +161,7 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                 remapAnnotationStrings(m.invisibleAnnotations, blocked, counts);
                 remapAnnotationStrings(m.visibleAnnotations, blocked, counts);
             }
+
             for (FieldNode f : node.fields) {
                 remapAnnotationStrings(f.invisibleAnnotations, blocked, counts);
                 remapAnnotationStrings(f.visibleAnnotations, blocked, counts);
@@ -123,10 +171,221 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         dropBrokenInnerClasses(node, mappings.remapper(blocked, new TreeMap<>()));
         ClassWriter writer = new ClassWriter(0);
         node.accept(new ClassRemapper(writer, mappings.remapper(blocked, counts)));
-        if (counts.isEmpty() && replaced == 0) return bytes;
-        if (report != null) report.record(counts, mappings, adapted[0]);
-        LOGGER.debug("{} remapped Forge owners in {}: {}", TAG, className, counts);
+        if (counts.isEmpty() && replaced == 0 && !addCapabilityProvider) return bytes;
+        if (report != null && !counts.isEmpty()) report.record(counts, mappings, adapted[0]);
+        if (addCapabilityProvider) {
+            LOGGER.debug("{} injected legacy BlockEntity capability provider in {}", TAG, className);
+        }
+        if (!counts.isEmpty()) LOGGER.debug("{} remapped Forge owners in {}: {}", TAG, className, counts);
         return restoreParticleProviderSamParameter(writer.toByteArray());
+    }
+
+    private int rewriteLegacyFluidTankNbtCalls(ClassNode node) {
+        String legacyReadDescriptor = "(Lnet/minecraft/nbt/CompoundTag;)L" + FLUID_TANK + ";";
+        String helperReadDescriptor = "(L" + FLUID_TANK + ";Lnet/minecraft/nbt/CompoundTag;)L" + FLUID_TANK + ";";
+        String legacyWriteDescriptor = "(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;";
+        String helperWriteDescriptor = "(L" + FLUID_TANK
+                + ";Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKEVIRTUAL) {
+                    continue;
+                }
+                boolean readFromNbt = call.name.equals("readFromNBT") && call.desc.equals(legacyReadDescriptor);
+                boolean writeToNbt = call.name.equals("writeToNBT")
+                        && call.desc.equals(legacyWriteDescriptor)
+                        && (call.owner.equals(FLUID_TANK) || hasSupertype(call.owner, FLUID_TANK));
+                if (!readFromNbt && !writeToNbt) continue;
+                call.setOpcode(Opcodes.INVOKESTATIC);
+                call.owner = LEGACY_FLUID_TANK;
+                call.desc = readFromNbt ? helperReadDescriptor : helperWriteDescriptor;
+                call.itf = false;
+                rewritten++;
+            }
+        }
+        return rewritten;
+    }
+
+    private boolean hasSupertype(String className, String target) {
+        Set<String> visited = new HashSet<>();
+        Deque<String> pending = new ArrayDeque<>(declaredSupertypes.getOrDefault(className, Set.of()));
+        while (!pending.isEmpty()) {
+            String current = pending.removeFirst();
+            if (current.equals(target)) return true;
+            if (!visited.add(current)) continue;
+            pending.addAll(declaredSupertypes.getOrDefault(current, Set.of()));
+        }
+        return false;
+    }
+
+    private static int rewriteTConstructSpawnTag(ClassNode node) {
+        if (!TCONSTRUCT_MOB_EQUIPMENT.equals(node.name)) return 0;
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || call.getOpcode() != Opcodes.INVOKEVIRTUAL
+                        || !LEGACY_FINALIZE_SPAWN_EVENT.equals(call.owner)
+                        || !call.name.equals("getSpawnTag")
+                        || !call.desc.equals("()Lnet/minecraft/nbt/CompoundTag;")) continue;
+                InsnList replacement = new InsnList();
+                replacement.add(new InsnNode(Opcodes.POP));
+                replacement.add(new InsnNode(Opcodes.ACONST_NULL));
+                method.instructions.insertBefore(call, replacement);
+                method.instructions.remove(call);
+                rewritten++;
+            }
+        }
+        return rewritten;
+    }
+
+    private static int rewriteLegacyEntityCapabilityCalls(ClassNode node) {
+        String entity = "net/minecraft/world/entity/Entity";
+        String capability = "Lnet/minecraftforge/common/capabilities/Capability;";
+        String lazyOptional = "Lnet/minecraftforge/common/util/LazyOptional;";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || !(call.getOpcode() == Opcodes.INVOKEVIRTUAL || call.getOpcode() == Opcodes.INVOKEINTERFACE)
+                        || !call.name.equals("getCapability")
+                        || !(LEGACY_ENTITY_CAPABILITY_DESC.equals(call.desc)
+                                || LEGACY_SIDED_ENTITY_CAPABILITY_DESC.equals(call.desc))
+                        || !isEntityCapabilityOwner(call.owner)) continue;
+                String helperDescriptor = "(L" + entity + ";" + capability
+                        + (LEGACY_SIDED_ENTITY_CAPABILITY_DESC.equals(call.desc) ? "Lnet/minecraft/core/Direction;" : "")
+                        + ")" + lazyOptional;
+                call.setOpcode(Opcodes.INVOKESTATIC);
+                call.owner = LEGACY_CAPABILITY_ACCESS;
+                call.desc = helperDescriptor;
+                call.itf = false;
+                rewritten++;
+            }
+        }
+        return rewritten;
+    }
+
+    private int rewriteLegacyBlockEntityCapabilityCalls(ClassNode node) {
+        String capability = "Lnet/neoforged/forgestuck/compat/LegacyCapability;";
+        String lazyOptional = "Lnet/neoforged/forgestuck/compat/LazyOptional;";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || !(call.getOpcode() == Opcodes.INVOKEVIRTUAL || call.getOpcode() == Opcodes.INVOKEINTERFACE)
+                        || !call.name.equals("getCapability")
+                        || !(LEGACY_ENTITY_CAPABILITY_DESC.equals(call.desc)
+                                || LEGACY_SIDED_ENTITY_CAPABILITY_DESC.equals(call.desc))
+                        || !(BLOCK_ENTITY.equals(call.owner) || hasSupertype(call.owner, BLOCK_ENTITY))) continue;
+                String helperDescriptor = "(L" + BLOCK_ENTITY + ";" + capability
+                        + (LEGACY_SIDED_ENTITY_CAPABILITY_DESC.equals(call.desc)
+                                ? "Lnet/minecraft/core/Direction;" : "")
+                        + ")" + lazyOptional;
+                call.setOpcode(Opcodes.INVOKESTATIC);
+                call.owner = LEGACY_CAPABILITY_ACCESS;
+                call.desc = helperDescriptor;
+                call.itf = false;
+                rewritten++;
+            }
+        }
+        return rewritten;
+    }
+
+    private static int rewriteLegacyAttachCapabilityHandlers(ClassNode node) {
+        String legacyEvent = "net/minecraftforge/event/AttachCapabilitiesEvent";
+        String subscribeEvent = "Lnet/minecraftforge/eventbus/api/SubscribeEvent;";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            if (!method.desc.startsWith("(L" + legacyEvent + ";)V")
+                    || !hasSubscribeEvent(method, subscribeEvent)) continue;
+            String payload = legacyAttachCapabilitiesPayload(method.signature, legacyEvent);
+            if (payload == null) continue;
+            int eventLocal = (method.access & Opcodes.ACC_STATIC) == 0 ? 1 : 0;
+            LabelNode matched = new LabelNode();
+            InsnList guard = new InsnList();
+            guard.add(new org.objectweb.asm.tree.VarInsnNode(Opcodes.ALOAD, eventLocal));
+            guard.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, LEGACY_ATTACH_CAPABILITIES_EVENT, "getObject",
+                    "()Ljava/lang/Object;", false));
+            guard.add(new TypeInsnNode(Opcodes.INSTANCEOF, payload));
+            guard.add(new org.objectweb.asm.tree.JumpInsnNode(Opcodes.IFNE, matched));
+            guard.add(new InsnNode(Opcodes.RETURN));
+            guard.add(matched);
+            guard.add(new FrameNode(Opcodes.F_SAME, 0, null, 0, null));
+            method.instructions.insert(guard);
+            rewritten++;
+        }
+        return rewritten;
+    }
+
+    private static boolean hasSubscribeEvent(MethodNode method, String annotation) {
+        return hasAnnotation(method.visibleAnnotations, annotation)
+                || hasAnnotation(method.invisibleAnnotations, annotation);
+    }
+
+    private static boolean hasAnnotation(List<AnnotationNode> annotations, String descriptor) {
+        return annotations != null && annotations.stream().anyMatch(annotation -> annotation.desc.equals(descriptor));
+    }
+
+    private static String legacyAttachCapabilitiesPayload(String signature, String legacyEvent) {
+        if (signature == null) return null;
+        String marker = "L" + legacyEvent + "<L";
+        int start = signature.indexOf(marker);
+        if (start < 0) return null;
+        start += marker.length();
+        int end = signature.indexOf(';', start);
+        return end < 0 ? null : signature.substring(start, end);
+    }
+
+    private static int rewriteLegacyItemStackCapabilityCalls(ClassNode node) {
+        String itemStack = "net/minecraft/world/item/ItemStack";
+        String capability = "Lnet/neoforged/forgestuck/compat/LegacyCapability;";
+        String lazyOptional = "Lnet/neoforged/forgestuck/compat/LazyOptional;";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || call.getOpcode() != Opcodes.INVOKEVIRTUAL
+                        || !call.owner.equals(itemStack)
+                        || !call.name.equals("getCapability")
+                        || !LEGACY_CAPABILITY_LOOKUP_DESC.equals(call.desc)) continue;
+                call.setOpcode(Opcodes.INVOKESTATIC);
+                call.owner = LEGACY_CAPABILITY_ACCESS;
+                call.desc = "(L" + itemStack + ";" + capability + ")" + lazyOptional;
+                call.itf = false;
+                rewritten++;
+            }
+        }
+        return rewritten;
+    }
+
+    private static int rewriteLegacyLevelCapabilityCalls(ClassNode node) {
+        String level = "net/minecraft/world/level/Level";
+        String capability = "Lnet/neoforged/forgestuck/compat/LegacyCapability;";
+        String lazyOptional = "Lnet/neoforged/forgestuck/compat/LazyOptional;";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || call.getOpcode() != Opcodes.INVOKEVIRTUAL
+                        || !call.owner.equals(level)
+                        || !call.name.equals("getCapability")
+                        || !LEGACY_CAPABILITY_LOOKUP_DESC.equals(call.desc)) continue;
+                call.setOpcode(Opcodes.INVOKESTATIC);
+                call.owner = LEGACY_CAPABILITY_ACCESS;
+                call.desc = "(L" + level + ";" + capability + ")" + lazyOptional;
+                call.itf = false;
+                rewritten++;
+            }
+        }
+        return rewritten;
+    }
+
+    private static boolean isEntityCapabilityOwner(String owner) {
+        return owner.equals("net/minecraft/world/entity/Entity")
+                || owner.equals("net/minecraft/world/entity/LivingEntity")
+                || owner.equals("net/minecraft/world/entity/player/Player")
+                || owner.equals("net/minecraft/server/level/ServerPlayer");
     }
 
     private static int rewriteLegacyLazyInvocationKinds(ClassNode node) {
@@ -306,8 +565,18 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         });
     }
 
-    /** Instance calls on a mapped owner that are re-pointed at a static compat helper taking the receiver first. */
+    /** Calls on mapped owners redirected to static compatibility helpers. */
     private static final java.util.Map<String, String> REDIRECTS = java.util.Map.ofEntries(
+            java.util.Map.entry("net/minecraftforge/event/level/BlockEvent$BreakEvent.getExpToDrop()I",
+                    "net/neoforged/forgestuck/compat/LegacyBlockBreakEvent"),
+            java.util.Map.entry("net/minecraftforge/event/level/BlockEvent$BreakEvent.setExpToDrop(I)V",
+                    "net/neoforged/forgestuck/compat/LegacyBlockBreakEvent"),
+            java.util.Map.entry("net/minecraftforge/client/gui/overlay/ForgeGui"
+                    + ".shouldDrawSurvivalElements()Z",
+                    "net/neoforged/forgestuck/compat/LegacyForgeGui"),
+            java.util.Map.entry("net/minecraftforge/client/gui/overlay/ForgeGui"
+                    + ".setupOverlayRenderState(ZZ)V",
+                    "net/neoforged/forgestuck/compat/LegacyForgeGui"),
             java.util.Map.entry("net/minecraftforge/client/event/ModelEvent$RegisterAdditional"
                     + ".register(Lnet/minecraft/resources/ResourceLocation;)V",
                     "net/neoforged/forgestuck/compat/LegacyAdditionalModelEvent"),
@@ -380,6 +649,20 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             java.util.Map.entry("net/minecraftforge/event/entity/player/PlayerInteractEvent$RightClickBlock"
                     + ".getUseItem()Lnet/minecraftforge/eventbus/api/Event$Result;",
                     "net/neoforged/forgestuck/compat/LegacyPlayerInteractEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/PlayerInteractEvent$RightClickEmpty"
+                    + ".getCancellationResult()Lnet/minecraft/world/InteractionResult;",
+                    "net/neoforged/forgestuck/compat/LegacyPlayerInteractEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/PlayerInteractEvent$RightClickEmpty"
+                    + ".setCancellationResult(Lnet/minecraft/world/InteractionResult;)V",
+                    "net/neoforged/forgestuck/compat/LegacyPlayerInteractEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/PlayerInteractEvent$LeftClickEmpty"
+                    + ".getCancellationResult()Lnet/minecraft/world/InteractionResult;",
+                    "net/neoforged/forgestuck/compat/LegacyPlayerInteractEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/PlayerInteractEvent$LeftClickEmpty"
+                    + ".setCancellationResult(Lnet/minecraft/world/InteractionResult;)V",
+                    "net/neoforged/forgestuck/compat/LegacyPlayerInteractEvent"),
+            java.util.Map.entry("net/minecraftforge/event/entity/player/PlayerEvent$StartTracking.isCanceled()Z",
+                    "net/neoforged/forgestuck/compat/LegacyStartTrackingEvent"),
             java.util.Map.entry("net/minecraftforge/event/entity/EntityAttributeModificationEvent.add("
                     + "Lnet/minecraft/world/entity/EntityType;"
                     + "Lnet/minecraft/world/entity/ai/attributes/Attribute;)V",
@@ -407,6 +690,13 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
             java.util.Map.entry(FLUID_STACK
                     + ".writeToNBT(Lnet/minecraft/nbt/CompoundTag;)Lnet/minecraft/nbt/CompoundTag;",
                     "net/neoforged/forgestuck/compat/LegacyFluidStack"),
+            java.util.Map.entry(FLUID_STACK + ".readFromPacket" + FLUID_STACK_PACKET_READ_DESC,
+                    LEGACY_FLUID_STACK),
+            java.util.Map.entry(FLUID_STACK + ".writeToPacket" + FLUID_STACK_PACKET_WRITE_DESC,
+                    LEGACY_FLUID_STACK),
+            java.util.Map.entry("net/minecraftforge/fluids/FluidUtil.getFluidHandler("
+                    + "Lnet/minecraft/world/item/ItemStack;)Lnet/minecraftforge/common/util/LazyOptional;",
+                    "net/neoforged/forgestuck/compat/LegacyFluidUtil"),
             java.util.Map.entry("net/minecraftforge/fluids/capability/templates/FluidTank"
                     + ".readFromNBT(Lnet/minecraft/nbt/CompoundTag;)"
                     + "Lnet/minecraftforge/fluids/capability/templates/FluidTank;",
@@ -448,6 +738,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     "net/neoforged/forgestuck/compat/LegacyMobEffectApplicable"),
             java.util.Map.entry("net/minecraftforge/event/entity/living/MobEffectEvent$Applicable.getResult()"
                     + "Lnet/minecraftforge/eventbus/api/Event$Result;",
+                    "net/neoforged/forgestuck/compat/LegacyMobEffectApplicable"),
+            java.util.Map.entry("net/minecraftforge/event/entity/living/MobEffectEvent$Applicable.isCanceled()Z",
+                    "net/neoforged/forgestuck/compat/LegacyMobEffectApplicable"),
+            java.util.Map.entry("net/minecraftforge/event/entity/living/MobEffectEvent$Applicable.setCanceled(Z)V",
+                    "net/neoforged/forgestuck/compat/LegacyMobEffectApplicable"),
+            java.util.Map.entry("net/minecraftforge/event/entity/living/MobEffectEvent$Added.isCanceled()Z",
                     "net/neoforged/forgestuck/compat/LegacyMobEffectApplicable"),
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.register(Ljava/lang/Object;)V", "net/neoforged/forgestuck/compat/LegacyEventBusRegistration"),
             java.util.Map.entry("net/minecraftforge/eventbus/api/IEventBus.post(Lnet/minecraftforge/eventbus/api/Event;)Z",
@@ -522,6 +818,13 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
                     field = true;
                 } else {
                     continue;
+                }
+                if (insn instanceof MethodInsnNode call) {
+                    String mappedName = mappings.mappedMemberName(owner, name, desc);
+                    if (mappedName != null) {
+                        call.name = mappedName;
+                        name = mappedName;
+                    }
                 }
                 String helper = field ? null : REDIRECTS.get(owner + "." + name + desc);
                 if (helper != null) {
@@ -705,6 +1008,93 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         return replaced;
     }
 
+    private static int rewriteLegacyFluidStackPacketCalls(ClassNode node) {
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call) || !call.owner.equals(FLUID_STACK)) continue;
+                if (call.getOpcode() == Opcodes.INVOKESTATIC
+                        && call.name.equals("readFromPacket")
+                        && call.desc.equals(FLUID_STACK_PACKET_READ_DESC)) {
+                    call.owner = LEGACY_FLUID_STACK;
+                    call.itf = false;
+                    rewritten++;
+                } else if ((call.getOpcode() == Opcodes.INVOKEVIRTUAL || call.getOpcode() == Opcodes.INVOKEINTERFACE)
+                        && call.name.equals("writeToPacket")
+                        && call.desc.equals(FLUID_STACK_PACKET_WRITE_DESC)) {
+                    call.owner = LEGACY_FLUID_STACK;
+                    call.setOpcode(Opcodes.INVOKESTATIC);
+                    call.desc = "(L" + FLUID_STACK + ";" + FLUID_STACK_PACKET_WRITE_DESC.substring(1);
+                    call.itf = false;
+                    rewritten++;
+                }
+            }
+        }
+        return rewritten;
+    }
+
+    private static int rewriteLegacyFriendlyByteBufRegistryCalls(ClassNode node) {
+        String buffer = "net/minecraft/network/FriendlyByteBuf";
+        String helper = "net/neoforged/forgestuck/compat/LegacyFriendlyByteBuf";
+        String legacyRegistry = "net/minecraftforge/registries/IForgeRegistry";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || !buffer.equals(call.owner)
+                        || call.getOpcode() != Opcodes.INVOKEVIRTUAL) continue;
+                if (call.name.equals("writeRegistryId")
+                        && call.desc.equals("(L" + legacyRegistry + ";Ljava/lang/Object;)V")) {
+                    call.setOpcode(Opcodes.INVOKESTATIC);
+                    call.owner = helper;
+                    call.desc = "(L" + buffer + ";L" + legacyRegistry + ";Ljava/lang/Object;)V";
+                    call.itf = false;
+                    rewritten++;
+                } else if (call.name.equals("readRegistryId")
+                        && call.desc.equals("()Ljava/lang/Object;")) {
+                    call.setOpcode(Opcodes.INVOKESTATIC);
+                    call.owner = helper;
+                    call.desc = "(L" + buffer + ";)Ljava/lang/Object;";
+                    call.itf = false;
+                    rewritten++;
+                }
+            }
+        }
+        return rewritten;
+    }
+
+    private static int rewriteLegacyFriendlyByteBufFluidStackCalls(ClassNode node) {
+        String buffer = "net/minecraft/network/FriendlyByteBuf";
+        String readDesc = "()L" + FLUID_STACK + ";";
+        String writeDesc = "(L" + FLUID_STACK + ";)V";
+        int rewritten = 0;
+        for (MethodNode method : node.methods) {
+            for (AbstractInsnNode instruction : method.instructions.toArray()) {
+                if (!(instruction instanceof MethodInsnNode call)
+                        || !call.owner.equals(buffer)
+                        || (call.getOpcode() != Opcodes.INVOKEVIRTUAL && call.getOpcode() != Opcodes.INVOKEINTERFACE)) {
+                    continue;
+                }
+                if (call.name.equals("readFluidStack") && call.desc.equals(readDesc)) {
+                    call.setOpcode(Opcodes.INVOKESTATIC);
+                    call.owner = LEGACY_FLUID_STACK;
+                    call.name = "readFromPacket";
+                    call.desc = "(L" + buffer + ";)L" + FLUID_STACK + ";";
+                    call.itf = false;
+                    rewritten++;
+                } else if (call.name.equals("writeFluidStack") && call.desc.equals(writeDesc)) {
+                    call.setOpcode(Opcodes.INVOKESTATIC);
+                    call.owner = LEGACY_FLUID_STACK;
+                    call.name = "writeToPacket";
+                    call.desc = "(L" + buffer + ";L" + FLUID_STACK + ";)V";
+                    call.itf = false;
+                    rewritten++;
+                }
+            }
+        }
+        return rewritten;
+    }
+
     private static int rewriteEmptyFluidHandlerConstructors(ClassNode node) {
         String owner = "net/minecraftforge/fluids/capability/templates/EmptyFluidHandler";
         int replaced = 0;
@@ -877,6 +1267,12 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
     private Object replaceUnsupportedHandle(String className, ClassNode node, MethodNode method, Object value,
             OwnerRemapReport report, int helperIndex) {
         if (value instanceof Handle handle) {
+            String mappedName = mappings.mappedMemberName(
+                    handle.getOwner(), handle.getName(), handle.getDesc());
+            if (mappedName != null) {
+                return new Handle(handle.getTag(), handle.getOwner(), mappedName, handle.getDesc(),
+                        handle.isInterface());
+            }
             if (handle.getTag() == Opcodes.H_INVOKESTATIC
                     && handle.getOwner().equals(LEGACY_BURN_TIME_OWNER)
                     && handle.getName().equals("getBurnTime")
@@ -1040,12 +1436,16 @@ public class ForgeOwnerRemapStep implements ClassTransformStep {
         });
     }
 
-    /**
-     * Retained for API compatibility: blocking is now class-local (see {@link #apply}), so there is no jar-wide
-     * pre-pass state to collect.
-     */
     @Override
-    public void scan(String className, byte[] bytes, OwnerRemapReport report) {}
+    public void scan(String className, byte[] bytes, OwnerRemapReport report) {
+        if (bytes == null) return;
+        ClassNode node = new ClassNode();
+        new ClassReader(bytes).accept(node,
+                ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES);
+        Set<String> supertypes = new HashSet<>(node.interfaces);
+        if (node.superName != null) supertypes.add(node.superName);
+        declaredSupertypes.put(node.name, Set.copyOf(supertypes));
+    }
 
     private void collectBlocked(String className, ClassNode node, Set<String> blocked, int[] adapted,
             Set<String> uses) {

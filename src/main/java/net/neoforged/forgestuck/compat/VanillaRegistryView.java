@@ -59,6 +59,16 @@ final class VanillaRegistryView<V> implements IForgeRegistry<V> {
     }
 
     @Override
+    public int getId(V value) {
+        return registry().getId(value);
+    }
+
+    @Override
+    public V byId(int id) {
+        return registry().byId(id);
+    }
+
+    @Override
     public ResourceLocation getKey(V value) {
         return registry().getKey(value);
     }

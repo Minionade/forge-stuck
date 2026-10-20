@@ -82,6 +82,31 @@ class GameFieldRepairStepTest {
     }
 
     @Test
+    void fishingLootTableKeyIsAdaptedToLegacyResourceLocation() throws Exception {
+        byte[] in = fixture(m -> {
+            m.visitFieldInsn(Opcodes.GETSTATIC, "net/minecraft/world/level/storage/loot/BuiltInLootTables",
+                    "FISHING_FISH", "Lnet/minecraft/resources/ResourceLocation;");
+            m.visitInsn(Opcodes.ARETURN);
+        }, "Lnet/minecraft/resources/ResourceLocation;");
+        byte[] out = new GameFieldRepairStep().apply("com.ex.F", in);
+        ClassNode transformed = read(out);
+        var instructions = transformed.methods.get(0).instructions.toArray();
+        assertTrue(java.util.Arrays.stream(instructions)
+                .filter(org.objectweb.asm.tree.FieldInsnNode.class::isInstance)
+                .map(org.objectweb.asm.tree.FieldInsnNode.class::cast)
+                .anyMatch(field -> field.name.equals("FISHING_FISH")
+                        && field.desc.equals("Lnet/minecraft/resources/ResourceKey;")));
+        assertTrue(java.util.Arrays.stream(instructions)
+                .filter(MethodInsnNode.class::isInstance).map(MethodInsnNode.class::cast)
+                .anyMatch(call -> call.owner.equals("net/minecraft/resources/ResourceKey")
+                        && call.name.equals("location")));
+
+        Class<?> c = define(out, true);
+        assertEquals(net.minecraft.world.level.storage.loot.BuiltInLootTables.FISHING_FISH.location(),
+                c.getMethod("go").invoke(null));
+    }
+
+    @Test
     void defaultedRegistryCallsAreReOwnedExceptGetDefaultKey() {
         byte[] in = fixture(m -> {
             m.visitInsn(Opcodes.ACONST_NULL);

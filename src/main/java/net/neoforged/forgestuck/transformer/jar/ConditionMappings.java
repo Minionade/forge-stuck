@@ -9,8 +9,8 @@ import java.util.Set;
  * go to {@code compat.LegacyConditions}. And/Or array constructors are adapted to NeoForge's list-backed conditions.
  * The single-variant ConditionalAdvancement builder is adapted to NeoForge's conditional advancement codec;
  * ConditionalRecipe's first-matching recipe variants have no equivalent in RecipeOutput and remain unmapped. The
- * remaining ingredient parsing helpers in CraftingHelper remain unmapped. Members are reflection-checked in
- * {@code ForgeOwnerMappingTargetsTest}.
+ * item-stack and NBT parsing helpers in CraftingHelper are routed through the legacy parser. Members are
+ * reflection-checked in {@code ForgeOwnerMappingTargetsTest}.
  */
 final class ConditionMappings {
     private ConditionMappings() {}
@@ -41,6 +41,11 @@ final class ConditionMappings {
                                 + "Lnet/minecraftforge/common/crafting/IIngredientSerializer;",
                         "getID(Lnet/minecraftforge/common/crafting/IIngredientSerializer;)"
                                 + "Lnet/minecraft/resources/ResourceLocation;",
+                        "getIngredient(Lcom/google/gson/JsonElement;Z)"
+                                + "Lnet/minecraft/world/item/crafting/Ingredient;",
+                        "getItemStack(Lcom/google/gson/JsonObject;Z)Lnet/minecraft/world/item/ItemStack;",
+                        "getItemStack(Lcom/google/gson/JsonObject;ZZ)Lnet/minecraft/world/item/ItemStack;",
+                        "getNBT(Lcom/google/gson/JsonElement;)Lnet/minecraft/nbt/CompoundTag;",
                         "processConditions(" + arr + ctx + ")Z",
                         "processConditions(" + json + "Ljava/lang/String;" + ctx + ")Z",
                         "serialize(" + ic + ")" + json, "serialize([" + ic + ")" + arr)),

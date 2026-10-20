@@ -10,7 +10,8 @@ import java.util.Set;
  * erased constructor and builder signatures) and the {@code RegisterCapabilitiesEvent} owner. Constants and
  * members are reflection-checked in {@code ForgeOwnerMappingTargetsTest}; anything NeoForge lacks (for example
  * {@code ForgeFlowingFluid.Properties.canMultiply}) fails at the call. {@code RegisterCapabilitiesEvent.register(Class)}
- * is redirected to {@code compat.LegacyCapabilities} by {@code ForgeOwnerRemapStep}.
+ * is redirected to {@code compat.LegacyCapabilities}; the adapter supports direct player providers and generic
+ * entity attachment providers.
  */
 final class ItemAbilityAndFluidMappings {
     private ItemAbilityAndFluidMappings() {}
@@ -158,7 +159,12 @@ final class ItemAbilityAndFluidMappings {
                         Set.of("writeSpawnData(Lnet/minecraft/network/FriendlyByteBuf;)V",
                                 "readSpawnData(Lnet/minecraft/network/FriendlyByteBuf;)V")),
                 e("net/minecraftforge/event/entity/living/PotionColorCalculationEvent",
-                        "net/neoforged/forgestuck/compat/LegacyPotionColorCalculationEvent", Set.of()),
+                        "net/neoforged/forgestuck/compat/LegacyPotionColorCalculationEvent",
+                        Set.of("<init>(Lnet/minecraft/world/entity/LivingEntity;IZLjava/util/Collection;)V",
+                                "getEntity()Lnet/minecraft/world/entity/LivingEntity;",
+                                "getEntity()Lnet/minecraft/world/entity/Entity;",
+                                "getEffects()Ljava/util/Collection;", "getColor()I", "setColor(I)V",
+                                "areParticlesHidden()Z", "shouldHideParticles(Z)V")),
                 e("net/minecraftforge/registries/MissingMappingsEvent",
                         "net/neoforged/forgestuck/compat/LegacyMissingMappingsEvent",
                         Set.of("getAllMappings(Lnet/minecraft/resources/ResourceKey;)Ljava/util/List;")),
@@ -217,10 +223,14 @@ final class ItemAbilityAndFluidMappings {
                         Set.of("getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;")),
                 e("net/minecraftforge/client/event/RenderGuiOverlayEvent$Post",
                         "net/neoforged/neoforge/client/event/RenderGuiLayerEvent$Post",
-                        Set.of("getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;")),
+                        Set.of("<init>(Lcom/mojang/blaze3d/platform/Window;"
+                                        + "Lnet/minecraft/client/gui/GuiGraphics;FLnet/minecraftforge/client/gui/overlay/"
+                                        + "NamedGuiOverlay;)V",
+                                "getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;", "getPartialTick()F")),
                 e("net/minecraftforge/client/event/RenderGuiOverlayEvent$Pre",
                         "net/neoforged/neoforge/client/event/RenderGuiLayerEvent$Pre",
-                        Set.of("getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;", "isCanceled()Z",
+                        Set.of("getGuiGraphics()Lnet/minecraft/client/gui/GuiGraphics;", "getPartialTick()F",
+                                "isCanceled()Z",
                                 "setCanceled(Z)V")),
                 e("net/minecraftforge/client/gui/overlay/NamedGuiOverlay",
                         "net/neoforged/forgestuck/compat/LegacyNamedGuiOverlay", Set.of()),

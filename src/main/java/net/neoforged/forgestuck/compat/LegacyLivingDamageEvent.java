@@ -2,10 +2,11 @@ package net.neoforged.forgestuck.compat;
 
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.LivingEntity;
+import net.neoforged.bus.api.ICancellableEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEvent;
 
 /** Mutable compatibility event for Forge's post-mitigation, pre-health-change damage hook. */
-public class LegacyLivingDamageEvent extends LivingEvent {
+public class LegacyLivingDamageEvent extends LivingEvent implements ICancellableEvent {
     private final DamageSource source;
     private float amount;
 
@@ -25,5 +26,13 @@ public class LegacyLivingDamageEvent extends LivingEvent {
 
     public void setAmount(float amount) {
         this.amount = amount;
+    }
+
+    public boolean isCancelable() {
+        return true;
+    }
+
+    public boolean hasResult() {
+        return false;
     }
 }

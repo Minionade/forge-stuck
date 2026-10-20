@@ -59,6 +59,8 @@ public final class LegacyNameMappings {
         // Descriptor keys also let indirect legacy subclass overrides retain virtual dispatch.
         members.put("m_213888_(Lnet/minecraft/util/RandomSource;Z)Lnet/minecraft/resources/ResourceKey;", "getConfiguredFeature");
         members.put("m_213817_(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;Lnet/minecraft/util/RandomSource;)Z", "growTree");
+        // Item.isFoil(ItemStack), often invoked through a legacy subclass owner.
+        members.put("m_41113_", "isFoil");
         // Removed ArmorMaterial interface methods, now implemented by compat.LegacyArmorMaterial.
         // Verified against MCP 1.20.1-20230612.114412 and Mojang 1.20.1 client mappings.
         members.put("m_266425_", "getDurabilityForType");
@@ -78,6 +80,7 @@ public final class LegacyNameMappings {
         // FriendlyByteBuf.Writer/Reader#optional, now on compat.LegacyByteBufWriter/LegacyByteBufReader.
         members.put("m_236883_", "optional");
         members.put("m_236879_", "optional");
+        members.put("net/neoforged/forgestuck/compat/LegacyItemStackTooltipPart#m_41809_()I", "getMask");
         return new LegacyNameMappings(members, missing);
     }
 

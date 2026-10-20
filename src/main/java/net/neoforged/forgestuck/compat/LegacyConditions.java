@@ -9,7 +9,14 @@ import com.mojang.serialization.MapCodec;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.TagParser;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.conditions.ICondition;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
@@ -76,6 +83,57 @@ public final class LegacyConditions {
 
     public static ICondition getCondition(JsonObject json) {
         return ICondition.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow(com.google.gson.JsonSyntaxException::new);
+    }
+
+    public static Ingredient getIngredient(JsonElement json, boolean allowEmpty) {
+        return LegacyIngredientBridge.fromJson(json, allowEmpty);
+    }
+
+    public static ItemStack getItemStack(JsonObject json, boolean readNBT) {
+        return getItemStack(json, readNBT, false);
+    }
+
+    public static ItemStack getItemStack(JsonObject json, boolean readNBT, boolean disallowsAirInRecipe) {
+        if (!json.has("item")) {
+            throw new com.google.gson.JsonSyntaxException("Missing item id");
+        }
+        ResourceLocation id;
+        try {
+            id = ResourceLocation.parse(json.get("item").getAsString());
+        } catch (RuntimeException exception) {
+            throw new com.google.gson.JsonSyntaxException("Invalid item id", exception);
+        }
+        var item = BuiltInRegistries.ITEM.getOptional(id)
+                .orElseThrow(() -> new com.google.gson.JsonSyntaxException("Unknown item '" + id + "'"));
+        if (item == net.minecraft.world.item.Items.AIR && disallowsAirInRecipe) {
+            throw new com.google.gson.JsonSyntaxException("Item '" + id + "' cannot be empty");
+        }
+        int count = json.has("count") ? json.get("count").getAsInt() : 1;
+        ItemStack stack = new ItemStack(item, count);
+        if (readNBT && json.has("nbt")) {
+            try {
+                JsonElement element = json.get("nbt");
+                String nbt = element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()
+                        ? element.getAsString() : element.toString();
+                stack.set(DataComponents.CUSTOM_DATA, CustomData.of(TagParser.parseTag(nbt)));
+            } catch (com.mojang.brigadier.exceptions.CommandSyntaxException exception) {
+                throw new com.google.gson.JsonSyntaxException("Invalid item NBT", exception);
+            }
+        }
+        return stack;
+    }
+
+    public static CompoundTag getNBT(JsonElement element) {
+        if (element == null || element.isJsonNull()) {
+            throw new com.google.gson.JsonSyntaxException("Expected item NBT, got null");
+        }
+        String nbt = element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()
+                ? element.getAsString() : element.toString();
+        try {
+            return TagParser.parseTag(nbt);
+        } catch (Exception exception) {
+            throw new com.google.gson.JsonSyntaxException("Invalid item NBT", exception);
+        }
     }
 
     public static boolean processConditions(JsonArray conditions, ICondition.IContext context) {

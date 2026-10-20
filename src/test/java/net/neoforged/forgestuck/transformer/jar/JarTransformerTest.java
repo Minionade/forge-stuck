@@ -221,6 +221,29 @@ class JarTransformerTest {
     }
 
     @Test
+    void updatesLegacyFogDistanceCallsInVertexShaders(@TempDir Path dir) throws Exception {
+        Path src = dir.resolve("legacy-shader.jar");
+        String original = """
+                void main() {
+                    vertexDistance = fog_distance(ModelViewMat, IViewRotMat * Position, FogShape);
+                }
+                """;
+        try (JarOutputStream out = new JarOutputStream(Files.newOutputStream(src))) {
+            put(out, "META-INF/mods.toml", MODS_TOML.getBytes(StandardCharsets.UTF_8));
+            put(out, "assets/mantle/shaders/core/fluid.vsh", original.getBytes(StandardCharsets.UTF_8));
+        }
+
+        Path transformed = dir.resolve("transformed-shader.jar");
+        plain().transform(src, transformed);
+        String output = new String(read(transformed, "assets/mantle/shaders/core/fluid.vsh"),
+                StandardCharsets.UTF_8);
+        assertTrue(output.contains(
+                "fog_distance((ModelViewMat * vec4(IViewRotMat * Position, 1.0)).xyz, FogShape)"));
+        assertArrayEquals(original.getBytes(StandardCharsets.UTF_8),
+                read(src, "assets/mantle/shaders/core/fluid.vsh"));
+    }
+
+    @Test
     void warnsOnNonJavafmlLoader(@TempDir Path dir) throws Exception {
         Path src = buildJar(dir, "adv.jar", MODS_TOML, "1");
         String[] seen = new String[1];

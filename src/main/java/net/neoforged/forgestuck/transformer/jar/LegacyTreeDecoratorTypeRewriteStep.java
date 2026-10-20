@@ -4,8 +4,6 @@ import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.InsnList;
-import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
@@ -28,11 +26,8 @@ final class LegacyTreeDecoratorTypeRewriteStep implements ClassTransformStep {
                 if (!(insn instanceof MethodInsnNode call) || call.getOpcode() != Opcodes.INVOKESPECIAL
                         || !TYPES.contains(call.owner) || !call.name.equals("<init>")
                         || !call.desc.equals("(L" + CODEC + ";)V")) continue;
-                InsnList conversion = new InsnList();
-                conversion.add(new LdcInsnNode("data"));
-                conversion.add(new MethodInsnNode(Opcodes.INVOKEINTERFACE, CODEC, "fieldOf",
-                        "(Ljava/lang/String;)L" + MAP_CODEC + ";", true));
-                method.instructions.insertBefore(call, conversion);
+                method.instructions.insertBefore(call, new MethodInsnNode(Opcodes.INVOKESTATIC, MAP_CODEC,
+                        "assumeMapUnsafe", "(L" + CODEC + ";)L" + MAP_CODEC + ";", false));
                 call.desc = "(L" + MAP_CODEC + ";)V";
                 rewritten++;
             }

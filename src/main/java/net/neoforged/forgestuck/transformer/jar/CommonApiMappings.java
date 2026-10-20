@@ -12,7 +12,10 @@ final class CommonApiMappings {
                 new ForgeOwnerMappings.Entry("net/minecraftforge/common/TierSortingRegistry",
                         "net/neoforged/forgestuck/compat/LegacyTierSortingRegistry",
                         Set.of("isCorrectTierForDrops(Lnet/minecraft/world/item/Tier;"
-                                + "Lnet/minecraft/world/level/block/state/BlockState;)Z")),
+                                        + "Lnet/minecraft/world/level/block/state/BlockState;)Z",
+                                "byName(Lnet/minecraft/resources/ResourceLocation;)Lnet/minecraft/world/item/Tier;",
+                                "getName(Lnet/minecraft/world/item/Tier;)Lnet/minecraft/resources/ResourceLocation;",
+                                "getSortedTiers()Ljava/util/List;")),
                 new ForgeOwnerMappings.Entry("net/minecraftforge/common/BasicItemListing",
                         "net/neoforged/neoforge/common/BasicItemListing",
                         Set.of("<init>(Lnet/minecraft/world/item/ItemStack;"
